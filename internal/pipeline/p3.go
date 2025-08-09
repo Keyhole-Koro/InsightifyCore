@@ -11,15 +11,33 @@ import (
 type P3 struct { LLM llm.LLMClient }
 
 func (p *P3) Run(ctx context.Context, p2Summaries []t.P2Out, glossary []t.GlossEntry, taxonomy []t.KV) (t.P3Out, error) {
-    prompt := `You are a software architect. Given a list of summarized directory roles, glossary definitions, and system taxonomy, identify semantic or functional links between directories/components.
+    prompt := `You are a senior software architect.
+Given a list of summarized directory roles, glossary definitions, and a taxonomy of system abstraction layers, generate candidate nodes representing architectural elements.
 
-Return only JSON with the following schema:
+Return only STRICT JSON with the following schema:
 {
-  "links": [
-    {"from": "string", "to": "string", "kind": "string", "confidence": 0.0, "provenance": ["string"]}
+  "nodes": [
+    {
+      "id": "string",
+      "name": "string",
+      "kind": "string",
+      "layer": 0,
+      "paths": ["string"],
+      "span": [{"file": "string", "lines": [0, 0]}],
+      "identifiers": ["string"],
+      "interfaces": ["string"],
+      "endpoints": ["string"],
+      "protocols": ["string"],
+      "embedding_hint": ["string"],
+      "confidence": 0.0,
+      "provenance": [{"file": "string", "lines": [0, 0]}]
+    }
   ],
-  "notes": ["string", "..."]
-}`
+  "open_questions": ["string"]
+}
+Guidelines:
+- Map kind→layer using provided taxonomy.
+- Lower confidence if unsure. Always include provenance.`
 
     input := map[string]any{
         "p2_summaries": p2Summaries,

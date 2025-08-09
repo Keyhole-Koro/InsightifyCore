@@ -1,7 +1,5 @@
 package types
 
-// Generic references / descriptors ------------------------------------------------
-
 type DocRef struct {
     Path       string  `json:"path"`
     Reason     string  `json:"reason"`
@@ -27,7 +25,7 @@ type NodeLite struct {
     Provenance []string `json:"provenance,omitempty"`
 }
 
-// Phase outputs ------------------------------------------------------------------
+// Phase outputs ----------------------------------------------------------------
 
 type P0Out struct {
     TopDocs     []DocRef     `json:"top_docs"`
@@ -49,8 +47,6 @@ type FieldWithConf struct {
     Confidence float64  `json:"confidence"`
     Provenance []string `json:"provenance,omitempty"`
 }
-
-// P2 -----------------------------------------------------------------------------
 
 type APIDecl struct {
     Name       string   `json:"name"`
@@ -75,17 +71,31 @@ type P2Out struct {
     NotableFiles []DocRef       `json:"notable_files"`
 }
 
-// P3 -----------------------------------------------------------------------------
+// P3 (node generation) --------------------------------------------------------
 
-type P3Out struct {
-    Links []Edge `json:"links"`
-    Notes []string `json:"notes"`
+type ProvenanceRef struct {
+    File  string `json:"file"`
+    Lines [2]int `json:"lines"`
 }
 
-type Edge struct {
-    From       string   `json:"from"`
-    To         string   `json:"to"`
-    Kind       string   `json:"kind"`
-    Confidence float64  `json:"confidence"`
-    Provenance []string `json:"provenance,omitempty"`
+type Node struct {
+    ID           string          `json:"id"`
+    Name         string          `json:"name"`
+    Kind         string          `json:"kind"`
+    Layer        int             `json:"layer"`
+    Origin       string          `json:"origin,omitempty"` // code|abstract
+    Paths        []string        `json:"paths"`
+    Span         []ProvenanceRef `json:"span,omitempty"`
+    Identifiers  []string        `json:"identifiers,omitempty"`
+    Interfaces   []string        `json:"interfaces,omitempty"`
+    Endpoints    []string        `json:"endpoints,omitempty"`
+    Protocols    []string        `json:"protocols,omitempty"`
+    EmbeddingHint []string       `json:"embedding_hint,omitempty"`
+    Confidence   float64         `json:"confidence"`
+    Provenance   []ProvenanceRef `json:"provenance"`
+}
+
+type P3Out struct {
+    Nodes         []Node  `json:"nodes"`
+    OpenQuestions []string `json:"open_questions"`
 }

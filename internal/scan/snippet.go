@@ -9,15 +9,17 @@ import (
 
 type Snippet struct {
     Path string `json:"path"`
-    Mode string `json:"mode"`
+    Mode string `json:"mode"` // full|head|struct
     Text string `json:"text"`
 }
 
-// Extract returns a snippet plan based on file metadata.
 func Extract(rt RepoTree, fm FileMeta) Snippet {
     fullPath := filepath.Join(rt.Root, fm.Path)
     b, _ := os.ReadFile(fullPath)
     src := string(b)
+    if strings.HasSuffix(strings.ToLower(fm.Path), ".md") {
+        src = cleanMarkdownImages(src)
+    }
     switch {
     case fm.LOC <= 200:
         return Snippet{Path: fm.Path, Mode: "full", Text: src}
@@ -28,10 +30,7 @@ func Extract(rt RepoTree, fm FileMeta) Snippet {
     }
 }
 
-func headN(s string, n int) string {
-    if len(s) < n { return s }
-    return s[:n]
-}
+func headN(s string, n int) string { if len(s) < n { return s }; return s[:n] }
 
 func structural(s string) string {
     re := regexp.MustCompile(`(?i)\b(export|public|route|router\.|controller|service|interface|type)\b`)
@@ -47,6 +46,21 @@ func structural(s string) string {
     if len(picked) == 0 { return headN(s, 3000) }
     return strings.Join(picked, "\n")
 }
+
+// remove inline images from markdown (e.g., ![alt](url) or <img ...>)
+func cleanMarkdownImages(s string) string {
+    lines := strings.Split(s, "\n")
+    kept := make([]string, 0, len(lines))
+    for _, l := range lines {
+        trim := strings.TrimSpace(l)
+        if strings.HasPrefix(trim, "![") { continue }
+        if strings.Contains(trim, "<img") { continue }
+        if strings.Contains(trim, "data:image/") { continue }
+        kept = append(kept, l)
+    }
+    return strings.Join(kept, "\n")
+}
+
 
 func max(a, b int) int { if a > b { return a }; return b }
 func min(a, b int) int { if a < b { return a }; return b }
