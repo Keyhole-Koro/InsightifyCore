@@ -2,8 +2,8 @@ package pipeline
 
 import (
 	"context"
-	"encoding/json"
 
+	"insightify/internal/util/jsonutil"
 	"insightify/internal/llm"
 	t "insightify/internal/types"
 )
@@ -74,7 +74,7 @@ Resolution:
 		return t.P4Out{}, err
 	}
 	var out t.P4Out
-	if err := json.Unmarshal(raw, &out); err != nil {
+	if err := jsonutil.Unmarshal(raw, &out); err != nil {
 		return t.P4Out{}, err
 	}
 	return out, nil

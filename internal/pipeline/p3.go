@@ -2,8 +2,8 @@ package pipeline
 
 import (
     "context"
-    "encoding/json"
 
+	"insightify/internal/util/jsonutil"
     "insightify/internal/llm"
     t "insightify/internal/types"
 )
@@ -54,5 +54,5 @@ Rules:
     }
 
     raw, err := p.LLM.GenerateJSON(ctx, prompt, input); if err != nil { return t.P3Out{}, err }
-    var out t.P3Out; err = json.Unmarshal(raw, &out); return out, err
+    var out t.P3Out; err = jsonutil.Unmarshal(raw, &out); return out, err
 }
