@@ -20,57 +20,11 @@ import (
     t "insightify/internal/types"
 )
 
-type PromptSaver struct{ Dir string }
-
-func (p *PromptSaver) Before(ctx context.Context, phase, prompt string, input any) {
-    if phase == "" { phase = "unknown" }
-    _ = os.MkdirAll(filepath.Join(p.Dir, "prompt"), 0o755)
-    path := filepath.Join(p.Dir, "prompt", phase+".txt")
-
-    var buf bytes.Buffer
-    buf.WriteString("==== ")
-    buf.WriteString(time.Now().Format(time.RFC3339))
-    buf.WriteString(" ====\n")
-    buf.WriteString(prompt)
-    buf.WriteString("\n\n[INPUT JSON]\n")
-    jb, _ := json.MarshalIndent(input, "", "  ")
-    buf.Write(jb)
-    buf.WriteString("\n\n")
-
-    f, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-    if f != nil {
-        _, _ = f.Write(buf.Bytes())
-        _ = f.Close()
-    }
-}
-
-func (p *PromptSaver) After(ctx context.Context, phase string, raw json.RawMessage, err error) {
-    if phase == "" { phase = "unknown" }
-    _ = os.MkdirAll(filepath.Join(p.Dir, "prompt"), 0o755)
-    path := filepath.Join(p.Dir, "prompt", phase+".txt")
-
-    var buf bytes.Buffer
-    buf.WriteString("[RESPONSE]\n")
-    if err != nil {
-        buf.WriteString("ERROR: " + err.Error() + "\n\n")
-    } else {
-        buf.Write(raw)
-        buf.WriteString("\n\n")
-    }
-
-    f, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-    if f != nil {
-        _, _ = f.Write(buf.Bytes())
-        _ = f.Close()
-    }
-}
-
-
 func main() {
     repo := flag.String("repo", "", "path to the repository root")
     model := flag.String("model", "gemini-2.5-flash", "Gemini model id")
     outDir := flag.String("out", "out", "output directory")
-    phase := flag.String("phase", "", "start phase whose results and later phases should be taken from cache unless --force (p0|p1|p2|p3)")
+    phase := flag.String("phase", "", "start phase whose results and later phases should be taken from cache unless --force (p0|p1|p2|p3|p4)")
     force := flag.Bool("force", false, "recompute specified phase and later phases, ignoring cache")
     flag.Parse()
     if *repo == "" { log.Fatal("--repo is required") }
@@ -144,8 +98,10 @@ func main() {
     p2 := pipeline.P2{LLM: llmCli}
 
     // dedupe dirs from read targets
-    dirSet := map[string]bool{}
-    for _, rt := range p1Out.ReadTargets { dirSet[filepath.Dir(rt.Path)] = true }
+    dirSet := make(map[string]struct{})
+        for _, rt := range p1Out.ReadTargets {
+            dirSet[filepath.Dir(rt.Path)] = struct{}{}
+        }
 
     for dir := range dirSet {
         f := fmt.Sprintf("p2_%s.json", safe(dir))
@@ -182,6 +138,56 @@ func main() {
         p3Out, err = p3.Run(ctxP3, allP2, p1Out.Glossary, p1Out.Taxonomy); if err != nil { log.Fatal(err) }
         writeJSON(*outDir, "p3.json", p3Out)
     }
+
+    // ------------------------- P4 (Map/Reduce, abstract) ----------------------
+    var mapBatches []t.P4Out
+
+    // Collect directories from P1 read targets, or use P2 dirs if empty
+    if len(dirSet) == 0 {
+        dirSet = map[string]struct{}{}
+        for _, rt := range p1Out.ReadTargets {
+            dirSet[filepath.Dir(rt.Path)] = struct{}{}
+        }
+    }
+
+    for dir := range dirSet {
+        fname := fmt.Sprintf("p4_map_%s.json", safe(dir))
+        if useCacheFor(4) && fileExists(filepath.Join(*outDir, fname)) {
+            log.Printf("P4 map: using cache for %s", dir)
+            var out t.P4Out
+            readJSON(*outDir, fname, &out)
+            mapBatches = append(mapBatches, out)
+            continue
+        }
+        // collect a few files under dir
+        var fmList []scan.FileMeta
+        for _, fm := range tree.Files {
+            if filepath.Dir(fm.Path) == dir { fmList = append(fmList, fm) }
+        }
+        pick := fmList
+        if len(pick) > 3 { pick = pick[:3] }
+
+        ev := scan.BuildEvidence(tree, dir, pick)
+        ctxMap := llm.WithPhase(ctx, "p4_map:"+safe(dir))
+        out, err := (&pipeline.P4Map{LLM: llmCli}).Run(ctxMap, p3Out.Nodes, ev)
+        if err != nil { log.Printf("P4 map error (%s): %v", dir, err); continue }
+        writeJSON(*outDir, fname, out)
+        mapBatches = append(mapBatches, out)
+    }
+
+    // Reduce
+    var p4Out t.P4Out
+    if useCacheFor(4) && fileExists(filepath.Join(*outDir, "p4.json")) {
+        log.Println("P4 reduce: using cache")
+        readJSON(*outDir, "p4.json", &p4Out)
+    } else {
+        ctxRed := llm.WithPhase(ctx, "p4_reduce")
+        out, err := (&pipeline.P4Reduce{LLM: llmCli}).Run(ctxRed, mapBatches)
+        if err != nil { log.Fatal(err) }
+        p4Out = out
+        writeJSON(*outDir, "p4.json", p4Out)
+    }
+
 
     log.Println("analysis completed →", *outDir)
 }
@@ -223,8 +229,57 @@ func phaseIndex(p string) int {
         return 2
     case "p3":
         return 3
+    case "p4":
+        return 4
     default:
-        log.Fatalf("invalid --phase: %s (use p0|p1|p2|p3)", p)
+        log.Fatalf("invalid --phase: %s (use p0|p1|p2|p3|p4)", p)
         return -1
     }
 }
+
+
+type PromptSaver struct{ Dir string }
+
+func (p *PromptSaver) Before(ctx context.Context, phase, prompt string, input any) {
+    if phase == "" { phase = "unknown" }
+    _ = os.MkdirAll(filepath.Join(p.Dir, "prompt"), 0o755)
+    path := filepath.Join(p.Dir, "prompt", phase+".txt")
+
+    var buf bytes.Buffer
+    buf.WriteString("==== ")
+    buf.WriteString(time.Now().Format(time.RFC3339))
+    buf.WriteString(" ====\n")
+    buf.WriteString(prompt)
+    buf.WriteString("\n\n[INPUT JSON]\n")
+    jb, _ := json.MarshalIndent(input, "", "  ")
+    buf.Write(jb)
+    buf.WriteString("\n\n")
+
+    f, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+    if f != nil {
+        _, _ = f.Write(buf.Bytes())
+        _ = f.Close()
+    }
+}
+
+func (p *PromptSaver) After(ctx context.Context, phase string, raw json.RawMessage, err error) {
+    if phase == "" { phase = "unknown" }
+    _ = os.MkdirAll(filepath.Join(p.Dir, "prompt"), 0o755)
+    path := filepath.Join(p.Dir, "prompt", phase+".txt")
+
+    var buf bytes.Buffer
+    buf.WriteString("[RESPONSE]\n")
+    if err != nil {
+        buf.WriteString("ERROR: " + err.Error() + "\n\n")
+    } else {
+        buf.Write(raw)
+        buf.WriteString("\n\n")
+    }
+
+    f, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+    if f != nil {
+        _, _ = f.Write(buf.Bytes())
+        _ = f.Close()
+    }
+}
+

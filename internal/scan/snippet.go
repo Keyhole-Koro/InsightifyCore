@@ -5,6 +5,8 @@ import (
     "path/filepath"
     "regexp"
     "strings"
+
+    t "insightify/internal/types"
 )
 
 type Snippet struct {
@@ -64,3 +66,45 @@ func cleanMarkdownImages(s string) string {
 
 func max(a, b int) int { if a > b { return a }; return b }
 func min(a, b int) int { if a < b { return a }; return b }
+
+func BuildEvidence(rt RepoTree, dir string, files []FileMeta) t.P4Evidence {
+	ev := t.P4Evidence{Dir: dir}
+
+	reBind := regexp.MustCompile(`(?m)\b(import|require|using|include|package)\b[^\n]*`)
+	reInvoke := regexp.MustCompile(`(?m)\b([A-Za-z_][A-Za-z0-9_\.]+)\s*\(`)
+	reIO := regexp.MustCompile(`(?is)\b(select|insert|update|delete)\b|https?://|(?i)\bfrom\b\s+['"][^'"]+['"]|queue|topic|subject`)
+	reDecl := regexp.MustCompile(`(?m)\b(class|interface|struct|module|package)\b\s+[A-Za-z0-9_\.]+`)
+	reAnno := regexp.MustCompile(`(?m)@\w+|\[[A-Za-z]+\]`)
+
+	for _, fm := range files {
+		if filepath.Dir(fm.Path) != dir {
+			continue
+		}
+		sn := Extract(rt, fm)
+		head := sn.Text
+
+		for _, m := range reBind.FindAllString(head, -1) {
+			ev.Signals = append(ev.Signals, t.Signal{Kind: "bind", File: fm.Path, Attrs: map[string]string{"raw": strings.TrimSpace(m)}})
+		}
+		for _, m := range reInvoke.FindAllStringSubmatch(head, -1) {
+			if len(m) > 1 {
+				ev.Signals = append(ev.Signals, t.Signal{Kind: "invoke", File: fm.Path, Attrs: map[string]string{"callee": m[1]}})
+			}
+		}
+		for _, m := range reIO.FindAllString(head, -1) {
+			ev.Signals = append(ev.Signals, t.Signal{Kind: "io", File: fm.Path, Attrs: map[string]string{"surface": strings.TrimSpace(m)}})
+		}
+		for _, m := range reDecl.FindAllString(head, -1) {
+			ev.Signals = append(ev.Signals, t.Signal{Kind: "declare", File: fm.Path, Attrs: map[string]string{"raw": strings.TrimSpace(m)}})
+		}
+		for _, m := range reAnno.FindAllString(head, -1) {
+			ev.Signals = append(ev.Signals, t.Signal{Kind: "annotate", File: fm.Path, Attrs: map[string]string{"raw": strings.TrimSpace(m)}})
+		}
+		text := head
+		if len(text) > 800 {
+			text = text[:800]
+		}
+		ev.Signals = append(ev.Signals, t.Signal{Kind: "file_head", File: fm.Path, Text: text})
+	}
+	return ev
+}
