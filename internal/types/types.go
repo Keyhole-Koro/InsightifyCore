@@ -156,3 +156,39 @@ type P4Out struct {
 	Edges     []Edge     `json:"edges"`
 	Artifacts Artifacts  `json:"artifacts"`
 }
+
+// P5 -------------------------------------------------
+
+// GraphState is the unified graph after P5 normalization.
+type GraphState struct {
+	Nodes     []Node    `json:"nodes"`
+	Edges     []Edge    `json:"edges"`
+	Artifacts Artifacts `json:"artifacts"`
+}
+
+// Change is an atomic normalization operation proposed by P5.
+// Supported ops:
+// - merge_nodes: merge multiple nodes into one (fields unioned; edges retargeted)
+// - promote: change node kind/layer upward (e.g., module -> subsystem)
+// - demote: change node kind/layer downward (e.g., subsystem -> module)
+// - drop_node: remove a node and its incident edges
+// - drop_edge: remove an edge by id
+// - add_node: add a new node (allowed kinds: schema|config|interface)
+type Change struct {
+	Op      string   `json:"op"`                     // merge_nodes|promote|demote|drop_node|drop_edge|add_node
+	From    []string `json:"from,omitempty"`         // merge_nodes
+	To      string   `json:"to,omitempty"`           // merge_nodes target
+	ID      string   `json:"id,omitempty"`           // node id (promote/demote/drop_node/add_node) or edge id (drop_edge)
+	ToKind  string   `json:"to_kind,omitempty"`      // promote/demote
+	Name    string   `json:"name,omitempty"`         // add_node
+	Kind    string   `json:"kind,omitempty"`         // add_node
+	Layer   int      `json:"layer,omitempty"`        // add_node
+	Origin  string   `json:"origin,omitempty"`       // add_node (abstract|code)
+	Paths   []string `json:"paths,omitempty"`        // add_node
+	Reason  string   `json:"reason,omitempty"`
+}
+
+type P5Out struct {
+	Changes    []Change   `json:"changes"`
+	GraphState GraphState `json:"graph_state"`
+}

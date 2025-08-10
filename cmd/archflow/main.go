@@ -311,6 +311,21 @@ func main() {
 		writeJSON(*outDir, "p4.json", p4Out)
 	}
 
+    // ------------------------- P5 (Integrate/Normalize) ----------------------
+    var p5Out t.P5Out
+    if useCacheFor(5) && fileExists(filepath.Join(*outDir, "p5.json")) {
+        log.Println("P5: using cache")
+        readJSON(*outDir, "p5.json", &p5Out)
+    } else {
+        log.Println("P5: computing…")
+        ctxP5 := llm.WithPhase(ctx, "p5")
+        out, err := (&pipeline.P5{LLM: llmCli}).Run(ctxP5, p3Out.Nodes, p4Out.Edges, p4Out.Artifacts)
+        if err != nil { log.Fatal(err) }
+        p5Out = out
+        writeJSON(*outDir, "p5.json", p5Out)
+        writeJSON(*outDir, "graph.json", p5Out.GraphState)
+    }
+
 	log.Println("analysis completed →", *outDir)
 }
 
@@ -370,6 +385,14 @@ func phaseIndex(p string) int {
 		return 3
 	case "p4":
 		return 4
+    case "p5":
+        return 5
+    case "p6":
+        return 6
+    case "p7":
+        return 7
+    case "p8":
+        return 8
 	default:
 		log.Fatalf("invalid --phase: %s (use p0|p1|p2|p3|p4)", p)
 		return -1
