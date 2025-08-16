@@ -1,194 +1,167 @@
 package types
 
-type DocRef struct {
-    Path       string  `json:"path"`
-    Reason     string  `json:"reason"`
-    Confidence float64 `json:"confidence"`
+// Generic evidence reference with optional line range.
+type EvidenceRef struct {
+	Path  string  `json:"path"`
+	Lines *[2]int `json:"lines"` // nil means unknown/unspecified lines
 }
 
-type GlossEntry struct {
-    Term       string  `json:"term"`
-    Desc       string  `json:"desc"`
-    Confidence float64 `json:"confidence"`
+// -------- P0 --------
+
+type FileIndexEntry struct {
+	Path string `json:"path"`
+	Ext  string `json:"ext"`
+	Size int64  `json:"size"`
+	LOC  int    `json:"loc"`
 }
 
-type KV struct {
-    Key   string `json:"kind"`
-    Value string `json:"desc"`
+type MDDoc struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
 }
 
-type NodeLite struct {
-    ID         string   `json:"id"`
-    Name       string   `json:"name"`
-    Kind       string   `json:"kind"`
-    Confidence float64  `json:"confidence"`
-    Provenance []string `json:"provenance,omitempty"`
+type P0Hints struct {
+	Targets []string `json:"targets,omitempty"`
+	Notes   []string `json:"notes,omitempty"`
 }
 
-// P1 ----------------------------------------------------------------
+type P0Limits struct {
+	MaxNext int `json:"max_next"`
+}
+
+type P0KeyComponent struct {
+	Name          string       `json:"name"`
+	Kind          string       `json:"kind"`
+	Responsibility string      `json:"responsibility"`
+	Evidence      []EvidenceRef `json:"evidence"`
+}
+
+type P0TechStack struct {
+	Platforms  []string `json:"platforms"`
+	Languages  []string `json:"languages"`
+	BuildTools []string `json:"build_tools"`
+}
+
+type P0Hypothesis struct {
+	Summary       string          `json:"summary"`
+	KeyComponents []P0KeyComponent `json:"key_components"`
+	ExecutionModel string         `json:"execution_model"`
+	TechStack     P0TechStack     `json:"tech_stack"`
+	Assumptions   []string        `json:"assumptions"`
+	Unknowns      []string        `json:"unknowns"`
+	Confidence    float64         `json:"confidence"`
+}
+
+type P0NextFile struct {
+	Path         string   `json:"path"`
+	Reason       string   `json:"reason"`
+	WhatToCheck  []string `json:"what_to_check"`
+	Priority     int      `json:"priority"`
+}
+
+type P0NextPattern struct {
+	Pattern      string   `json:"pattern"`
+	Reason       string   `json:"reason"`
+	WhatToCheck  []string `json:"what_to_check"`
+	Priority     int      `json:"priority"`
+}
+
+type P0Contradiction struct {
+	Claim     string        `json:"claim"`
+	Supports  []EvidenceRef `json:"supports"`
+	Conflicts []EvidenceRef `json:"conflicts"`
+	Note      string        `json:"note"`
+}
 
 type P0Out struct {
-    TopDocs     []DocRef     `json:"top_docs"`
-    EntryPoints []DocRef     `json:"entry_points"`
-    Glossary    []GlossEntry `json:"glossary_seed"`
-    NextActions []string     `json:"next_actions"`
+	ArchitectureHypothesis P0Hypothesis      `json:"architecture_hypothesis"`
+	NextFiles              []P0NextFile      `json:"next_files"`
+	NextPatterns           []P0NextPattern   `json:"next_patterns"`
+	Contradictions         []P0Contradiction `json:"contradictions"`
+	NeedsInput             []string          `json:"needs_input"`
+	StopWhen               []string          `json:"stop_when"`
+	Notes                  []string          `json:"notes"`
+}
+
+// -------- P1 --------
+
+type OpenedFile struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
+type FocusItem struct {
+	Path        string   `json:"path"`
+	WhatToCheck []string `json:"what_to_check"`
+}
+
+type P1Previous struct {
+	ArchitectureHypothesis P0Hypothesis    `json:"architecture_hypothesis"`
+	NextFiles              []P0NextFile    `json:"next_files"`
+	NextPatterns           []P0NextPattern `json:"next_patterns"`
+}
+
+type P1KeyComponent struct {
+	Name          string       `json:"name"`
+	Kind          string       `json:"kind"`
+	Responsibility string      `json:"responsibility"`
+	Evidence      []EvidenceRef `json:"evidence"`
+}
+
+type P1TechStack struct {
+	Platforms  []string `json:"platforms"`
+	Languages  []string `json:"languages"`
+	BuildTools []string `json:"build_tools"`
+}
+
+type P1Hypothesis struct {
+	Summary       string           `json:"summary"`
+	KeyComponents []P1KeyComponent `json:"key_components"`
+	ExecutionModel string          `json:"execution_model"`
+	TechStack     P1TechStack      `json:"tech_stack"`
+	Assumptions   []string         `json:"assumptions"`
+	Unknowns      []string         `json:"unknowns"`
+	Confidence    float64          `json:"confidence"`
+}
+
+type P1QuestionStatus struct {
+	Path     string        `json:"path"`
+	Question string        `json:"question"`
+	Status   string        `json:"status"` // "confirmed|refuted|inconclusive"
+	Evidence []EvidenceRef `json:"evidence"`
+	Note     string        `json:"note"`
+}
+
+type P1DeltaModified struct {
+	Field  string `json:"field"`
+	Before any    `json:"before"`
+	After  any    `json:"after"`
+}
+
+type P1Delta struct {
+	Added    []string         `json:"added"`
+	Removed  []string         `json:"removed"`
+	Modified []P1DeltaModified `json:"modified"`
 }
 
 type P1Out struct {
-    Taxonomy      []KV         `json:"taxonomy"`
-    ParentNodes   []NodeLite   `json:"parent_nodes"`
-    Glossary      []GlossEntry `json:"glossary"`
-    ReadingPolicy []string     `json:"reading_policy"`
-    ReadTargets   []DocRef     `json:"read_targets"`
+	UpdatedHypothesis P1Hypothesis      `json:"updated_hypothesis"`
+	QuestionStatus    []P1QuestionStatus `json:"question_status"`
+	Delta             P1Delta            `json:"delta"`
+	Contradictions    []P0Contradiction  `json:"contradictions"`
+	NextFiles         []P0NextFile       `json:"next_files"`
+	NextPatterns      []P0NextPattern    `json:"next_patterns"`
+	NeedsInput        []string           `json:"needs_input"`
+	StopWhen          []string           `json:"stop_when"`
+	Notes             []string           `json:"notes"`
 }
 
-// P2 --------------------------------------------------------
-
-type FieldWithConf struct {
-    Summary    string   `json:"summary"`
-    Confidence float64  `json:"confidence"`
-    Provenance []string `json:"provenance,omitempty"`
-}
-
-type APIDecl struct {
-    Name       string   `json:"name"`
-    Kind       string   `json:"kind"`
-    Path       string   `json:"path"`
-    Signature  string   `json:"signature,omitempty"`
-    Provenance []string `json:"provenance,omitempty"`
-}
-
-type IdentDecl struct {
-    Name       string   `json:"name"`
-    Kind       string   `json:"kind"`
-    Path       string   `json:"path"`
-    Provenance []string `json:"provenance,omitempty"`
-}
-
-type P2Out struct {
-    Dir          string         `json:"dir"`
-    Role         FieldWithConf  `json:"role"`
-    PublicAPI    []APIDecl      `json:"public_api"`
-    Identifiers  []IdentDecl    `json:"identifiers"`
-    NotableFiles []DocRef       `json:"notable_files"`
-}
-
-// P3 --------------------------------------------------------
-
-type ProvenanceRef struct {
-    File  string `json:"file"`
-    Lines [2]int `json:"lines"`
-}
-
-type Node struct {
-    ID          string          `json:"id"`
-    Name        string          `json:"name"`
-    Kind        string          `json:"kind"`
-    Layer       int             `json:"layer"`
-    Origin      string          `json:"origin,omitempty"` // abstract|code
-    Paths       []string        `json:"paths,omitempty"`
-    Span        []ProvenanceRef `json:"span,omitempty"`
-    Identifiers []string        `json:"identifiers,omitempty"`
-    Confidence  float64         `json:"confidence"`
-    Provenance  []ProvenanceRef `json:"provenance"`
-}
-
-type P3Out struct {
-    Nodes         []Node  `json:"nodes"`
-    OpenQuestions []string `json:"open_questions"`
-}
-
-// -------- P4 Evidence (language-agnostic) --------
-
-// Signal is a language-agnostic hint extracted from code.
-// Keep it abstract: no HTTP/SQL, no specific protocols, no language-specific terms.
-type Signal struct {
-	Kind  string            `json:"kind"`              // bind | invoke | io | declare | annotate | file_head
-	File  string            `json:"file"`
-	Range [2]int            `json:"range,omitempty"`   // [startLine, endLine]
-	Attrs map[string]string `json:"attrs,omitempty"`   // callee/ref/channel_hint/verb_hint/key/topic/boundary_hint...
-	Text  string            `json:"text,omitempty"`    // short head snippet (optional)
-}
-
-type P4Evidence struct {
-	Dir     string   `json:"dir"`
-	Signals []Signal `json:"signals"`
-}
-
-// -------- P4 Output --------
-
-// Edge is abstract, technology-neutral.
-type Edge struct {
-	ID         string            `json:"id"`
-	Source     string            `json:"source"`
-	Target     string            `json:"target"`
-	Type       string            `json:"type"`                 // contains|depends_on|invokes|exchanges|persists|configures|observes
-	Attrs      map[string]string `json:"attrs,omitempty"`      // channel=network|storage|message|process|unknown, sync=sync|async|unknown, boundary=internal|external|unknown, verb, etc.
-	Evidence   []ProvenanceRef   `json:"evidence,omitempty"`
-	Confidence float64           `json:"confidence"`
-}
-
-// Artifacts are also abstract. Keep interfaces/schemas/config only.
-type InterfaceArtifact struct {
-	Name       string          `json:"name"`
-	Kind       string          `json:"kind"` // api|rpc|cli|event|other
-	Where      string          `json:"where"`
-	Provenance []ProvenanceRef `json:"provenance,omitempty"`
-}
-type SchemaItem struct {
-	Name       string          `json:"name"`
-	Where      string          `json:"where"`
-	Provenance []ProvenanceRef `json:"provenance,omitempty"`
-}
-type ConfigItem struct {
-	Key        string          `json:"key"`
-	Where      string          `json:"where"`
-	Provenance []ProvenanceRef `json:"provenance,omitempty"`
-}
-
-type Artifacts struct {
-	Interfaces []InterfaceArtifact `json:"interfaces,omitempty"`
-	Schemas    []SchemaItem        `json:"schemas,omitempty"`
-	Config     []ConfigItem        `json:"config,omitempty"`
-}
-
-type P4Out struct {
-	Edges     []Edge     `json:"edges"`
-	Artifacts Artifacts  `json:"artifacts"`
-}
-
-// P5 -------------------------------------------------
-
-// GraphState is the unified graph after P5 normalization.
-type GraphState struct {
-	Nodes     []Node    `json:"nodes"`
-	Edges     []Edge    `json:"edges"`
-	Artifacts Artifacts `json:"artifacts"`
-}
-
-// Change is an atomic normalization operation proposed by P5.
-// Supported ops:
-// - merge_nodes: merge multiple nodes into one (fields unioned; edges retargeted)
-// - promote: change node kind/layer upward (e.g., module -> subsystem)
-// - demote: change node kind/layer downward (e.g., subsystem -> module)
-// - drop_node: remove a node and its incident edges
-// - drop_edge: remove an edge by id
-// - add_node: add a new node (allowed kinds: schema|config|interface)
-type Change struct {
-	Op      string   `json:"op"`                     // merge_nodes|promote|demote|drop_node|drop_edge|add_node
-	From    []string `json:"from,omitempty"`         // merge_nodes
-	To      string   `json:"to,omitempty"`           // merge_nodes target
-	ID      string   `json:"id,omitempty"`           // node id (promote/demote/drop_node/add_node) or edge id (drop_edge)
-	ToKind  string   `json:"to_kind,omitempty"`      // promote/demote
-	Name    string   `json:"name,omitempty"`         // add_node
-	Kind    string   `json:"kind,omitempty"`         // add_node
-	Layer   int      `json:"layer,omitempty"`        // add_node
-	Origin  string   `json:"origin,omitempty"`       // add_node (abstract|code)
-	Paths   []string `json:"paths,omitempty"`        // add_node
-	Reason  string   `json:"reason,omitempty"`
-}
-
-type P5Out struct {
-	Changes    []Change   `json:"changes"`
-	GraphState GraphState `json:"graph_state"`
+// Convenience input bundler for P1.
+type P1In struct {
+	Previous      P1Previous     `json:"previous"`
+	OpenedFiles   []OpenedFile   `json:"opened_files"`
+	Focus         []FocusItem    `json:"focus"`
+	FileIndex     []FileIndexEntry `json:"file_index,omitempty"`
+	MDDocs        []MDDoc        `json:"md_docs,omitempty"`
+	LimitMaxNext  int            `json:"limit_max_next"`
 }
