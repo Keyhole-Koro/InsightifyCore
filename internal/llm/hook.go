@@ -6,33 +6,21 @@ import (
 )
 
 type PromptHook interface {
-	Before(ctx context.Context, phase, prompt string, input any)
-	After(ctx context.Context, phase string, raw json.RawMessage, err error)
+    Before(ctx context.Context, phase, prompt string, input any)
+    After(ctx context.Context, phase string, raw json.RawMessage, err error)
 }
 
 type ctxKeyHook struct{}
 type ctxKeyPhase struct{}
 
-// WithHook attaches a PromptHook to the context used by GenerateJSON.
-func WithHook(base LLMClient, hook PromptHook) LLMClient {
-	return &hooked{base: base, hook: hook}
-}
-
-type hooked struct {
-	base LLMClient
-	hook PromptHook
-}
-
-func (h *hooked) Name() string { return h.base.Name() }
-func (h *hooked) Close() error { return h.base.Close() }
-
-func (h *hooked) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-	ctx = context.WithValue(ctx, ctxKeyHook{}, h.hook)
-	return h.base.GenerateJSON(ctx, prompt, input)
-}
-
 func WithPhase(ctx context.Context, phase string) context.Context {
-	return context.WithValue(ctx, ctxKeyPhase{}, phase)
+    return context.WithValue(ctx, ctxKeyPhase{}, phase)
+}
+
+// WithPromptHook attaches a PromptHook to the context. Middlewares that call
+// HookFrom(ctx) can use this to invoke Before/After around requests.
+func WithPromptHook(ctx context.Context, hook PromptHook) context.Context {
+    return context.WithValue(ctx, ctxKeyHook{}, hook)
 }
 
 // HookFrom returns the hook stored in the context.
