@@ -1,15 +1,18 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"flag"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
+    "bytes"
+    "context"
+    "encoding/json"
+    "flag"
+    "fmt"
+    "log"
+    "os"
+    "path/filepath"
+    "regexp"
+    "strconv"
+    "strings"
+    "time"
 
 	"github.com/joho/godotenv"
 
@@ -24,6 +27,7 @@ func main() {
 	outDir := flag.String("out", "out", "output directory")
 	model := flag.String("model", "gemini-2.5-pro", "Gemini model id")
 	mainline := flag.String("mainline", "m0", "mainline to run (m0|m1)")
+	extraction := flag.String("extraction", "x0", "extraction to run (x0)")
 	force := flag.Bool("force", false, "recompute even if cache exists")
 	maxNext := flag.Int("max_next", 8, "max next_files+next_patterns to propose in M0/M1")
 	flag.Parse()
@@ -60,21 +64,32 @@ func main() {
 	)
 	defer llmCli.Close()
 
-	// Scan repository (index & markdown docs)
-	index, mdDocs, err := scan.IndexRepo(*repo)
-	if err != nil {
-		log.Fatal(err)
+	extCounts := map[string]int{}
+	callback := func(f scan.FileVisit) {
+		extCounts[f.Ext]++
 	}
-	log.Printf("scanned %d files, %d markdown docs", len(index), len(mdDocs))
+    // Scan repository (index & markdown docs)
+    index, mdDocs, err := scan.IndexRepoWithCallback(*repo, callback)
+    log.Printf("File extensions found: %v\n", extCounts)
+    if err != nil {
+        log.Fatal(err)
+    }
+    log.Printf("scanned %d files, %d markdown docs", len(index), len(mdDocs))
 
-switch strings.ToLower(*mainline) {
-case "m0":
-    runM0(ctx, llmCli, *outDir, index, mdDocs, *maxNext, *force)
-case "m1":
-    runM1(ctx, llmCli, *outDir, *repo, *maxNext, *force)
-default:
-    log.Fatalf("unknown --mainline: %s (use m0|m1)", *mainline)
-}
+    // If extraction is requested, run that path and exit; otherwise run mainline.
+    if strings.ToLower(*extraction) == "x0" {
+        runX0(ctx, llmCli, *outDir, index, mdDocs, extCounts, *extraction, *force)
+        return
+    }
+
+    switch strings.ToLower(*mainline) {
+    case "m0":
+        runM0(ctx, llmCli, *outDir, index, mdDocs, *maxNext, *force)
+    case "m1":
+        runM1(ctx, llmCli, *outDir, *repo, *maxNext, *force)
+    default:
+        log.Fatalf("unknown --mainline: %s (use m0|m1)", *mainline)
+    }
 }
 
 func runM0(ctx context.Context, cli llm.LLMClient, outDir string,
@@ -167,6 +182,51 @@ func runM1(ctx context.Context, cli llm.LLMClient, outDir, repo string, maxNext 
     log.Println("M1 →", outPath)
 }
 
+func runX0(ctx context.Context, cli llm.LLMClient, outDir string,
+    index []t.FileIndexEntry, mdDocs []t.MDDoc, extCounts map[string]int,
+    extraction string, force bool,
+) {
+    // Determine next versioned filename x0_vN.json and always write a new version.
+    ver := nextX0Version(outDir)
+    versionedName := fmt.Sprintf("x0_v%d.json", ver)
+    outPath := filepath.Join(outDir, versionedName)
+    log.Printf("X0: computing… (version %d)", ver)
+
+	p := pipeline.X0{LLM: cli}
+	ctx = llm.WithPhase(ctx, extraction)
+
+    in := t.X0In{
+        ExtReport:  []t.ExtReportEntry{},
+    }
+    for ext, count := range extCounts {
+        if ext == "" {
+            continue
+        }
+        snippet, lines := sampleFilesByExt(ext, index, 3)
+        in.ExtReport = append(in.ExtReport, t.ExtReportEntry{
+            Ext:         ext,
+            Count:       count,
+            SamplePaths: lines,
+            HeadSnippet: snippet,
+            RandomLines: []string{},
+        })
+    }
+    out, err := p.Run(ctx, in)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // Write both versioned file and latest pointer (x0.json)
+    writeJSON(outDir, versionedName, out)
+    writeJSON(outDir, "x0.json", out)
+    log.Printf("X0 → %s (and updated x0.json)", outPath)
+
+    // If a raw model dump exists for phase x0, also copy it to a versioned raw file for debugging.
+    raw := filepath.Join(outDir, "x0.raw.json")
+    if fileExists(raw) {
+        _ = copyFile(raw, filepath.Join(outDir, fmt.Sprintf("x0_v%d.raw.json", ver)))
+    }
+}
+
 func writeJSON(dir, name string, v any) {
     b, _ := json.MarshalIndent(v, "", "  ")
     _ = os.WriteFile(filepath.Join(dir, name), b, 0o644)
@@ -185,6 +245,56 @@ func readJSON(dir, name string, v any) {
 func fileExists(path string) bool {
     fi, err := os.Stat(path)
     return err == nil && !fi.IsDir()
+}
+
+// nextX0Version scans outDir for files named x0_vN.json and returns the next N.
+func nextX0Version(outDir string) int {
+    entries, err := os.ReadDir(outDir)
+    if err != nil {
+        return 1
+    }
+    re := regexp.MustCompile(`^x0_v(\d+)\.json$`)
+    max := 0
+    for _, e := range entries {
+        if e.IsDir() {
+            continue
+        }
+        m := re.FindStringSubmatch(e.Name())
+        if len(m) == 2 {
+            if n, err := strconv.Atoi(m[1]); err == nil && n > max {
+                max = n
+            }
+        }
+    }
+    return max + 1
+}
+
+func copyFile(src, dst string) error {
+    b, err := os.ReadFile(src)
+    if err != nil {
+        return err
+    }
+    return os.WriteFile(dst, b, 0o644)
+}
+
+// sampleFilesByExt returns a small set of repo-relative paths from the index
+// that end with the given extension and a placeholder head snippet.
+// Note: main currently does not have repo root here to read contents, so we
+// return an empty snippet and just a few sample file paths.
+func sampleFilesByExt(ext string, index []t.FileIndexEntry, limit int) (string, []string) {
+    if limit <= 0 {
+        limit = 3
+    }
+    var paths []string
+    for _, it := range index {
+        if strings.HasSuffix(strings.ToLower(it.Path), strings.ToLower(ext)) {
+            paths = append(paths, it.Path)
+            if len(paths) >= limit {
+                break
+            }
+        }
+    }
+    return "", paths
 }
 
 func min(a, b int) int {
