@@ -23,9 +23,9 @@ func main() {
 	repo := flag.String("repo", "", "path to repository root")
 	outDir := flag.String("out", "out", "output directory")
 	model := flag.String("model", "gemini-2.5-pro", "Gemini model id")
-	phase := flag.String("phase", "p0", "phase to run (p0|p1)")
+	mainline := flag.String("mainline", "m0", "mainline to run (m0|m1)")
 	force := flag.Bool("force", false, "recompute even if cache exists")
-	maxNext := flag.Int("max_next", 8, "max next_files+next_patterns to propose in P0/P1")
+	maxNext := flag.Int("max_next", 8, "max next_files+next_patterns to propose in M0/M1")
 	flag.Parse()
 
 	if *repo == "" {
@@ -67,63 +67,64 @@ func main() {
 	}
 	log.Printf("scanned %d files, %d markdown docs", len(index), len(mdDocs))
 
-	switch strings.ToLower(*phase) {
-	case "p0":
-		runP0(ctx, llmCli, *outDir, index, mdDocs, *maxNext, *force)
-	case "p1":
-		runP1(ctx, llmCli, *outDir, *repo, *maxNext, *force)
-	default:
-		log.Fatalf("unknown --phase: %s (use p0|p1)", *phase)
-	}
+switch strings.ToLower(*mainline) {
+case "m0":
+    runM0(ctx, llmCli, *outDir, index, mdDocs, *maxNext, *force)
+case "m1":
+    runM1(ctx, llmCli, *outDir, *repo, *maxNext, *force)
+default:
+    log.Fatalf("unknown --mainline: %s (use m0|m1)", *mainline)
+}
 }
 
-func runP0(ctx context.Context, cli llm.LLMClient, outDir string,
+func runM0(ctx context.Context, cli llm.LLMClient, outDir string,
     index []t.FileIndexEntry, mdDocs []t.MDDoc, maxNext int, force bool,
 ) {
-    outPath := filepath.Join(outDir, "p0.json")
+    outPath := filepath.Join(outDir, "m0.json")
     if !force && fileExists(outPath) {
-        log.Println("P0: using cache →", outPath)
+        log.Println("M0: using cache →", outPath)
         return
     }
-    log.Println("P0: computing…")
+    log.Println("M0: computing…")
 
-    p := pipeline.P0{LLM: cli}
-    ctx = llm.WithPhase(ctx, "p0")
+    p := pipeline.M0{LLM: cli}
+    ctx = llm.WithPhase(ctx, "m0")
 
-    in := t.P0In{
+    in := t.M0In{
         FileIndex: index,
         MDDocs:    mdDocs,
-        Hints:     &t.P0Hints{},
-        Limits:    &t.P0Limits{MaxNext: maxNext},
+        Hints:     &t.M0Hints{},
+        Limits:    &t.M0Limits{MaxNext: maxNext},
     }
     out, err := p.Run(ctx, in)
     if err != nil {
         log.Fatal(err)
     }
-    writeJSON(outDir, "p0.json", out)
-    log.Println("P0 →", outPath)
+    writeJSON(outDir, "m0.json", out)
+    log.Println("M0 →", outPath)
 }
 
-func runP1(ctx context.Context, cli llm.LLMClient, outDir, repo string, maxNext int, force bool) {
-    inPath := filepath.Join(outDir, "p0.json")
-    if !fileExists(inPath) {
-        log.Fatalf("P1: missing %s. Run P0 first.", inPath)
+func runM1(ctx context.Context, cli llm.LLMClient, outDir, repo string, maxNext int, force bool) {
+    inPath := filepath.Join(outDir, "m0.json")
+    var m0 t.M0Out
+    if fileExists(inPath) {
+        readJSON(outDir, "m0.json", &m0)
+    } else {
+        log.Fatalf("M1: missing m0.json. Run M0 first.")
     }
-    var p0 t.P0Out
-    readJSON(outDir, "p0.json", &p0)
 
-    outPath := filepath.Join(outDir, "p1.json")
+    outPath := filepath.Join(outDir, "m1.json")
     if !force && fileExists(outPath) {
-        log.Println("P1: using cache →", outPath)
+        log.Println("M1: using cache →", outPath)
         return
     }
-    log.Println("P1: computing…")
+    log.Println("M1: computing…")
 
-    // Prepare opened_files from P0.next_files (top N existing files)
+    // Prepare opened_files from M0.next_files (top N existing files)
     var opened []t.OpenedFile
     var focus []t.FocusQuestion
     picked := 0
-    for _, nf := range p0.NextFiles {
+    for _, nf := range m0.NextFiles {
         if picked >= maxNext {
             break
         }
@@ -148,10 +149,10 @@ func runP1(ctx context.Context, cli llm.LLMClient, outDir, repo string, maxNext 
     // Also pass minimal context (index/docs) if helpful
     index, mdDocs, _ := scan.IndexRepo(repo)
 
-    p := pipeline.P1{LLM: cli}
-    ctx = llm.WithPhase(ctx, "p1")
-    in := t.P1In{
-        Previous:     p0,
+    p := pipeline.M1{LLM: cli}
+    ctx = llm.WithPhase(ctx, "m1")
+    in := t.M1In{
+        Previous:     m0,
         OpenedFiles:  opened,
         Focus:        focus,
         FileIndex:    index,
@@ -162,8 +163,8 @@ func runP1(ctx context.Context, cli llm.LLMClient, outDir, repo string, maxNext 
     if err != nil {
         log.Fatal(err)
     }
-    writeJSON(outDir, "p1.json", out)
-    log.Println("P1 →", outPath)
+    writeJSON(outDir, "m1.json", out)
+    log.Println("M1 →", outPath)
 }
 
 func writeJSON(dir, name string, v any) {
@@ -242,7 +243,7 @@ func (p *PromptSaver) After(ctx context.Context, phase string, raw json.RawMessa
     }
 
     // Also persist latest raw model output for this phase to a handy file
-    // like out/p0.raw.json or out/p1.raw.json for quick debugging when JSON
+    // like out/m0.raw.json or out/m1.raw.json for quick debugging when JSON
     // parsing/normalization fails later in the pipeline.
     _ = os.WriteFile(filepath.Join(p.Dir, phase+".raw.json"), raw, 0o644)
 }

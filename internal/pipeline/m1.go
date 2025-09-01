@@ -12,7 +12,7 @@ import (
 
 // Preamble is assumed to be defined elsewhere as `prologue`. We rely on it.
 // The schema below adds `updated_hypothesis.verification_targets`.
-const promptP1 = prologue + `
+const promptM1 = prologue + `
 
 You MUST output STRICT JSON that exactly matches the schema below. 
 No comments, no trailing commas, no ellipses “…”, no backticks. 
@@ -108,10 +108,10 @@ Rules & Guidance:
 
 `
 
-type P1 struct{ LLM llm.LLMClient }
+type M1 struct{ LLM llm.LLMClient }
 
-// Run executes P1 with robust JSON handling and normalization.
-func (p *P1) Run(ctx context.Context, in t.P1In) (t.P1Out, error) {
+// Run executes M1 with robust JSON handling and normalization.
+func (p *M1) Run(ctx context.Context, in t.M1In) (t.M1Out, error) {
 	input := map[string]any{
 		"previous":        in.Previous,
 		"opened_files":    in.OpenedFiles,
@@ -121,33 +121,33 @@ func (p *P1) Run(ctx context.Context, in t.P1In) (t.P1Out, error) {
 		"limit_max_next":  in.LimitMaxNext,
 	}
 
-	raw, err := p.LLM.GenerateJSON(ctx, promptP1, input)
-	if err != nil {
-		return t.P1Out{}, err
-	}
-	fmt.Printf("P1 raw output (%d bytes)\n", len(raw))
+    raw, err := p.LLM.GenerateJSON(ctx, promptM1, input)
+    if err != nil {
+        return t.M1Out{}, err
+    }
+    fmt.Printf("M1 raw output (%d bytes)\n", len(raw))
 
-	var out t.P1Out
-	if err := json.Unmarshal(raw, &out); err == nil {
-		return out, nil
-	}
+    var out t.M1Out
+    if err := json.Unmarshal(raw, &out); err == nil {
+        return out, nil
+    }
 
 	// Normalize known quirks and retry.
-	norm, nerr := normalizeP1JSON(raw)
-	if nerr != nil {
-		return t.P1Out{}, fmt.Errorf("P1 JSON invalid and normalization failed: %w", nerr)
-	}
-	if err := json.Unmarshal(norm, &out); err != nil {
-		return t.P1Out{}, fmt.Errorf("P1 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
-	}
-	return out, nil
+    norm, nerr := normalizeM1JSON(raw)
+    if nerr != nil {
+        return t.M1Out{}, fmt.Errorf("M1 JSON invalid and normalization failed: %w", nerr)
+    }
+    if err := json.Unmarshal(norm, &out); err != nil {
+        return t.M1Out{}, fmt.Errorf("M1 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
+    }
+    return out, nil
 }
 
-// normalizeP1JSON coerces known-quirk fields into a stable shape expected by t.P1Out:
+// normalizeM1JSON coerces known-quirk fields into a stable shape expected by t.M1Out:
 // - delta.modified.before/after: stringify if array/object/number/bool
 // - ensure arrays exist if omitted
 // - ensure verification_targets exists as array under updated_hypothesis
-func normalizeP1JSON(raw []byte) ([]byte, error) {
+func normalizeM1JSON(raw []byte) ([]byte, error) {
 	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return nil, err

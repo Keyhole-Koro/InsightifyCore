@@ -1,27 +1,28 @@
+
 package types
 
-// P1In is the input envelope for phase P1.
-type P1In struct {
-	Previous      any              `json:"previous"`       // prior hypothesis snapshot (opaque)
-	OpenedFiles   []OpenedFile     `json:"opened_files"`   // newly opened files (content included)
-	Focus         []FocusQuestion  `json:"focus"`          // questions we want to answer
-	FileIndex     []FileIndexEntry `json:"file_index"`     // searchable index (path/size/kind/etc.)
-	MDDocs        []MDDoc          `json:"md_docs"`        // markdown docs (text only)
-	LimitMaxNext  int              `json:"limit_max_next"` // cap for next_files+next_patterns
+// M1In is the input envelope for milestone M1.
+type M1In struct {
+    Previous      any              `json:"previous"`       // prior hypothesis snapshot (opaque)
+    OpenedFiles   []OpenedFile     `json:"opened_files"`   // newly opened files (content included)
+    Focus         []FocusQuestion  `json:"focus"`          // questions we want to answer
+    FileIndex     []FileIndexEntry `json:"file_index"`     // searchable index (path/size/kind/etc.)
+    MDDocs        []MDDoc          `json:"md_docs"`        // markdown docs (text only)
+    LimitMaxNext  int              `json:"limit_max_next"` // cap for next_files+next_patterns
 }
 
-// -------------------- P1Out --------------------
+// -------------------- M1Out --------------------
 
-type P1Out struct {
-	UpdatedHypothesis UpdatedHypothesis `json:"updated_hypothesis"`
-	QuestionStatus    []QuestionStatus  `json:"question_status"`
-	Delta             Delta             `json:"delta"`
-	Contradictions    []Contradiction   `json:"contradictions"`
-	NextFiles         []NextFileItem    `json:"next_files"`
-	NextPatterns      []NextPatternItem `json:"next_patterns"`
-	NeedsInput        []string          `json:"needs_input"`
-	StopWhen          []string          `json:"stop_when"`
-	Notes             []string          `json:"notes"`
+type M1Out struct {
+    UpdatedHypothesis UpdatedHypothesis `json:"updated_hypothesis"`
+    QuestionStatus    []QuestionStatus  `json:"question_status"`
+    Delta             Delta             `json:"delta"`
+    Contradictions    []Contradiction   `json:"contradictions"`
+    NextFiles         []NextFileItem    `json:"next_files"`
+    NextPatterns      []NextPatternItem `json:"next_patterns"`
+    NeedsInput        []string          `json:"needs_input"`
+    StopWhen          []string          `json:"stop_when"`
+    Notes             []string          `json:"notes"`
 }
 
 // UpdatedHypothesis is the refined hypothesis with verification targets.
@@ -32,7 +33,7 @@ type UpdatedHypothesis struct {
     Summary             string               `json:"summary"`
     KeyComponents       []KeyComponent       `json:"key_components"`
     ExecutionModel      string               `json:"execution_model"`
-    TechStack           P0TechStack          `json:"tech_stack"`
+    TechStack           M0TechStack          `json:"tech_stack"`
     Assumptions         []string             `json:"assumptions"`
     Unknowns            []string             `json:"unknowns"`
     Confidence          float64              `json:"confidence"`

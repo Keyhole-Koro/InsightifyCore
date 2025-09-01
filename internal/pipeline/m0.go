@@ -29,7 +29,7 @@ Common Rules & Constraints:
 - Do not leak or reuse knowledge outside of the provided inputs.
 - Keep names and paths case-sensitive.`
 
-const promptP0 = prologue + `
+const promptM0 = prologue + `
 
 Task:
 From the file index and Markdown text (images/binaries excluded), construct an initial architecture hypothesis. Then propose the next files/patterns to open to confirm or refute that hypothesis.
@@ -79,17 +79,17 @@ Constraints:
 - Propose at most limits.max_next (default 8) across next_files + next_patterns.
 - Evidence must reference provided paths; if you cannot identify lines, set lines to null and explain in notes.`
 
-type P0 struct{ LLM llm.LLMClient }
+type M0 struct{ LLM llm.LLMClient }
 
-// Run now accepts a single P0In to mirror P1's API.
-func (p *P0) Run(ctx context.Context, in t.P0In) (t.P0Out, error) {
+// Run now accepts a single M0In to mirror M1's API.
+func (p *M0) Run(ctx context.Context, in t.M0In) (t.M0Out, error) {
     hints := in.Hints
     if hints == nil {
-        hints = &t.P0Hints{}
+        hints = &t.M0Hints{}
     }
     limits := in.Limits
     if limits == nil {
-        limits = &t.P0Limits{MaxNext: 8}
+        limits = &t.M0Limits{MaxNext: 8}
     }
     input := map[string]any{
         "file_index": in.FileIndex,
@@ -97,13 +97,13 @@ func (p *P0) Run(ctx context.Context, in t.P0In) (t.P0Out, error) {
         "hints":      hints,
         "limits":     map[string]any{"max_next": limits.MaxNext},
     }
-    raw, err := p.LLM.GenerateJSON(ctx, promptP0, input)
+    raw, err := p.LLM.GenerateJSON(ctx, promptM0, input)
     if err != nil {
-        return t.P0Out{}, err
+        return t.M0Out{}, err
     }
-    var out t.P0Out
+    var out t.M0Out
     if err := json.Unmarshal(raw, &out); err != nil {
-        return t.P0Out{}, fmt.Errorf("P0 JSON invalid: %w", err)
+        return t.M0Out{}, fmt.Errorf("M0 JSON invalid: %w", err)
     }
     return out, nil
 }
