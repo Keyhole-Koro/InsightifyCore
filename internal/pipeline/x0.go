@@ -22,6 +22,7 @@ If provided, consider project_hints.tsconfig (string content of tsconfig.json) t
 Inputs (JSON):
 {
   "project_hints": { "notes": "string (optional)" },
+  "runtime_config_roots": ["string"], // optional hints from classification (e.g., env/, migrations/, templates/)
   "ext_report": [
     {
       "ext": ".ts",
@@ -129,9 +130,10 @@ func (p *X0) Run(ctx context.Context, in t.X0In) (t.X0Out, error) {
     _ = raw // we could add raw for debugging, but avoid leaking large payloads
 
     input := map[string]any{
-        "ext_report":    in.ExtReport,
-        "existing_specs": in.ExistingSpecs,
-        "regen_hint":     hint,
+        "ext_report":           in.ExtReport,
+        "existing_specs":       in.ExistingSpecs,
+        "runtime_config_roots": in.RuntimeConfigRoots,
+        "regen_hint":           hint,
     }
     // Use the same prompt; include regen_hint in input only.
     rraw, rerr := p.LLM.GenerateJSON(ctx, promptX0, input)
@@ -150,8 +152,9 @@ func (p *X0) Run(ctx context.Context, in t.X0In) (t.X0Out, error) {
 
 func (p *X0) generate(ctx context.Context, in t.X0In) (t.X0Out, json.RawMessage, error) {
     input := map[string]any{
-        "ext_report":    in.ExtReport,
-        "existing_specs": in.ExistingSpecs,
+        "ext_report":           in.ExtReport,
+        "existing_specs":       in.ExistingSpecs,
+        "runtime_config_roots": in.RuntimeConfigRoots,
     }
     raw, err := p.LLM.GenerateJSON(ctx, promptX0, input)
     if err != nil {

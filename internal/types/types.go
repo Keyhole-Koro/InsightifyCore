@@ -24,6 +24,7 @@ type FileIndexEntry struct {
 	Size     int64  `json:"size,omitempty"`
 	Language string `json:"language,omitempty"`
 	Kind     string `json:"kind,omitempty"` // code|config|doc|test|asset|other
+	Ext      string `json:"ext,omitempty"`
 }
 
 // MDDoc holds extracted markdown text (images omitted).

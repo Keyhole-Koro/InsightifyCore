@@ -1,101 +1,49 @@
 package pipeline
 
 import (
-	"context"
-	"fmt"
+    "context"
     "encoding/json"
+    "fmt"
 
-	"insightify/internal/llm"
-	t "insightify/internal/types"
+    "insightify/internal/llm"
+    t "insightify/internal/types"
 )
 
-const prologue = `You are an experienced software engineer analyzing an unfamiliar codebase.
+const promptM0 = `You are ifying a repository layout.
 
-Purpose of the output:
-- Provide a clear picture of what the system does and how it is structured so a reader can quickly understand the architecture.
-- Explicitly mention external nodes/services (APIs, queues, DBs, third-party SaaS) that the system integrates with.
-
-Approach:
-- Identify relevant code → cite exact files/symbols → avoid guessing; if unknown, state it.
-
-Common Rules & Constraints:
-- Use repository-relative paths exactly as provided; never invent paths or filenames.
-- Prefer code over docs when they disagree; report contradictions explicitly.
-- Be technology-agnostic: do not assume frameworks, stacks, or runtimes unless observed in code or docs. If you infer, mark it as an assumption with low confidence.
-- Cite evidence with {path, lines:[start,end]} using 1-based inclusive line numbers. If lines are unknown or unavailable, set lines to null and explain.
-- Return ONLY valid JSON that matches the requested schema. No markdown, no commentary, no trailing commas.
-- If inputs are incomplete, list what else you need under "needs_input" with exact filenames or glob patterns.
-- When inputs are large, work incrementally: entrypoints → build/manifest → configuration → wiring/adapters → public APIs.
-- Do not leak or reuse knowledge outside of the provided inputs.
-- Keep names and paths case-sensitive.`
-
-const promptM0 = prologue + `
+Input JSON provides:
+- ext_counts: map of file extensions to counts across the repo (e.g., ".ts": 120)
+- dirs_depth1: top-level directories (one-segment paths)
+- dirs_depth2: second-level directories (two-segment paths like "src/app")
 
 Task:
-From the file index and Markdown text (images/binaries excluded), construct an initial architecture hypothesis. Then propose the next files/patterns to open to confirm or refute that hypothesis.
-
-Output: STRICT JSON with this schema (no extra fields):
+Return STRICT JSON identifying likely roots for:
 {
-  "architecture_hypothesis": {
-    "purpose": "string",                          // What the system does and the big picture, including external nodes/services
-    "summary": "string",
-    "key_components": [
-      {
-        "name": "string",
-        "kind": "string",
-        "responsibility": "string",
-        "evidence": [{"path":"string","lines":[1,2] | null}]
-      }
-    ],
-    "execution_model": "string",
-    "tech_stack": {
-      "platforms": ["string"],
-      "languages": ["string"],
-      "build_tools": ["string"]
-    },
-    "assumptions": ["string"],
-    "unknowns": ["string"],
-    "confidence": 0.0
-  },
-  "next_files": [
-    {"path":"string","reason":"string","what_to_check":["string"],"priority":1}
-  ],
-  "next_patterns": [
-    {"pattern":"string","reason":"string","what_to_check":["string"],"priority":2}
-  ],
-  "contradictions": [
-    {"claim":"string",
-     "supports":[{"path":"string","lines":[1,2]|null}],
-     "conflicts":[{"path":"string","lines":[1,2]|null}],
-     "note":"string"}
-  ],
-  "needs_input": ["string"],
-  "stop_when": ["string"],
-  "notes": ["string"]
+  "main_source_roots":   ["string"],  // primary application code dirs
+  "library_roots":       ["string"],  // internal/shared libraries OR third-party vendor/dependency roots to be skipped in analysis (e.g., node_modules, vendor, third_party)
+  "config_roots":        ["string"],  // configuration, infra, or ops (e.g., .github, config/, scripts/)
+  "runtime_config_roots": ["string"], // paths that influence runtime behavior (env/templates/migrations/etc.)
+  "notes":               ["string"]   // short rationale for each category
 }
 
-Constraints:
-- Do NOT choose from fixed lists; use free-form tokens based on evidence. Use "unknown" only when genuinely unknown.
-- Propose at most limits.max_next (default 8) across next_files + next_patterns.
-- Evidence must reference provided paths; if you cannot identify lines, set lines to null and explain in notes.`
+Rules:
+- Use repo-relative directory paths using forward slashes.
+- Prefer concrete subpaths at depth 1 or 2.
+- If uncertain, keep the list small and add a note.
+- JSON only; no comments or trailing commas.
+- Treat large dependency/vendor directories as library_roots when present:
+- prefer top-level roots only (e.g., "node_modules", not "node_modules/*").
+- Common examples: "node_modules", "vendor", "third_party", ".venv", "venv".
+- Keep lists small; do not explode subpackages under vendor directories.
+`
 
 type M0 struct{ LLM llm.LLMClient }
 
-// Run now accepts a single M0In to mirror M1's API.
 func (p *M0) Run(ctx context.Context, in t.M0In) (t.M0Out, error) {
-    hints := in.Hints
-    if hints == nil {
-        hints = &t.M0Hints{}
-    }
-    limits := in.Limits
-    if limits == nil {
-        limits = &t.M0Limits{MaxNext: 8}
-    }
     input := map[string]any{
-        "file_index": in.FileIndex,
-        "md_docs":    in.MDDocs,
-        "hints":      hints,
-        "limits":     map[string]any{"max_next": limits.MaxNext},
+        "ext_counts":  in.ExtCounts,
+        "dirs_depth1": in.DirsDepth1,
+        "dirs_depth2": in.DirsDepth2,
     }
     raw, err := p.LLM.GenerateJSON(ctx, promptM0, input)
     if err != nil {
@@ -103,7 +51,7 @@ func (p *M0) Run(ctx context.Context, in t.M0In) (t.M0Out, error) {
     }
     var out t.M0Out
     if err := json.Unmarshal(raw, &out); err != nil {
-        return t.M0Out{}, fmt.Errorf("M0 JSON invalid: %w", err)
+        return t.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
     }
     return out, nil
 }

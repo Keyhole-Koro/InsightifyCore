@@ -2,6 +2,7 @@ package types
 
 type X0In struct {
     ExtReport []ExtReportEntry `json:"ext_report"`
+    RuntimeConfigRoots []string `json:"runtime_config_roots,omitempty"`
     ExistingSpecs any `json:"existing_specs,omitempty"`
 }
 
