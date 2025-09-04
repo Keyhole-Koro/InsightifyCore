@@ -220,5 +220,3 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 		},
 	}
 }
-
-// --- thin adapters so this package doesn

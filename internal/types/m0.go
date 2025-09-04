@@ -14,5 +14,8 @@ type M0Out struct {
     LibraryRoots    []string `json:"library_roots"`
     ConfigRoots     []string `json:"config_roots"`
     RuntimeConfigRoots []string `json:"runtime_config_roots,omitempty"`
+    // Optional: specific files that represent configuration and runtime-config
+    ConfigFiles        []string `json:"config_files,omitempty"`
+    RuntimeConfigFiles []string `json:"runtime_config_files,omitempty"`
     Notes           []string `json:"notes,omitempty"`
 }

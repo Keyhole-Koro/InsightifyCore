@@ -1,0 +1,33 @@
+{
+  "name": "Insightify Dev",
+  "image": "mcr.microsoft.com/devcontainers/go:1-1.24-bookworm",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "containerEnv": {
+    "GOFLAGS": "-mod=mod"
+  },
+  "mounts": [
+    "type=volume,source=go-pkg-cache,target=/go/pkg",
+    "type=volume,source=go-build-cache,target=/home/vscode/.cache/go-build"
+  ],
+  "postCreateCommand": "go mod download && go install github.com/go-delve/delve/cmd/dlv@latest",
+  "postStartCommand": "sudo mkdir -p /home/vscode/.cache/go-build /go/pkg/mod && sudo chown -R vscode:vscode /home/vscode/.cache/go-build /go/pkg/mod",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.toolsManagement.autoUpdate": true,
+        "go.testExplorer.discoveryMode": "workspace",
+        "go.gopath": "/go",
+        "go.goroot": "/usr/local/go",
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

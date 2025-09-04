@@ -1,18 +1,15 @@
 package types
 
 type X0In struct {
-    ExtReport []ExtReportEntry `json:"ext_report"`
-    RuntimeConfigRoots []string `json:"runtime_config_roots,omitempty"`
-    ExistingSpecs any `json:"existing_specs,omitempty"`
+	ExtReport          []ExtReportEntry `json:"ext_report"`
+	RuntimeConfigFiles []string         `json:"runtime_config_files,omitempty"`
+	ExistingSpecs      any              `json:"existing_specs,omitempty"`
 }
 
 // ExtReportEntry summarizes per-extension evidence to help generate extraction rules.
 type ExtReportEntry struct {
-    Ext          string   `json:"ext"`
-    Count        int      `json:"count"`
-    SamplePaths  []string `json:"sample_paths"`
-    HeadSnippet  string   `json:"head_snippet"`
-    RandomLines  []string `json:"random_lines"`
+	Ext   string `json:"ext"`
+	Count int    `json:"count"`
 }
 
 type X0Out struct {
@@ -40,11 +37,11 @@ type BlockComment struct {
 }
 
 type X0Rule struct {
-	ID       string         `json:"id"`
-	Kind     string         `json:"kind"`  // "bind" only
-	Style    string         `json:"style"` // "regex" or "regex+ebnf"
-	Pattern  string         `json:"pattern"`
-	Captures map[string]int `json:"captures"`          // e.g. {"module":1}
+	ID       string            `json:"id"`
+	Kind     string            `json:"kind"`  // "bind" only
+	Style    string            `json:"style"` // "regex" or "regex+ebnf"
+	Pattern  string            `json:"pattern"`
+	Captures map[string]int    `json:"captures"`        // e.g. {"module":1}
 	Attrs    map[string]string `json:"attrs,omitempty"` // e.g. {"surface":"module"}
 	Tests    struct {
 		Pos []string `json:"pos"`

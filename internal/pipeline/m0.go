@@ -17,13 +17,15 @@ Input JSON provides:
 - dirs_depth2: second-level directories (two-segment paths like "src/app")
 
 Task:
-Return STRICT JSON identifying likely roots for:
+Return STRICT JSON identifying likely roots and key files for:
 {
-  "main_source_roots":   ["string"],  // primary application code dirs
-  "library_roots":       ["string"],  // internal/shared libraries OR third-party vendor/dependency roots to be skipped in analysis (e.g., node_modules, vendor, third_party)
-  "config_roots":        ["string"],  // configuration, infra, or ops (e.g., .github, config/, scripts/)
-  "runtime_config_roots": ["string"], // paths that influence runtime behavior (env/templates/migrations/etc.)
-  "notes":               ["string"]   // short rationale for each category
+  "main_source_roots":     ["string"],  // primary application code dirs
+  "library_roots":         ["string"],  // internal/shared libraries OR third-party vendor/dependency roots to be skipped in analysis (e.g., node_modules, vendor, third_party)
+  "config_roots":          ["string"],  // configuration, infra, or ops (e.g., .github, config/, scripts/)
+  "runtime_config_roots":  ["string"],  // paths that influence runtime behavior (env/templates/migrations/etc.)
+  "config_files":          ["string"],  // specific config files (e.g., ".env", "docker-compose.yml", "tsconfig.json")
+  "runtime_config_files":  ["string"],  // files that alter runtime behavior (e.g., env files, migrations, templates)
+  "notes":                 ["string"]   // short rationale for each category
 }
 
 Rules:
@@ -32,9 +34,10 @@ Rules:
 - If uncertain, keep the list small and add a note.
 - JSON only; no comments or trailing commas.
 - Treat large dependency/vendor directories as library_roots when present:
-- prefer top-level roots only (e.g., "node_modules", not "node_modules/*").
-- Common examples: "node_modules", "vendor", "third_party", ".venv", "venv".
-- Keep lists small; do not explode subpackages under vendor directories.
+ - prefer top-level roots only (e.g., "node_modules", not "node_modules/*").
+ - Common examples: "node_modules", "vendor", "third_party", ".venv", "venv".
+ - Also list a small set of representative config_files and runtime_config_files when obvious.
+ - Keep lists small; do not explode subpackages under vendor directories.
 `
 
 type M0 struct{ LLM llm.LLMClient }

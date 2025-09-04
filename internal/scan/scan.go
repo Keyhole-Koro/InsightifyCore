@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -65,6 +66,13 @@ func Scan(root string, cb VisitFunc) error {
 // If CacheSubtrees is true, it uses subtree caching and can re-scan only changed prefixes.
 func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 	rClean := filepath.Clean(root)
+
+	// Confirm the root exists and is a directory before scanning or serving cache.
+	if fi, err := os.Stat(rClean); err != nil {
+		return err
+	} else if !fi.IsDir() {
+		return fmt.Errorf("scan root is not a directory: %s", rClean)
+	}
 
 	// If subtree caching is disabled and not bypassed, fall back to the original whole-cache path.
 	if !opts.CacheSubtrees && !opts.BypassCache {

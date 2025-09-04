@@ -21,6 +21,8 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
             "main_source_roots": []string{"src", "internal"},
             "library_roots": []string{"third_party", "vendor"},
             "config_roots": []string{".github", "scripts"},
+            "config_files": []string{".env.example"},
+            "runtime_config_files": []string{},
             "notes": []string{"fake m0 output"},
         }
     case "m1":
@@ -84,4 +86,3 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
     b, _ := json.Marshal(obj)
     return json.RawMessage(b), nil
 }
-
