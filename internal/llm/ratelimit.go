@@ -81,3 +81,9 @@ func (l *rpsLimiter) Stop() {
     }
     close(l.stopCh)
 }
+
+// NewLimiter exposes a minimal Limiter backed by an internal rpsLimiter.
+// If rps <= 0, the returned Limiter is nil and Acquire is a no-op when checked.
+func NewLimiter(rps float64, burst int) Limiter {
+    return newRPSLimiter(rps, burst)
+}

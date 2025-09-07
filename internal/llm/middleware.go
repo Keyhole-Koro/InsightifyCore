@@ -42,12 +42,13 @@ type rateLimited struct {
 func (c *rateLimited) Name() string { return c.next.Name() }
 func (c *rateLimited) Close() error { return c.next.Close() }
 func (c *rateLimited) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-	if c.rl != nil {
-		if err := c.rl.Acquire(ctx); err != nil {
-			return nil, err
-		}
-	}
-	return c.next.GenerateJSON(ctx, prompt, input)
+    if c.rl != nil {
+        // Prefer reserved credits embedded in the context.
+        if !TakeCredit(ctx) {
+            if err := c.rl.Acquire(ctx); err != nil { return nil, err }
+        }
+    }
+    return c.next.GenerateJSON(ctx, prompt, input)
 }
 
 // RateLimitFromEnv reads RPS/BURST from environment variables with the
