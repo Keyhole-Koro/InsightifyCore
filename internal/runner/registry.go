@@ -26,9 +26,8 @@ type Env struct {
 
 	LLM llm.LLMClient
 
-	Index     []t.FileIndexEntry
-	MDDocs    []t.MDDoc
-	ExtCounts map[string]int
+	Index  []t.FileIndexEntry
+	MDDocs []t.MDDoc
 
 	StripImgMD   *regexp.Regexp
 	StripImgHTML *regexp.Regexp
@@ -40,9 +39,9 @@ type PhaseSpec struct {
 	File        string                                           // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, env *Env) (any, error) // produce logical input
 	Run         func(ctx context.Context, in any, env *Env) (any, error)
-	Fingerprint func(in any, env *Env) string                    // stable hash for caching
-	Downstream  []string                                         // phases to invalidate when forced
-	Strategy    CacheStrategy                                    // how to cache (json, versioned, none)
+	Fingerprint func(in any, env *Env) string // stable hash for caching
+	Downstream  []string                      // phases to invalidate when forced
+	Strategy    CacheStrategy                 // how to cache (json, versioned, none)
 }
 
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
@@ -65,8 +64,12 @@ type cacheMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (jsonStrategy) metaPath(spec PhaseSpec, env *Env) string { return filepath.Join(env.OutDir, spec.Key+".meta.json") }
-func (jsonStrategy) outPath(spec PhaseSpec, env *Env) string  { return filepath.Join(env.OutDir, spec.File) }
+func (jsonStrategy) metaPath(spec PhaseSpec, env *Env) string {
+	return filepath.Join(env.OutDir, spec.Key+".meta.json")
+}
+func (jsonStrategy) outPath(spec PhaseSpec, env *Env) string {
+	return filepath.Join(env.OutDir, spec.File)
+}
 
 func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (any, bool) {
 	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
@@ -113,37 +116,39 @@ func (s jsonStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *Env) 
 type versionedStrategy struct{}
 
 func (versionedStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (any, bool) {
-    // Never reuse cache for versioned phases (consistent with previous x0 behavior).
-    return nil, false
+	// Never reuse cache for versioned phases (consistent with previous x0 behavior).
+	return nil, false
 }
 
 func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out any, inputFP string) error {
-    // Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
-    versioned := fmt.Sprintf("%s_v1.json", spec.Key)
-    versionedPath := filepath.Join(env.OutDir, versioned)
-    latestPath := filepath.Join(env.OutDir, spec.File)
+	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
+	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
+	versionedPath := filepath.Join(env.OutDir, versioned)
+	latestPath := filepath.Join(env.OutDir, spec.File)
 
-    if b, e := json.MarshalIndent(out, "", "  "); e == nil {
-        _ = os.WriteFile(versionedPath, b, 0o644)
-        _ = os.WriteFile(latestPath, b, 0o644)
-    }
-    // meta is optional for versioned write; record last inputs for debugging
-    mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
-    mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
-    _ = os.WriteFile(mp, mb, 0o644)
+	if b, e := json.MarshalIndent(out, "", "  "); e == nil {
+		_ = os.WriteFile(versionedPath, b, 0o644)
+		_ = os.WriteFile(latestPath, b, 0o644)
+	}
+	// meta is optional for versioned write; record last inputs for debugging
+	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
+	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
+	_ = os.WriteFile(mp, mb, 0o644)
 
-    // Best-effort pruning of other versions (x0_vN.json where N != 1)
-    entries, _ := os.ReadDir(env.OutDir)
-    re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
-    for _, e := range entries {
-        if e.IsDir() { continue }
-        name := e.Name()
-        if m := re.FindStringSubmatch(name); len(m) == 2 && name != versioned {
-            _ = os.Remove(filepath.Join(env.OutDir, name))
-        }
-    }
-    log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versionedPath, latestPath)
-    return nil
+	// Best-effort pruning of other versions (x0_vN.json where N != 1)
+	entries, _ := os.ReadDir(env.OutDir)
+	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if m := re.FindStringSubmatch(name); len(m) == 2 && name != versioned {
+			_ = os.Remove(filepath.Join(env.OutDir, name))
+		}
+	}
+	log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versionedPath, latestPath)
+	return nil
 }
 
 func (versionedStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *Env) error {
@@ -303,21 +308,25 @@ func FilterMDDocsByRoots(docs []t.MDDoc, roots []string) []t.MDDoc {
 }
 
 func Min(a, b int) int {
-    if a < b {
-        return a
-    }
-    return b
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // baseNames returns the final path segment for each provided path.
 // Inputs may be repo-relative or absolute; empty segments are ignored.
 func baseNames(paths ...string) []string {
-    out := make([]string, 0, len(paths))
-    for _, p := range paths {
-        p = strings.TrimSpace(p)
-        if p == "" { continue }
-        b := filepath.Base(filepath.ToSlash(p))
-        if b != "" { out = append(out, b) }
-    }
-    return out
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		b := filepath.Base(filepath.ToSlash(p))
+		if b != "" {
+			out = append(out, b)
+		}
+	}
+	return out
 }

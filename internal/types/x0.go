@@ -1,50 +1,40 @@
 package types
 
 type X0In struct {
-	ExtReport          []ExtReportEntry `json:"ext_report"`
-	RuntimeConfigFiles []string         `json:"runtime_config_files,omitempty"`
-	ExistingSpecs      any              `json:"existing_specs,omitempty"`
+	ExtCounts []ExtCount `json:"ext_counts"`
+	Roots     M0Out      `json:"roots"`
 }
 
-// ExtReportEntry summarizes per-extension evidence to help generate extraction rules.
-type ExtReportEntry struct {
-	Ext   string `json:"ext"`
-	Count int    `json:"count"`
+type RuntimeConfig struct {
+	Path    string `json:"path"`    // e.g. "config/tsconfig.json"
+	Ext     string `json:"ext"`     // e.g. ".json"
+	Content string `json:"content"` // raw text content (may be truncated)
 }
 
 type X0Out struct {
-	Version int      `json:"version"`
-	Specs   []X0Spec `json:"specs"`
+    Specs []ExtractorSpec `json:"specs"`
 }
 
-type X0Spec struct {
-	Ext           string        `json:"ext"`
-	Language      string        `json:"language"`
-	CommentStyles *CommentStyle `json:"comment_styles,omitempty"`
-	StringDelims  []string      `json:"string_delims,omitempty"`
-	Rules         []X0Rule      `json:"rules"`
-	Notes         []string      `json:"notes,omitempty"`
-	Confidence    float64       `json:"confidence"`
+type ExtractorSpec struct {
+	Ext            string         `json:"ext"`      // e.g. ".js"
+	Language       string         `json:"language"` // e.g. "JavaScript"
+	Rules          Rules          `json:"rules"`
+	NormalizeHints NormalizeHints `json:"normalize_hints"`
 }
 
-type CommentStyle struct {
-	Line  []string       `json:"line,omitempty"`
-	Block []BlockComment `json:"block,omitempty"`
-}
-type BlockComment struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
+// X0Spec is an alias for ExtractorSpec for compatibility with older code.
+type X0Spec = ExtractorSpec
+
+type Rules struct {
+	Keywords  []string `json:"keywords"`   // tokens like "import","from","require"
+	PathSplit []string `json:"path_split"` // separators to split around the path
 }
 
-type X0Rule struct {
-	ID       string            `json:"id"`
-	Kind     string            `json:"kind"`  // "bind" only
-	Style    string            `json:"style"` // "regex" or "regex+ebnf"
-	Pattern  string            `json:"pattern"`
-	Captures map[string]int    `json:"captures"`        // e.g. {"module":1}
-	Attrs    map[string]string `json:"attrs,omitempty"` // e.g. {"surface":"module"}
-	Tests    struct {
-		Pos []string `json:"pos"`
-		Neg []string `json:"neg"`
-	} `json:"tests"`
+type NormalizeHints struct {
+	Alias []AliasPair `json:"alias"` // optional alias normalization map
+}
+
+type AliasPair struct {
+	Original   string `json:"original"`
+	Normalized string `json:"normalized"`
 }

@@ -14,8 +14,8 @@ type OpenedFile struct {
 
 // FocusQuestion represents a single confirmation target.
 type FocusQuestion struct {
-	Path     string `json:"path,omitempty"`     // optional: where this question points to
-	Question string `json:"question"`           // natural language question
+	Path     string `json:"path,omitempty"` // optional: where this question points to
+	Question string `json:"question"`       // natural language question
 }
 
 // FileIndexEntry is a minimal index row for search hints.
@@ -31,4 +31,9 @@ type FileIndexEntry struct {
 type MDDoc struct {
 	Path string `json:"path"`
 	Text string `json:"text"`
+}
+
+type ExtCount struct {
+	Ext   string `json:"ext"`   // e.g. ".js"
+	Count int    `json:"count"` // frequency reference
 }

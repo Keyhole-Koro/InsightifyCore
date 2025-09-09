@@ -23,13 +23,13 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
 				// Scan for m0: depth-limited to 2
 				opts := scan.Options{MaxDepth: 2}
-				ext := map[string]int{}
+				extCounts := map[string]int{}
 				var idx []t.FileIndexEntry
 				_ = scan.ScanWithOptions(env.Repo, opts, func(f scan.FileVisit) {
 					if f.IsDir {
 						return
 					}
-					ext[f.Ext]++
+					extCounts[f.Ext]++
 					idx = append(idx, t.FileIndexEntry{Path: f.Path, Size: f.Size})
 				})
 				// Build d1/d2 directory sets
@@ -55,7 +55,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 				for k := range d2set {
 					d2 = append(d2, k)
 				}
-				return t.M0In{ExtCounts: ext, DirsDepth1: d1, DirsDepth2: d2}, nil
+				return t.M0In{ExtCounts: extCounts, DirsDepth1: d1, DirsDepth2: d2}, nil
 			},
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
 				ctx = llm.WithPhase(ctx, "m0")

@@ -1,11 +1,11 @@
 package pipeline
 
 import (
-	"bufio"
-	"os"
+	"context"
 	"path/filepath"
-	"regexp"
+	"sort"
 	"strings"
+	"sync"
 
 	"insightify/internal/scan"
 	t "insightify/internal/types"
@@ -15,127 +15,50 @@ import (
 // This pipeline does not use an LLM — it is entirely programmatic.
 type X1 struct{}
 
-func (X1) Run(in t.X1In) (t.X1Out, error) {
-	// Build ext -> compiled rules
-	type rule struct {
-		re       *regexp.Regexp
-		modGroup int // capture index for module; defaults to 1
-		spec     t.X0Spec
-	}
-	rulesByExt := map[string][]rule{}
-	for _, s := range in.Specs {
-		// Determine module capture index per rule
-		modIdx := 1
-		for _, r := range s.Rules {
-			if g, ok := r.Captures["module"]; ok {
-				modIdx = g
-			} else {
-				modIdx = 1
-			}
-			// compile
-			re, err := regexp.Compile(r.Pattern)
-			if err != nil {
-				continue // skip invalid
-			}
-			rulesByExt[strings.ToLower(s.Ext)] = append(rulesByExt[strings.ToLower(s.Ext)], rule{re: re, modGroup: modIdx, spec: s})
-		}
+func (X1) Run(ctx context.Context, in t.X1In) (t.X1Out, error) {
+
+	folderNames, err := fetchFolderNames(ctx, in.Repo, in.Roots)
+	if err != nil {
+		return t.X1Out{}, err
 	}
 
-	// Build allowed set from provided index (optional) and for existence checks
-	filesSet := map[string]struct{}{}
-	for _, f := range in.Index {
-		filesSet[filepath.ToSlash(f.Path)] = struct{}{}
-	}
+}
 
-	out := t.X1Out{}
+func fetchFolderNames(ctx context.Context, repo string, roots t.M0Out) ([]string, error) {
+	dirSet := map[string]struct{}{}
+	nameSet := map[string]struct{}{}
+	var mu sync.Mutex
 
-	// Use scan.ScanWithOptions to traverse repo files; honor provided index when non-empty
-	_ = scan.ScanWithOptions(in.Repo, scan.Options{}, func(fv scan.FileVisit) {
-		if fv.IsDir {
+	sopts := scan.Options{IgnoreDirs: roots.BuildRoots, BypassCache: true}
+	_ = scan.ScanWithOptions(repo, sopts, func(f scan.FileVisit) {
+		if !f.IsDir {
 			return
 		}
-		// If an index was provided, restrict processing to those files
-		if len(filesSet) > 0 {
-			if _, ok := filesSet[filepath.ToSlash(fv.Path)]; !ok {
-				return
-			}
-		}
-		ext := strings.ToLower(filepath.Ext(fv.Path))
-		rs := rulesByExt[ext]
-		if len(rs) == 0 {
+		if f.Path == "." || f.Path == "" {
 			return
 		}
-		f, err := os.Open(fv.AbsPath)
-		if err != nil {
-			return
+		p := filepath.ToSlash(f.Path)
+		mu.Lock()
+		dirSet[p] = struct{}{}
+		base := filepath.Base(p)
+		base = strings.TrimSpace(base)
+		if base != "" {
+			nameSet[base] = struct{}{}
 		}
-		out.Files++
-		scn := bufio.NewScanner(f)
-		scn.Buffer(make([]byte, 0, 64*1024), 2*1024*1024)
-		for scn.Scan() {
-			line := scn.Text()
-			for _, r := range rs {
-				if m := r.re.FindStringSubmatch(line); m != nil {
-					mod := ""
-					if r.modGroup >= 0 && r.modGroup < len(m) {
-						mod = m[r.modGroup]
-					}
-					edge := t.X1Edge{From: filepath.ToSlash(fv.Path), Module: mod}
-					if strings.HasPrefix(mod, ".") || strings.HasPrefix(mod, "/") {
-						baseDir := filepath.Dir(fv.Path)
-						cand := filepath.Clean(filepath.Join(baseDir, mod))
-						// Prefer resolution via provided index set; if empty, fallback to filesystem checks
-						if _, ok := filesSet[filepath.ToSlash(cand)]; ok {
-							edge.To = filepath.ToSlash(cand)
-							edge.Reason = "resolved exact"
-						} else {
-							resolved := false
-							for _, e := range []string{".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"} {
-								if _, ok := filesSet[filepath.ToSlash(cand+e)]; ok {
-									edge.To = filepath.ToSlash(cand + e)
-									edge.Reason = "resolved with ext " + e
-									resolved = true
-									break
-								}
-								ix := filepath.Join(cand, "index"+e)
-								if _, ok := filesSet[filepath.ToSlash(ix)]; ok {
-									edge.To = filepath.ToSlash(ix)
-									edge.Reason = "resolved index with ext " + e
-									resolved = true
-									break
-								}
-							}
-							if !resolved && len(filesSet) == 0 {
-								// fallback: check filesystem
-								if _, err := os.Stat(filepath.Join(in.Repo, filepath.FromSlash(cand))); err == nil {
-									edge.To = filepath.ToSlash(cand)
-									edge.Reason = "resolved exact (fs)"
-								} else {
-									for _, e := range []string{".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"} {
-										if _, err := os.Stat(filepath.Join(in.Repo, filepath.FromSlash(cand+e))); err == nil {
-											edge.To = filepath.ToSlash(cand + e)
-											edge.Reason = "resolved with ext (fs) " + e
-											break
-										}
-										ix := filepath.Join(cand, "index"+e)
-										if _, err := os.Stat(filepath.Join(in.Repo, filepath.FromSlash(ix))); err == nil {
-											edge.To = filepath.ToSlash(ix)
-											edge.Reason = "resolved index with ext (fs) " + e
-											break
-										}
-									}
-								}
-							}
-						}
-					} else {
-						edge.Reason = "external module"
-					}
-					out.Edges = append(out.Edges, edge)
-					out.Matches++
-				}
-			}
-		}
-		_ = f.Close()
+		mu.Unlock()
 	})
-	return out, nil
+
+	dirs := make([]string, 0, len(dirSet))
+	for d := range dirSet {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+
+	names := make([]string, 0, len(nameSet))
+	for n := range nameSet {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	return names, nil
 }

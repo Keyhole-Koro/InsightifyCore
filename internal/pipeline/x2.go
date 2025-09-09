@@ -1,117 +1,138 @@
 package pipeline
 
 import (
-    "path/filepath"
-    "sort"
-    "strings"
+	"context"
+	"fmt"
 
-    t "insightify/internal/types"
+	"insightify/internal/llm"
+	"insightify/internal/scheduler"
+	t "insightify/internal/types"
 )
 
-// X2 sorts files by fewest dependencies and emits detailed per-file dependency objects.
-type X2 struct{}
-
-func (X2) Run(in t.X2In) (t.X2Out, error) {
-    // Build set of all candidate files and lookup maps from index
-    all := map[string]struct{}{}
-    sizes := map[string]int64{}
-    exts := map[string]string{}
-    langs := map[string]string{}
-    for _, it := range in.Index {
-        p := filepath.ToSlash(it.Path)
-        all[p] = struct{}{}
-        sizes[p] = it.Size
-        e := strings.ToLower(filepath.Ext(p))
-        if it.Ext != "" { e = strings.ToLower(it.Ext) }
-        exts[p] = e
-        if it.Language != "" {
-            langs[p] = it.Language
-        } else {
-            langs[p] = languageForExt(e)
-        }
-    }
-
-    // Forward and reverse internal dependency maps
-    fwd := map[string]map[string]struct{}{}
-    rev := map[string]map[string]struct{}{}
-    for _, e := range in.Graph.Edges {
-        from := filepath.ToSlash(strings.TrimSpace(e.From))
-        to := filepath.ToSlash(strings.TrimSpace(e.To))
-        if from == "" || to == "" { // only consider resolved internal edges
-            continue
-        }
-        if _, ok := fwd[from]; !ok { fwd[from] = map[string]struct{}{} }
-        if _, ok := rev[to]; !ok { rev[to] = map[string]struct{}{} }
-        fwd[from][to] = struct{}{}
-        rev[to][from] = struct{}{}
-    }
-
-    // Build nodes list for sorting (by fewest internal deps)
-    var nodes []t.X2Node
-    for p := range all {
-        n := 0
-        if m, ok := fwd[p]; ok { n = len(m) }
-        nodes = append(nodes, t.X2Node{Path: p, InternalDeps: n})
-    }
-    sort.Slice(nodes, func(i, j int) bool {
-        if nodes[i].InternalDeps != nodes[j].InternalDeps {
-            return nodes[i].InternalDeps < nodes[j].InternalDeps
-        }
-        return nodes[i].Path < nodes[j].Path
-    })
-
-    // Build detailed FileWithDependency objects in the same order
-    files := make([]t.FileWithDependency, 0, len(nodes))
-    for _, n := range nodes {
-        req := setKeys(fwd[n.Path])
-        rby := setKeys(rev[n.Path])
-        sort.Strings(req)
-        sort.Strings(rby)
-        files = append(files, t.FileWithDependency{
-            Path:       n.Path,
-            Size:       sizes[n.Path],
-            Language:   langs[n.Path],
-            Ext:        exts[n.Path],
-            Requires:   req,
-            RequiredBy: rby,
-        })
-    }
-
-    return t.X2Out{Sorted: nodes, Files: files}, nil
+type X2 struct {
+	LLM         llm.LLMClient
+	Broker      llm.PermitBroker
+	ReserveWith scheduler.ReservePolicy
 }
 
-func languageForExt(ext string) string {
-    switch strings.ToLower(ext) {
-    case ".ts", ".tsx":
-        return "TypeScript"
-    case ".js", ".jsx", ".mjs", ".cjs":
-        return "JavaScript"
-    case ".go":
-        return "Go"
-    case ".py":
-        return "Python"
-    case ".rs":
-        return "Rust"
-    case ".java":
-        return "Java"
-    case ".kt":
-        return "Kotlin"
-    case ".swift":
-        return "Swift"
-    case ".c", ".h":
-        return "C"
-    case ".cpp", ".hpp", ".cc", ".hh":
-        return "C++"
-    case ".sh":
-        return "Shell"
-    default:
-        return ""
-    }
+// BiMap keeps a bidirectional mapping between string keys and dense int IDs.
+type BiMap struct {
+	s2i map[string]int
+	i2s []string
+}
+
+func NewBiMap() *BiMap {
+	return &BiMap{
+		s2i: make(map[string]int),
+		i2s: make([]string, 0),
+	}
+}
+
+// Ensure returns the existing ID for key or assigns a new dense ID [0..n).
+func (b *BiMap) Ensure(key string) int {
+	if id, ok := b.s2i[key]; ok {
+		return id
+	}
+	id := len(b.i2s)
+	b.s2i[key] = id
+	b.i2s = append(b.i2s, key)
+	return id
+}
+
+func (b *BiMap) GetID(key string) (int, bool) {
+	id, ok := b.s2i[key]
+	return id, ok
+}
+
+func (b *BiMap) GetKey(id int) (string, bool) {
+	if id < 0 || id >= len(b.i2s) {
+		return "", false
+	}
+	return b.i2s[id], true
+}
+
+func (b *BiMap) Size() int { return len(b.i2s) }
+
+// BuildAdjacency builds a dense-ID adjacency from edges.
+// - Skips edges with empty From or To (tune policy as needed).
+func BuildAdjacency(edges []t.X1Edge) ([][]int, *BiMap) {
+	b := NewBiMap()
+
+	// 1) First pass: assign IDs to all endpoints to know final size.
+	for _, e := range edges {
+		if e.From != "" {
+			b.Ensure(e.From)
+		}
+		if e.To != "" {
+			b.Ensure(e.To)
+		}
+	}
+
+	// 2) Allocate adjacency with the final size.
+	n := b.Size()
+	adj := make([][]int, n)
+
+	// 3) Second pass: add edges (skip unresolved).
+	for _, e := range edges {
+		if e.From == "" || e.To == "" {
+			continue // skip unresolved externals
+		}
+		// Edge direction: dependency -> dependent (B -> A when A imports B)
+		dep := b.Ensure(e.To)
+		depd := b.Ensure(e.From)
+		adj[dep] = append(adj[dep], depd)
+	}
+	return adj, b
+}
+
+func WeightTemporary(id int) int {
+	// Temporary weight function: all weights are 1.
+	return 1
+}
+
+func SinksAsTargets(adj [][]int) map[int]struct{} {
+	t := make(map[int]struct{})
+	for u := range adj {
+		if len(adj[u]) == 0 {
+			t[u] = struct{}{}
+		}
+	}
+	return t
+}
+
+func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
+
+	// Optionally invoke scheduler to reserve permits per chunk (no-op if Broker nil)
+	adj, _ := BuildAdjacency(in.Dependencies)
+	targets := SinksAsTargets(adj)
+	runner := func(ctx context.Context, chunk []int) (<-chan struct{}, error) {
+		ch := make(chan struct{})
+		close(ch)
+		return ch, nil
+	}
+	if err := scheduler.ScheduleHeavierStart(ctx, scheduler.Params{
+		Adj:         adj,
+		WeightOf:    WeightTemporary,
+		Targets:     targets,
+		CapPerChunk: 5,
+		NParallel:   2,
+		Run:         runner,
+		Broker:      x.Broker,
+		ReserveWith: x.ReserveWith,
+	}); err != nil {
+		return t.X2Out{}, fmt.Errorf("schedule failed: %w", err)
+	}
+
+	return t.X2Out{Sorted: nodes, Files: files}, nil
 }
 
 func setKeys(m map[string]struct{}) []string {
-    if len(m) == 0 { return []string{} }
-    out := make([]string, 0, len(m))
-    for k := range m { out = append(out, k) }
-    return out
+	if len(m) == 0 {
+		return []string{}
+	}
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/joho/godotenv"
 
 	"insightify/internal/llm"
- 
 
 	"insightify/internal/runner"
 )
@@ -23,8 +22,8 @@ func main() {
 	outDir := flag.String("out", "artifacts", "output directory")
 	model := flag.String("model", "gemini-2.5-pro", "Gemini model id")
 	fake := flag.Bool("fake", false, "use a fake LLM (no network)")
-    phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|x0|x1|x2)")
-    forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|x0|x1|x2)")
+	phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|x0|x1|x2)")
+	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|x0|x1|x2)")
 	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
 	flag.Parse()
 
@@ -64,8 +63,8 @@ func main() {
 		llm.WithLogging(nil),
 	)
 	defer llmCli.Close()
-	
-    // Scanning is performed per-phase inside runner.BuildRegistry via PlanScan.
+
+	// Scanning is performed per-phase inside runner.BuildRegistry via PlanScan.
 
 	// ----- Build environment & registry -----
 	env := &runner.Env{
@@ -77,7 +76,6 @@ func main() {
 		LLM:          llmCli,
 		Index:        nil,
 		MDDocs:       nil,
-		ExtCounts:    map[string]int{},
 		StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
 		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
 	}
@@ -90,9 +88,9 @@ func main() {
 	// ----- Execute requested phase -----
 	key := strings.ToLower(strings.TrimSpace(*phase))
 	spec, ok := reg[key]
-    if !ok {
-        log.Fatalf("unknown --phase: %s (use m0|m1|m2|x0|x1|x2)", *phase)
-    }
+	if !ok {
+		log.Fatalf("unknown --phase: %s (use m0|m1|m2|x0|x1|x2)", *phase)
+	}
 	if err := runner.ExecutePhase(ctx, spec, env, reg); err != nil {
 		log.Fatal(err)
 	}
