@@ -2,137 +2,161 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"path/filepath"
+	"strings"
 
-	"insightify/internal/llm"
-	"insightify/internal/scheduler"
+	"insightify/internal/scan"
 	t "insightify/internal/types"
 )
 
-type X2 struct {
-	LLM         llm.LLMClient
-	Broker      llm.PermitBroker
-	ReserveWith scheduler.ReservePolicy
+const promptX2 = `You are Stage X2 of a static analysis pipeline.
+
+Goal
+- Given code snippets around import/include statements, clarify dependency relationships per file.
+- Distinguish internal (repo) dependencies from external libraries.
+
+Input (JSON)
+{
+  "snippets": [
+    {"file_path": "src/a.ts", "start_line": 8, "end_line": 16, "code": "..."}
+  ]
 }
 
-// BiMap keeps a bidirectional mapping between string keys and dense int IDs.
-type BiMap struct {
-	s2i map[string]int
-	i2s []string
+Task
+- For each snippet's file, extract dependencies evident in the provided code.
+- For each dependency, output:
+  - source: raw module string as seen in the code (e.g., "./util", "react").
+  - is_library: true when the dependency is an external package; false for internal repo usage.
+  - resolved_path: repo-relative path when internal and reasonably inferable; omit if unknown.
+  - symbols: identifiers imported/used for this source (e.g., ["Foo", "default"]).
+  - lines: snippet line numbers that evidence this dependency.
+  - reason: short phrase stating why you classified it that way.
+- Prefer omission over guessing. Never invent missing files.
+
+Heuristics
+- Internal when path starts with "./" or "../" or clearly refers to a repo path.
+- Common resolution: "foo" → "foo.ts|tsx|js|jsx|mjs|cjs" or "foo/index.ts|js|..." when obviously internal; otherwise omit.
+- Barrel files (index.*) are allowed; still prefer a concrete file when inferable.
+- Bare package names (e.g., "react", "lodash", "@scope/pkg") are external libraries.
+- Framework-specific import styles are libraries unless clearly project-local.
+
+Output (STRICT JSON; no comments; omit empty fields)
+{
+  "dependencies": [
+    {
+      "file": "src/a.ts",
+      "imports": [
+        {
+          "source": "./util",
+          "resolved_path": "src/util.ts",
+          "is_library": false,
+          "symbols": ["Foo"],
+          "lines": [9],
+          "reason": "relative import"
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {"file": "src/a.ts", "source": "@alias/core", "why": "aliased path; insufficient info"}
+  ]
 }
 
-func NewBiMap() *BiMap {
-	return &BiMap{
-		s2i: make(map[string]int),
-		i2s: make([]string, 0),
-	}
-}
+Constraints
+- JSON only; no trailing commas. Use forward slashes in paths.
+- It is acceptable to return zero dependencies when none are evident.
+- Input may be chunked; treat independently. Duplicates across chunks are fine.
 
-// Ensure returns the existing ID for key or assigns a new dense ID [0..n).
-func (b *BiMap) Ensure(key string) int {
-	if id, ok := b.s2i[key]; ok {
-		return id
-	}
-	id := len(b.i2s)
-	b.s2i[key] = id
-	b.i2s = append(b.i2s, key)
-	return id
-}
+Example
+Input:
+{"snippets":[{"file_path":"src/a.ts","start_line":8,"end_line":16,"code":"import {Foo} from './util'\nimport React from 'react'\n"}]}
+Output:
+{
+  "dependencies": [
+    {"file":"src/a.ts","imports":[
+      {"source":"./util","resolved_path":"src/util.ts","is_library":false,"symbols":["Foo"],"lines":[8],"reason":"relative import"},
+      {"source":"react","is_library":true,"symbols":["default"],"lines":[9],"reason":"bare package import"}
+    ]}
+  ]
+}`
 
-func (b *BiMap) GetID(key string) (int, bool) {
-	id, ok := b.s2i[key]
-	return id, ok
-}
+// X2 uses LLM to refine dependency relationships using code snippets.
+type X2 struct{ LLM llmClient }
 
-func (b *BiMap) GetKey(id int) (string, bool) {
-	if id < 0 || id >= len(b.i2s) {
-		return "", false
-	}
-	return b.i2s[id], true
-}
-
-func (b *BiMap) Size() int { return len(b.i2s) }
-
-// BuildAdjacency builds a dense-ID adjacency from edges.
-// - Skips edges with empty From or To (tune policy as needed).
-func BuildAdjacency(edges []t.X1Edge) ([][]int, *BiMap) {
-	b := NewBiMap()
-
-	// 1) First pass: assign IDs to all endpoints to know final size.
-	for _, e := range edges {
-		if e.From != "" {
-			b.Ensure(e.From)
-		}
-		if e.To != "" {
-			b.Ensure(e.To)
-		}
-	}
-
-	// 2) Allocate adjacency with the final size.
-	n := b.Size()
-	adj := make([][]int, n)
-
-	// 3) Second pass: add edges (skip unresolved).
-	for _, e := range edges {
-		if e.From == "" || e.To == "" {
-			continue // skip unresolved externals
-		}
-		// Edge direction: dependency -> dependent (B -> A when A imports B)
-		dep := b.Ensure(e.To)
-		depd := b.Ensure(e.From)
-		adj[dep] = append(adj[dep], depd)
-	}
-	return adj, b
-}
-
-func WeightTemporary(id int) int {
-	// Temporary weight function: all weights are 1.
-	return 1
-}
-
-func SinksAsTargets(adj [][]int) map[int]struct{} {
-	t := make(map[int]struct{})
-	for u := range adj {
-		if len(adj[u]) == 0 {
-			t[u] = struct{}{}
-		}
-	}
-	return t
+// small interface to avoid import loops
+type llmClient interface {
+	GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error)
 }
 
 func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
+	// Collect snippet ranges from input
+	var all []scan.Snippet
+	for _, grp := range in.Stmts {
+		for _, r := range grp.StmtRange {
+			s, err := scan.ReadSnippet(in.Repo, scan.SnippetInput{FilePath: r.FilePath, StartLine: r.StartLine, EndLine: r.EndLine})
+			if err != nil {
+				continue
+			}
+			all = append(all, s)
+		}
+	}
+	chunks := scan.ChunkSnippets(all, 10_000)
 
-	// Optionally invoke scheduler to reserve permits per chunk (no-op if Broker nil)
-	adj, _ := BuildAdjacency(in.Dependencies)
-	targets := SinksAsTargets(adj)
-	runner := func(ctx context.Context, chunk []int) (<-chan struct{}, error) {
-		ch := make(chan struct{})
-		close(ch)
-		return ch, nil
+	// Aggregate dependencies across chunks
+	requiresByFile := map[string]map[string]struct{}{}
+
+	type llmIn struct {
+		Snippets []scan.Snippet `json:"snippets"`
 	}
-	if err := scheduler.ScheduleHeavierStart(ctx, scheduler.Params{
-		Adj:         adj,
-		WeightOf:    WeightTemporary,
-		Targets:     targets,
-		CapPerChunk: 5,
-		NParallel:   2,
-		Run:         runner,
-		Broker:      x.Broker,
-		ReserveWith: x.ReserveWith,
-	}); err != nil {
-		return t.X2Out{}, fmt.Errorf("schedule failed: %w", err)
+	type llmOut struct {
+		Dependencies []struct {
+			File     string   `json:"file"`
+			Requires []string `json:"requires"`
+		} `json:"dependencies"`
 	}
 
-	return t.X2Out{Sorted: nodes, Files: files}, nil
-}
+	for _, ch := range chunks {
+		inp := llmIn{Snippets: ch}
+		raw, err := x.LLM.GenerateJSON(ctx, promptX2, inp)
+		if err != nil {
+			continue
+		}
+		var out llmOut
+		if err := json.Unmarshal(raw, &out); err != nil {
+			continue
+		}
+		for _, d := range out.Dependencies {
+			f := filepath.ToSlash(strings.TrimSpace(d.File))
+			if f == "" {
+				continue
+			}
+			set := requiresByFile[f]
+			if set == nil {
+				set = map[string]struct{}{}
+				requiresByFile[f] = set
+			}
+			for _, r := range d.Requires {
+				r = strings.TrimSpace(r)
+				if r == "" {
+					continue
+				}
+				set[r] = struct{}{}
+			}
+		}
+	}
 
-func setKeys(m map[string]struct{}) []string {
-	if len(m) == 0 {
-		return []string{}
+	// Build X2Out
+	var out t.X2Out
+	for f, set := range requiresByFile {
+		var req []string
+		for k := range set {
+			req = append(req, k)
+		}
+		out.Dependencies = append(out.Dependencies, t.FileWithDependency{
+			Path:     f,
+			Requires: req,
+		})
 	}
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
+	return out, nil
 }

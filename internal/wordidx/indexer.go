@@ -24,16 +24,10 @@ Rules:
 - Aggregated index builds asynchronously via scan.ScanParallel; Find blocks until completion.
 */
 
-// Position is a 1-based (line, column) position; column counts runes.
-type Position struct {
-	Line int
-	Col  int
-}
-
 // Word is a collected token and its position within a file.
 type Word struct {
 	Text string
-	Pos  Position
+	Line int
 }
 
 // Index holds words from a single file and a hash-based posting map.
@@ -67,7 +61,6 @@ func Build(src []byte) *Index {
 		}
 		if isStart(r) {
 			start := i
-			startCol := col
 			i += w
 			col++
 			for i < len(src) {
@@ -79,8 +72,7 @@ func Build(src []byte) *Index {
 				col++
 			}
 			word := string(src[start:i])
-			pos := Position{Line: line, Col: startCol}
-			idx.add(word, pos)
+			idx.add(word, line)
 			continue
 		}
 		// Delimiter: advance 1 rune.
@@ -90,12 +82,12 @@ func Build(src []byte) *Index {
 	return idx
 }
 
-func (x *Index) add(word string, pos Position) {
+func (x *Index) add(word string, line int) {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(word))
 	key := h.Sum64()
 	idx := len(x.Words)
-	x.Words = append(x.Words, Word{Text: word, Pos: pos})
+	x.Words = append(x.Words, Word{Text: word, Line: line})
 	if x.post == nil {
 		x.post = make(map[uint64][]int)
 	}
@@ -103,17 +95,17 @@ func (x *Index) add(word string, pos Position) {
 }
 
 // Find returns positions of exact matches for the given word in this file index.
-func (x *Index) Find(word string) []Position {
+func (x *Index) Find(word string) []int {
 	if x == nil || x.post == nil {
 		return nil
 	}
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(word))
 	key := h.Sum64()
-	var out []Position
+	var out []int
 	for _, i := range x.post[key] {
 		if i >= 0 && i < len(x.Words) && x.Words[i].Text == word {
-			out = append(out, x.Words[i].Pos)
+			out = append(out, x.Words[i].Line)
 		}
 	}
 	return out
@@ -127,8 +119,8 @@ type FileIndex struct {
 
 // PosRef ties a word occurrence to a file and its position.
 type PosRef struct {
-	File string
-	Pos  Position
+	FilePath string
+	Line     int
 }
 
 // AggIndex aggregates indices across files asynchronously.
@@ -257,7 +249,7 @@ func (a *AggIndex) indexOne(path string) {
 		h := fnv.New64a()
 		_, _ = h.Write([]byte(w.Text))
 		key := h.Sum64()
-		a.byHash[key] = append(a.byHash[key], PosRef{File: path, Pos: w.Pos})
+		a.byHash[key] = append(a.byHash[key], PosRef{FilePath: path, Line: w.Line})
 	}
 	a.mu.Unlock()
 }

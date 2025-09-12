@@ -14,6 +14,7 @@ import (
 
 	"insightify/internal/llm"
 	t "insightify/internal/types"
+	"insightify/internal/wordidx"
 )
 
 // Env is the shared environment passed to builders/runners.
@@ -25,6 +26,8 @@ type Env struct {
 	ForceFrom string
 
 	LLM llm.LLMClient
+
+	WordIndexer wordidx.AggIndex
 
 	Index  []t.FileIndexEntry
 	MDDocs []t.MDDoc

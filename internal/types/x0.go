@@ -1,6 +1,7 @@
 package types
 
 type X0In struct {
+	Repo      string     `json:"repo"`
 	ExtCounts []ExtCount `json:"ext_counts"`
 	Roots     M0Out      `json:"roots"`
 }
@@ -12,7 +13,7 @@ type RuntimeConfig struct {
 }
 
 type X0Out struct {
-    Specs []ExtractorSpec `json:"specs"`
+	Specs []ExtractorSpec `json:"specs"`
 }
 
 type ExtractorSpec struct {

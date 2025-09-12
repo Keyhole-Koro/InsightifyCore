@@ -7,17 +7,26 @@ type X1In struct {
 	Specs []ExtractorSpec `json:"specs"`
 }
 
-// X1Edge represents a dependency from one file to a module/path (possibly resolved).
-type X1Edge struct {
-	From   string `json:"from"`             // repository-relative file path
-	Module string `json:"module"`           // raw module text found (e.g., "./util", "react")
-	To     string `json:"to,omitempty"`     // resolved repository-relative file path when found
-	Reason string `json:"reason,omitempty"` // e.g., "external module", "file found with .ts"
-}
-
 // X1Out is a minimal dependency graph.
 type X1Out struct {
-	Edges   []X1Edge `json:"edges"`
-	Matches int      `json:"matches"`
-	Files   int      `json:"files"`
+    ImportStatementRanges []PerExtImportStatement `json:"import_statement_ranges,omitempty"`
+}
+
+type PerExtImportStatement struct {
+    Ext       string                 `json:"ext,omitempty"`
+    StmtRange []ImportStatementRange `json:"stmt_range,omitempty"`
+}
+
+type FileWords struct {
+	Path string `json:"path"`
+	Pos  struct {
+		Line int `json:"line"`
+		Col  int `json:"col"`
+	} `json:"words"` // Positions of Indexer.go
+}
+
+type ImportStatementRange struct {
+	FilePath  string `json:"file_path"`
+	StartLine int    `json:"start_line"`
+	EndLine   int    `json:"end_line"`
 }

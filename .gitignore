@@ -17,12 +17,15 @@ vendor/
 # Go workspace file
 go.work
 
+# Go module files
+.gocache
+
 # IDE and editor specific files
 .idea/
 .vscode/
 *.swp
 *.swo
-    
+
 # Logs
 *.log
 

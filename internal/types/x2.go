@@ -2,26 +2,18 @@ package types
 
 // X2In carries the file index and the dependency graph from X1.
 type X2In struct {
-	Index        []FileIndexEntry `json:"index"`
-	Dependencies []X1Edge          `json:"dependencies"`
-}
-
-// X2Node summarises a file and its dependency counts.
-type X2Node struct {
-	Path         string `json:"path"`
-	InternalDeps int    `json:"internal_deps"`
+    Repo  string                     `json:"repo"`
+    Stmts []PerExtImportStatement    `json:"stmt"`
 }
 
 // X2Out provides files sorted by fewest internal dependencies.
 type X2Out struct {
-	Sorted []X2Node             `json:"sorted"`
-	Files  []FileWithDependency `json:"files,omitempty"`
+	Dependencies []FileWithDependency `json:"dependencies"`
 }
 
 // FileWithDependency models a file and its internal dependency relationships.
 type FileWithDependency struct {
 	Path       string   `json:"path"`
-	Size       int64    `json:"size,omitempty"`
 	Language   string   `json:"language,omitempty"`
 	Ext        string   `json:"ext,omitempty"`
 	Requires   []string `json:"requires"`

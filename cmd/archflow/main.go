@@ -20,10 +20,12 @@ func main() {
 	// ----- Flags -----
 	repo := flag.String("repo", "", "path to repository root")
 	outDir := flag.String("out", "artifacts", "output directory")
-	model := flag.String("model", "gemini-2.5-pro", "Gemini model id")
+    provider := flag.String("provider", "gemini", "LLM provider (gemini|groq)")
+    model := flag.String("model", "gemini-2.5-pro", "LLM model id (provider-specific)")
 	fake := flag.Bool("fake", false, "use a fake LLM (no network)")
-	phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|x0|x1|x2)")
-	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|x0|x1|x2)")
+    phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|x0|x1|x2)")
+    forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|x0|x1|x2)")
+    cache := flag.Bool("cache", false, "use cached artifacts (default: off)")
 	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
 	flag.Parse()
 
@@ -34,7 +36,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// ----- LLM setup -----
+    // Determine requested phase key and default force behavior when cache is disabled
+    key := strings.ToLower(strings.TrimSpace(*phase))
+    force := strings.ToLower(strings.TrimSpace(*forceFrom))
+    if !*cache && force == "" {
+        // Default: do not use cache → force recompute of the requested phase
+        force = key
+    }
+
+    // ----- LLM setup -----
 	_ = godotenv.Load()
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" && !*fake {
@@ -45,16 +55,21 @@ func main() {
 	// Prompt hook persists prompts & raw responses under artifacts/prompt/
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
-	var base llm.LLMClient
-	var err error
-	if *fake {
-		base = llm.NewFakeClient()
-	} else {
-		base, err = llm.NewGeminiClient(ctx, apiKey, *model)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+    var base llm.LLMClient
+    var err error
+    if *fake {
+        base = llm.NewFakeClient()
+    } else {
+        switch strings.ToLower(strings.TrimSpace(*provider)) {
+        case "gemini":
+            base, err = llm.NewGeminiClient(ctx, apiKey, *model)
+        case "groq":
+            base, err = llm.NewGroqClient(apiKey, *model)
+        default:
+            log.Fatalf("unknown --provider: %s (use gemini|groq)", *provider)
+        }
+        if err != nil { log.Fatal(err) }
+    }
 	llmCli := llm.Wrap(
 		base,
 		llm.RateLimitFromEnv("LLM", "GEMINI"),
@@ -67,18 +82,18 @@ func main() {
 	// Scanning is performed per-phase inside runner.BuildRegistry via PlanScan.
 
 	// ----- Build environment & registry -----
-	env := &runner.Env{
-		Repo:         *repo,
-		OutDir:       *outDir,
-		MaxNext:      *maxNext,
-		ModelSalt:    os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
-		ForceFrom:    strings.ToLower(strings.TrimSpace(*forceFrom)),
-		LLM:          llmCli,
-		Index:        nil,
-		MDDocs:       nil,
-		StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
-		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
-	}
+    env := &runner.Env{
+        Repo:         *repo,
+        OutDir:       *outDir,
+        MaxNext:      *maxNext,
+        ModelSalt:    os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
+        ForceFrom:    force,
+        LLM:          llmCli,
+        Index:        nil,
+        MDDocs:       nil,
+        StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
+        StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
+    }
 
 	reg := runner.BuildRegistry(env)       // m0/m1/m2
 	for k, v := range runner.BuildX(env) { // x0/x1
@@ -86,8 +101,7 @@ func main() {
 	}
 
 	// ----- Execute requested phase -----
-	key := strings.ToLower(strings.TrimSpace(*phase))
-	spec, ok := reg[key]
+    spec, ok := reg[key]
 	if !ok {
 		log.Fatalf("unknown --phase: %s (use m0|m1|m2|x0|x1|x2)", *phase)
 	}

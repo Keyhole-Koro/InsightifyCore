@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"log"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"insightify/internal/llm"
 	"insightify/internal/pipeline"
 	"insightify/internal/scan"
-	"insightify/internal/scheduler"
 	t "insightify/internal/types"
 )
 
@@ -63,6 +63,7 @@ func BuildX(env *Env) map[string]PhaseSpec {
 
 				// Build X0 input. Align this with your actual t.X0In type.
 				in := t.X0In{
+					Repo:      env.Repo,
 					ExtCounts: extCounts, // if your X0In expects a map, adjust accordingly (but you lose determinism).
 					Roots:     m0prev,
 				}
@@ -119,16 +120,42 @@ func BuildX(env *Env) map[string]PhaseSpec {
 			Downstream: []string{"x2"},
 			Strategy:   jsonStrategy{},
 		},
+		// ----- x2 (json) -----
+		"x2": {
+			Key:  "x2",
+			File: "x2.json",
+			BuildInput: func(ctx context.Context, env *Env) (any, error) {
+				// Wire x1 output (import statement ranges) as input to x2
+				var x1prev t.X1Out
+				if FileExists(filepath.Join(env.OutDir, "x1.json")) {
+					ReadJSON(env.OutDir, "x1.json", &x1prev)
+				}
+				log.Printf("x2: read x1.json content: %+v", x1prev)
+				log.Printf("x2: read %d import statement groups from x1", len(x1prev.ImportStatementRanges))
+				in := t.X2In{Repo: env.Repo, Stmts: x1prev.ImportStatementRanges}
+				return in, nil
+			},
+			Run: func(ctx context.Context, in any, env *Env) (any, error) {
+				ctx = llm.WithPhase(ctx, "x2")
+				x := pipelineX2{LLM: env.LLM}
+				return x.Run(ctx, in.(t.X2In))
+			},
+			Fingerprint: func(in any, env *Env) string {
+				return JSONFingerprint(struct {
+					In   t.X2In
+					Salt string
+				}{in.(t.X2In), env.ModelSalt})
+			},
+			Downstream: nil,
+			Strategy:   jsonStrategy{},
+		},
 	}
 }
 
 // thin adapters
 type pipelineX0 struct{ LLM llm.LLMClient }
 type pipelineX1 struct{}
-type pipelineX2 struct {
-	Broker      llm.PermitBroker
-	ReserveWith scheduler.ReservePolicy
-}
+type pipelineX2 struct{ LLM llm.LLMClient }
 
 func (p pipelineX0) Run(ctx context.Context, in t.X0In) (t.X0Out, error) {
 	real := pipeline.X0{LLM: p.LLM}
@@ -139,7 +166,7 @@ func (pipelineX1) Run(ctx context.Context, in t.X1In) (t.X1Out, error) {
 	return real.Run(ctx, in)
 }
 func (p pipelineX2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
-	real := pipeline.X2{Broker: p.Broker, ReserveWith: p.ReserveWith}
+	real := pipeline.X2{LLM: p.LLM}
 	return real.Run(ctx, in)
 }
 
