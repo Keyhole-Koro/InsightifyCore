@@ -39,7 +39,9 @@ func RedactMedia(v any) any {
 }
 
 func looksLikeBase64Image(s string) bool {
-	if len(s) < 512 { return false }
+	if len(s) < 512 {
+		return false
+	}
 	// quick base64 check
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil

@@ -12,12 +12,12 @@ import (
 
 const bt = "`"
 
-// X0 prompt — imports/includes only, plus normalization hints for later post-processing.
+// C0 prompt — imports/includes only, plus normalization hints for later post-processing.
 // This phase does NOT receive source snippets; it must produce RE2 patterns to detect module strings,
 // and also provide language-agnostic guidance ("normalize_hints") describing how X1 should derive
 // fields like folder_path[], file_name, file_ext, scope/package/subpath, alias, and kind.
-const promptX0 = `
-You are Stage X0 of a static analysis pipeline.
+const promptC0 = `
+You are Stage C0 of a static analysis pipeline.
 
 Task
 - You will be given a list of file extensions ("ext_counts") and roots for main source and optional runtime configs ("roots").
@@ -66,20 +66,20 @@ Constraints & notes
 - If unknown, use empty arrays rather than inventing fields.
 `
 
-// X0 generates ExtractorSpec v1 rules per extension based on an ext report.
-type X0 struct{ LLM llm.LLMClient }
+// C0 generates ExtractorSpec v1 rules per extension based on an ext report.
+type C0 struct{ LLM llm.LLMClient }
 
 // Run asks the model to produce specs, validates them against provided tests,
 // and retries once with additional context when available (e.g., runtime configs).
-func (x *X0) Run(ctx context.Context, in t.X0In) (t.X0Out, error) {
-	raw, err := x.LLM.GenerateJSON(ctx, promptX0, in)
+func (x *C0) Run(ctx context.Context, in t.C0In) (t.C0Out, error) {
+	raw, err := x.LLM.GenerateJSON(ctx, promptC0, in)
 	if err != nil {
-		return t.X0Out{}, err
+		return t.C0Out{}, err
 	}
 
-	var out t.X0Out
+	var out t.C0Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return t.X0Out{}, fmt.Errorf("X0 JSON invalid: %w\nraw: %s", err, string(raw))
+		return t.C0Out{}, fmt.Errorf("C0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	return out, nil
 }

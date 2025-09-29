@@ -1,5 +1,5 @@
 m-mainline
-x-extraction
+x-external
 a-algorithm
 b-build
 c-codebase

@@ -10,7 +10,7 @@ import (
 	t "insightify/internal/types"
 )
 
-const promptX2 = `You are Stage X2 of a static analysis pipeline.
+const promptC2 = `You are Stage C2 of a static analysis pipeline.
 
 Goal
 - Given code snippets around import/include statements, clarify dependency relationships per file.
@@ -81,15 +81,15 @@ Output:
   ]
 }`
 
-// X2 uses LLM to refine dependency relationships using code snippets.
-type X2 struct{ LLM llmClient }
+// C2 uses LLM to refine dependency relationships using code snippets.
+type C2 struct{ LLM llmClient }
 
 // small interface to avoid import loops
 type llmClient interface {
 	GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error)
 }
 
-func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
+func (x C2) Run(ctx context.Context, in t.C2In) (t.C2Out, error) {
 	// Collect snippet ranges from input
 	var all []scan.Snippet
 	for _, grp := range in.Stmts {
@@ -101,7 +101,8 @@ func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
 			all = append(all, s)
 		}
 	}
-	chunks := scan.ChunkSnippets(all, 10_000)
+
+	chunks := scan.ChunkSnippets(all, 5_000)
 
 	// Aggregate dependencies across chunks
 	requiresByFile := map[string]map[string]struct{}{}
@@ -118,7 +119,7 @@ func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
 
 	for _, ch := range chunks {
 		inp := llmIn{Snippets: ch}
-		raw, err := x.LLM.GenerateJSON(ctx, promptX2, inp)
+		raw, err := x.LLM.GenerateJSON(ctx, promptC2, inp)
 		if err != nil {
 			continue
 		}
@@ -146,8 +147,8 @@ func (x X2) Run(ctx context.Context, in t.X2In) (t.X2Out, error) {
 		}
 	}
 
-	// Build X2Out
-	var out t.X2Out
+	// Build C2Out
+	var out t.C2Out
 	for f, set := range requiresByFile {
 		var req []string
 		for k := range set {

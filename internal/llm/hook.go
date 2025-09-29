@@ -6,21 +6,21 @@ import (
 )
 
 type PromptHook interface {
-    Before(ctx context.Context, phase, prompt string, input any)
-    After(ctx context.Context, phase string, raw json.RawMessage, err error)
+	Before(ctx context.Context, phase, prompt string, input any)
+	After(ctx context.Context, phase string, raw json.RawMessage, err error)
 }
 
 type ctxKeyHook struct{}
 type ctxKeyPhase struct{}
 
 func WithPhase(ctx context.Context, phase string) context.Context {
-    return context.WithValue(ctx, ctxKeyPhase{}, phase)
+	return context.WithValue(ctx, ctxKeyPhase{}, phase)
 }
 
 // WithPromptHook attaches a PromptHook to the context. Middlewares that call
 // HookFrom(ctx) can use this to invoke Before/After around requests.
 func WithPromptHook(ctx context.Context, hook PromptHook) context.Context {
-    return context.WithValue(ctx, ctxKeyHook{}, hook)
+	return context.WithValue(ctx, ctxKeyHook{}, hook)
 }
 
 // HookFrom returns the hook stored in the context.

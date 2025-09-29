@@ -13,19 +13,19 @@ import (
 	"insightify/internal/wordidx"
 )
 
-// X1 builds a dependency graph from extractor specs (X0 output) by scanning files.
+// C1 builds a dependency graph from extractor specs (X0 output) by scanning files.
 // This pipeline does not use an LLM — it is entirely programmatic.
-type X1 struct{}
+type C1 struct{}
 
-func (X1) Run(ctx context.Context, in t.X1In) (t.X1Out, error) {
-	log.Printf("X1: starting scan in repo %s", in.Repo)
+func (C1) Run(ctx context.Context, in t.C1In) (t.C1Out, error) {
+	log.Printf("C1: starting scan in repo %s", in.Repo)
 	// 1) Collect folder basenames (used as identifier candidates)
 	folderNames, err := fetchFolderNames(ctx, in.Repo, in.Roots)
 	if err != nil {
-		return t.X1Out{}, err
+		return t.C1Out{}, err
 	}
 
-	log.Printf("X1: found %d unique folder names", len(folderNames))
+	log.Printf("C1: found %d unique folder names", len(folderNames))
 
 	// 2) Build IgnoreDirs as basenames (scan compares basenames)
 	igAll := make([]string, 0, len(in.Roots.BuildRoots)+len(in.Roots.RuntimeConfigRoots)+len(in.Roots.ConfigRoots)+len(in.Roots.LibraryRoots))
@@ -87,7 +87,7 @@ func (X1) Run(ctx context.Context, in t.X1In) (t.X1Out, error) {
 		}
 		groups = append(groups, t.PerExtImportStatement{Ext: spec.Ext, StmtRange: ranges})
 	}
-	return t.X1Out{ImportStatementRanges: groups}, nil
+	return t.C1Out{ImportStatementRanges: groups}, nil
 }
 
 // not explicitly processed; improve later

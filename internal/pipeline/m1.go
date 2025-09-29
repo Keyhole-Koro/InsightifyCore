@@ -2,8 +2,8 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-    "encoding/json"
 
 	"insightify/internal/llm"
 	t "insightify/internal/types"
@@ -83,27 +83,27 @@ type M1 struct{ LLM llm.LLMClient }
 
 // Run now accepts a single M1In to mirror M1's API.
 func (p *M1) Run(ctx context.Context, in t.M1In) (t.M1Out, error) {
-    hints := in.Hints
-    if hints == nil {
-        hints = &t.M1Hints{}
-    }
-    limits := in.Limits
-    if limits == nil {
-        limits = &t.M1Limits{MaxNext: 8}
-    }
-    input := map[string]any{
-        "file_index": in.FileIndex,
-        "md_docs":    in.MDDocs,
-        "hints":      hints,
-        "limits":     map[string]any{"max_next": limits.MaxNext},
-    }
-    raw, err := p.LLM.GenerateJSON(ctx, promptM1, input)
-    if err != nil {
-        return t.M1Out{}, err
-    }
-    var out t.M1Out
-    if err := json.Unmarshal(raw, &out); err != nil {
-        return t.M1Out{}, fmt.Errorf("M1 JSON invalid: %w", err)
-    }
-    return out, nil
+	hints := in.Hints
+	if hints == nil {
+		hints = &t.M1Hints{}
+	}
+	limits := in.Limits
+	if limits == nil {
+		limits = &t.M1Limits{MaxNext: 8}
+	}
+	input := map[string]any{
+		"file_index": in.FileIndex,
+		"md_docs":    in.MDDocs,
+		"hints":      hints,
+		"limits":     map[string]any{"max_next": limits.MaxNext},
+	}
+	raw, err := p.LLM.GenerateJSON(ctx, promptM1, input)
+	if err != nil {
+		return t.M1Out{}, err
+	}
+	var out t.M1Out
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return t.M1Out{}, fmt.Errorf("M1 JSON invalid: %w", err)
+	}
+	return out, nil
 }

@@ -1,12 +1,12 @@
 package llm
 
 import (
-	"context"
-	"encoding/json"
-	"log"
-	"os"
-	"strconv"
-	"time"
+    "context"
+    "encoding/json"
+    "log"
+    "os"
+    "strconv"
+    "time"
 )
 
 // Middleware decorates an LLMClient to inject cross-cutting concerns
@@ -42,13 +42,15 @@ type rateLimited struct {
 func (c *rateLimited) Name() string { return c.next.Name() }
 func (c *rateLimited) Close() error { return c.next.Close() }
 func (c *rateLimited) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-    if c.rl != nil {
-        // Prefer reserved credits embedded in the context.
-        if !TakeCredit(ctx) {
-            if err := c.rl.Acquire(ctx); err != nil { return nil, err }
-        }
-    }
-    return c.next.GenerateJSON(ctx, prompt, input)
+	if c.rl != nil {
+		// Prefer reserved credits embedded in the context.
+		if !TakeCredit(ctx) {
+			if err := c.rl.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return c.next.GenerateJSON(ctx, prompt, input)
 }
 
 // RateLimitFromEnv reads RPS/BURST from environment variables with the
@@ -95,6 +97,111 @@ func RateLimitFromEnv(prefixes ...string) Middleware {
 		rl := newRPSLimiter(rps, burst) // nil when disabled
 		return &rateLimited{next: next, rl: rl}
 	}
+}
+
+// -------- RPM/RPD/TPM combined limiter --------
+
+// MultiLimit applies minute/day request limits and tokens-per-minute.
+// Pass 0 to disable a specific limiter. Burst is derived as the nominal rate.
+func MultiLimit(rpm, rpd, tpm int) Middleware {
+    // Default to a constant token-per-request estimate to avoid per-call
+    // marshaling and string work. Adjust via MultiLimitConstTokens if needed.
+    const defaultTokensPerRequest = 1000
+    return MultiLimitConstTokens(rpm, rpd, tpm, defaultTokensPerRequest)
+}
+
+// MultiLimitConstTokens is like MultiLimit but uses a constant tokens-per-request
+// estimate for the TPM limiter.
+func MultiLimitConstTokens(rpm, rpd, tpm int, tokensPerRequest int) Middleware {
+    var rpmL, rpdL, tpmL *rpsLimiter
+    if rpm > 0 {
+        rpmL = newRPSLimiter(float64(rpm)/60.0, max1(rpm))
+    }
+    if rpd > 0 {
+        rpdL = newRPSLimiter(float64(rpd)/86400.0, max1(rpd))
+    }
+    if tpm > 0 {
+        tpmL = newRPSLimiter(float64(tpm)/60.0, max1(tpm))
+    }
+    if tokensPerRequest < 1 { tokensPerRequest = 1 }
+    return func(next LLMClient) LLMClient {
+        return &multiLimited{next: next, rpm: rpmL, rpd: rpdL, tpm: tpmL, tpr: tokensPerRequest}
+    }
+}
+
+// MultiLimitFromEnv reads _RPM, _RPD, _TPM (ints) using prefixes priority.
+func MultiLimitFromEnv(prefixes ...string) Middleware {
+	readInt := func(key string) int {
+		if key == "" {
+			return 0
+		}
+		v := os.Getenv(key)
+		if v == "" {
+			return 0
+		}
+		n, _ := strconv.Atoi(v)
+		return n
+	}
+	find := func(suffix string) string {
+		for _, p := range prefixes {
+			if p == "" {
+				continue
+			}
+			k := p + suffix
+			if os.Getenv(k) != "" {
+				return k
+			}
+		}
+		return ""
+	}
+    rpm := readInt(find("_RPM"))
+    rpd := readInt(find("_RPD"))
+    tpm := readInt(find("_TPM"))
+    return MultiLimit(rpm, rpd, tpm)
+}
+
+type multiLimited struct {
+    next LLMClient
+    rpm  *rpsLimiter
+    rpd  *rpsLimiter
+    tpm  *rpsLimiter
+    tpr  int // tokens per request (constant estimate)
+}
+
+func (m *multiLimited) Name() string { return m.next.Name() }
+func (m *multiLimited) Close() error { return m.next.Close() }
+func (m *multiLimited) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
+	// Requests-per-minute/day
+	if m.rpm != nil {
+		if !TakeCredit(ctx) {
+			if err := m.rpm.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if m.rpd != nil {
+		if !TakeCredit(ctx) {
+			if err := m.rpd.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+    // Tokens-per-minute using a constant per-request estimate.
+    if m.tpm != nil {
+        est := m.tpr
+        if est < 1 { est = 1 }
+        if err := m.tpm.AcquireN(ctx, est); err != nil {
+            return nil, err
+        }
+    }
+    return m.next.GenerateJSON(ctx, prompt, input)
+}
+
+func max1(n int) int {
+	if n < 1 {
+		return 1
+	}
+	return n
 }
 
 // -------- Retry with exponential backoff --------

@@ -1,10 +1,9 @@
 package scan
 
 import (
-    "bufio"
-    "os"
-    "path/filepath"
-    "strings"
+	"bufio"
+	"os"
+	"path/filepath"
 )
 
 // SnippetInput defines a file slice to extract.
@@ -24,17 +23,17 @@ type Snippet struct {
 
 // ReadSnippet returns lines [start..end] (inclusive, 1-based). If end < start, it swaps them.
 func ReadSnippet(repo string, in SnippetInput) (Snippet, error) {
-    if in.StartLine <= 0 {
-        in.StartLine = 1
-    }
-    if in.EndLine > 0 && in.EndLine < in.StartLine {
-        in.StartLine, in.EndLine = in.EndLine, in.StartLine
-    }
-    abs := repoJoin(repo, in.FilePath)
-    f, err := os.Open(abs)
-    if err != nil {
-        return Snippet{}, err
-    }
+	if in.StartLine <= 0 {
+		in.StartLine = 1
+	}
+	if in.EndLine > 0 && in.EndLine < in.StartLine {
+		in.StartLine, in.EndLine = in.EndLine, in.StartLine
+	}
+	abs := filepath.Join(repo, filepath.FromSlash(in.FilePath))
+	f, err := os.Open(abs)
+	if err != nil {
+		return Snippet{}, err
+	}
 	defer f.Close()
 
 	var out Snippet
@@ -95,23 +94,4 @@ func ChunkSnippets(snips []Snippet, maxBytes int) [][]Snippet {
 		res = append(res, cur)
 	}
 	return res
-}
-
-// repoJoin joins a possibly repo-prefixed path with repo, avoiding double-prefixing.
-// Accepts inputs like "src/a.ts" or "<repo>/src/a.ts" and returns an absolute path.
-func repoJoin(repo, p string) string {
-    p = strings.TrimSpace(p)
-    if p == "" { return filepath.Clean(repo) }
-    // If already absolute, use as-is
-    if filepath.IsAbs(p) { return p }
-    rp := filepath.ToSlash(p)
-    rs := filepath.ToSlash(filepath.Clean(repo))
-    rs = strings.TrimPrefix(rs, "./")
-    // Strip leading "./" in rp for robustness
-    rp = strings.TrimPrefix(rp, "./")
-    // If rp erroneously starts with the repo segment, strip it
-    if rs != "" && strings.HasPrefix(rp, rs+"/") {
-        rp = strings.TrimPrefix(rp, rs+"/")
-    }
-    return filepath.Join(repo, filepath.FromSlash(rp))
 }

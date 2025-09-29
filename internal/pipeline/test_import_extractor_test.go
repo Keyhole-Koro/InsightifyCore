@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-    types "insightify/internal/types"
+	types "insightify/internal/types"
 	"insightify/internal/wordidx"
 )
 
@@ -30,10 +30,10 @@ func TestImportExtractor_WithThresholdAndWeakerIdentifiers(t *testing.T) {
 		idMag     int
 		threshold int
 	}
-    tests := []struct {
+	tests := []struct {
 		name string
 		args args
-        want []types.ImportStatementRange
+		want []types.ImportStatementRange
 	}{
 		{
 			name: "Single keyword peak + one identifier pushes wider region over threshold",
@@ -47,7 +47,7 @@ func TestImportExtractor_WithThresholdAndWeakerIdentifiers(t *testing.T) {
 				idMag:     2,
 				threshold: 2,
 			},
-            want: []types.ImportStatementRange{
+			want: []types.ImportStatementRange{
 				{FilePath: "a.go", StartLine: 8, EndLine: 13},
 			},
 		},
@@ -69,7 +69,7 @@ func TestImportExtractor_WithThresholdAndWeakerIdentifiers(t *testing.T) {
 				idMag:     1,
 				threshold: 3,
 			},
-            want: []types.ImportStatementRange{
+			want: []types.ImportStatementRange{
 				{FilePath: "a.go", StartLine: 5, EndLine: 6},
 				{FilePath: "a.go", StartLine: 20, EndLine: 20},
 			},
@@ -86,7 +86,7 @@ func TestImportExtractor_WithThresholdAndWeakerIdentifiers(t *testing.T) {
 				idMag:     1,
 				threshold: 2,
 			},
-            want: []types.ImportStatementRange{
+			want: []types.ImportStatementRange{
 				{FilePath: "b.go", StartLine: 99, EndLine: 101},
 			},
 		},
@@ -105,7 +105,7 @@ func TestImportExtractor_WithThresholdAndWeakerIdentifiers(t *testing.T) {
 				idMag:     1,
 				threshold: 2,
 			},
-            want: []types.ImportStatementRange{
+			want: []types.ImportStatementRange{
 				{FilePath: "x.go", StartLine: 9, EndLine: 11},
 				{FilePath: "y.go", StartLine: 29, EndLine: 31},
 			},
@@ -151,7 +151,7 @@ func TestImportExtractor_DefaultWrapperBehavior(t *testing.T) {
 	idents := []wordidx.PosRef{{FilePath: "a.go", Line: 12}}
 	got := importStatementExtractor(keywords, idents, 4)
 
-    want := []types.ImportStatementRange{
+	want := []types.ImportStatementRange{
 		{FilePath: "a.go", StartLine: 8, EndLine: 13},
 	}
 	sortRanges(got)

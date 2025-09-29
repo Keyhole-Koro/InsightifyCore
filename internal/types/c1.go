@@ -1,20 +1,20 @@
 package types
 
-// X1In carries inputs to build a dependency graph from extractor specs.
-type X1In struct {
+// C1In carries inputs to build a dependency graph from extractor specs.
+type C1In struct {
 	Repo  string          `json:"repo"`
 	Roots M0Out           `json:"roots"`
 	Specs []ExtractorSpec `json:"specs"`
 }
 
-// X1Out is a minimal dependency graph.
-type X1Out struct {
-    ImportStatementRanges []PerExtImportStatement `json:"import_statement_ranges,omitempty"`
+// C1Out is a minimal dependency graph.
+type C1Out struct {
+	ImportStatementRanges []PerExtImportStatement `json:"import_statement_ranges,omitempty"`
 }
 
 type PerExtImportStatement struct {
-    Ext       string                 `json:"ext,omitempty"`
-    StmtRange []ImportStatementRange `json:"stmt_range,omitempty"`
+	Ext       string                 `json:"ext,omitempty"`
+	StmtRange []ImportStatementRange `json:"stmt_range,omitempty"`
 }
 
 type FileWords struct {

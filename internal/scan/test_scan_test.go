@@ -1,11 +1,11 @@
 package scan
 
 import (
-    "os"
-    "path/filepath"
-    "slices"
-    "sort"
-    "testing"
+	"os"
+	"path/filepath"
+	"slices"
+	"sort"
+	"testing"
 )
 
 func write(t *testing.T, root, rel, content string) string {
@@ -33,13 +33,17 @@ func TestStream_FilesOnly(t *testing.T) {
 		BypassCache: true,
 	}
 
-    ch, errCh := Stream(root, opts, true)
-    var got []string
-    for fv := range ch {
-        if fv.IsDir { t.Fatalf("IsDir came even though filesOnly=true: %+v", fv) }
-        got = append(got, fv.Path)
-    }
-    if err := <-errCh; err != nil { t.Fatalf("scan error: %v", err) }
+	ch, errCh := Stream(root, opts, true)
+	var got []string
+	for fv := range ch {
+		if fv.IsDir {
+			t.Fatalf("IsDir came even though filesOnly=true: %+v", fv)
+		}
+		got = append(got, fv.Path)
+	}
+	if err := <-errCh; err != nil {
+		t.Fatalf("scan error: %v", err)
+	}
 
 	sort.Strings(got)
 	want := []string{
@@ -66,8 +70,8 @@ func TestScan_IgnoresAndDepth(t *testing.T) {
 		BypassCache: true,
 	}
 
-    var mu = make(chan struct{}, 1)
-    var files []string
+	var mu = make(chan struct{}, 1)
+	var files []string
 
 	cb := func(fv FileVisit) {
 		if fv.IsDir {
@@ -77,7 +81,9 @@ func TestScan_IgnoresAndDepth(t *testing.T) {
 		files = append(files, fv.Path)
 		<-mu
 	}
-    if err := ScanWithOptions(root, opts, cb); err != nil { t.Fatalf("scan: %v", err) }
+	if err := ScanWithOptions(root, opts, cb); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
 
 	sort.Strings(files)
 	want := []string{"a.txt"}

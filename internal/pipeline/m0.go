@@ -1,12 +1,12 @@
 package pipeline
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
+	"context"
+	"encoding/json"
+	"fmt"
 
-    "insightify/internal/llm"
-    t "insightify/internal/types"
+	"insightify/internal/llm"
+	t "insightify/internal/types"
 )
 
 const promptM0 = `You are ifying a repository layout.
@@ -43,18 +43,18 @@ Rules:
 type M0 struct{ LLM llm.LLMClient }
 
 func (p *M0) Run(ctx context.Context, in t.M0In) (t.M0Out, error) {
-    input := map[string]any{
-        "ext_counts":  in.ExtCounts,
-        "dirs_depth1": in.DirsDepth1,
-        "dirs_depth2": in.DirsDepth2,
-    }
-    raw, err := p.LLM.GenerateJSON(ctx, promptM0, input)
-    if err != nil {
-        return t.M0Out{}, err
-    }
-    var out t.M0Out
-    if err := json.Unmarshal(raw, &out); err != nil {
-        return t.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
-    }
-    return out, nil
+	input := map[string]any{
+		"ext_counts":  in.ExtCounts,
+		"dirs_depth1": in.DirsDepth1,
+		"dirs_depth2": in.DirsDepth2,
+	}
+	raw, err := p.LLM.GenerateJSON(ctx, promptM0, input)
+	if err != nil {
+		return t.M0Out{}, err
+	}
+	var out t.M0Out
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return t.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
+	}
+	return out, nil
 }

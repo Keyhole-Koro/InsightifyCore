@@ -1,13 +1,13 @@
 package types
 
-// X2In carries the file index and the dependency graph from X1.
-type X2In struct {
-    Repo  string                     `json:"repo"`
-    Stmts []PerExtImportStatement    `json:"stmt"`
+// C2In carries the file index and the dependency graph from X1.
+type C2In struct {
+	Repo  string                  `json:"repo"`
+	Stmts []PerExtImportStatement `json:"stmt"`
 }
 
-// X2Out provides files sorted by fewest internal dependencies.
-type X2Out struct {
+// C2Out provides files sorted by fewest internal dependencies.
+type C2Out struct {
 	Dependencies []FileWithDependency `json:"dependencies"`
 }
 

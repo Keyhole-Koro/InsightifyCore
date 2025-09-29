@@ -113,34 +113,34 @@ type M2 struct{ LLM llm.LLMClient }
 // Run executes M2 with robust JSON handling and normalization.
 func (p *M2) Run(ctx context.Context, in t.M2In) (t.M2Out, error) {
 	input := map[string]any{
-		"previous":        in.Previous,
-		"opened_files":    in.OpenedFiles,
-		"focus":           in.Focus,
-		"file_index":      in.FileIndex,
-		"md_docs":         in.MDDocs,
-		"limit_max_next":  in.LimitMaxNext,
+		"previous":       in.Previous,
+		"opened_files":   in.OpenedFiles,
+		"focus":          in.Focus,
+		"file_index":     in.FileIndex,
+		"md_docs":        in.MDDocs,
+		"limit_max_next": in.LimitMaxNext,
 	}
 
-    raw, err := p.LLM.GenerateJSON(ctx, promptM2, input)
-    if err != nil {
-        return t.M2Out{}, err
-    }
-    fmt.Printf("M2 raw output (%d bytes)\n", len(raw))
+	raw, err := p.LLM.GenerateJSON(ctx, promptM2, input)
+	if err != nil {
+		return t.M2Out{}, err
+	}
+	fmt.Printf("M2 raw output (%d bytes)\n", len(raw))
 
-    var out t.M2Out
-    if err := json.Unmarshal(raw, &out); err == nil {
-        return out, nil
-    }
+	var out t.M2Out
+	if err := json.Unmarshal(raw, &out); err == nil {
+		return out, nil
+	}
 
 	// Normalize known quirks and retry.
-    norm, nerr := normalizeM2JSON(raw)
-    if nerr != nil {
-        return t.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
-    }
-    if err := json.Unmarshal(norm, &out); err != nil {
-        return t.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
-    }
-    return out, nil
+	norm, nerr := normalizeM2JSON(raw)
+	if nerr != nil {
+		return t.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
+	}
+	if err := json.Unmarshal(norm, &out); err != nil {
+		return t.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
+	}
+	return out, nil
 }
 
 // normalizeM2JSON coerces known-quirk fields into a stable shape expected by t.M2Out:
