@@ -196,6 +196,56 @@ func (a *AggIndex) StartFromScan(ctx context.Context, root string, sopts scan.Op
 	}()
 }
 
+// StartFromPaths indexes the provided absolute file paths. The call returns
+// immediately; Wait/Find synchronize on completion.
+func (a *AggIndex) StartFromPaths(ctx context.Context, paths []string, workers int) {
+	if workers <= 0 {
+		workers = runtime.GOMAXPROCS(0)
+		if workers <= 0 {
+			workers = 1
+		}
+	}
+	tasks := make(chan string, len(paths))
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case p, ok := <-tasks:
+					if !ok {
+						return
+					}
+					if p == "" {
+						continue
+					}
+					a.indexOne(p)
+				}
+			}
+		}()
+	}
+	go func() {
+		defer func() {
+			close(tasks)
+			wg.Wait()
+			a.doneOnce.Do(func() { close(a.doneCh) })
+		}()
+		for _, p := range paths {
+			if p == "" {
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case tasks <- p:
+			}
+		}
+	}()
+}
+
 // Wait blocks until indexing is completed or ctx is canceled.
 func (a *AggIndex) Wait(ctx context.Context) error {
 	select {

@@ -1,4 +1,6 @@
-package types
+package mainline
+
+import t "insightify/internal/types"
 
 type M1Hints struct {
 	Targets []string `json:"targets,omitempty"`
@@ -10,10 +12,10 @@ type M1Limits struct {
 }
 
 type M1KeyComponent struct {
-	Name           string        `json:"name"`
-	Kind           string        `json:"kind"`
-	Responsibility string        `json:"responsibility"`
-	Evidence       []EvidenceRef `json:"evidence"`
+	Name           string          `json:"name"`
+	Kind           string          `json:"kind"`
+	Responsibility string          `json:"responsibility"`
+	Evidence       []t.EvidenceRef `json:"evidence"`
 }
 
 type M1TechStack struct {
@@ -51,10 +53,10 @@ type M1NextPattern struct {
 }
 
 type M1Contradiction struct {
-	Claim     string        `json:"claim"`
-	Supports  []EvidenceRef `json:"supports"`
-	Conflicts []EvidenceRef `json:"conflicts"`
-	Note      string        `json:"note"`
+	Claim     string          `json:"claim"`
+	Supports  []t.EvidenceRef `json:"supports"`
+	Conflicts []t.EvidenceRef `json:"conflicts"`
+	Note      string          `json:"note"`
 }
 
 type M1Out struct {
@@ -69,8 +71,8 @@ type M1Out struct {
 
 // M1In bundles inputs for the M1 milestone to align with M1's single-arg Run.
 type M1In struct {
-	FileIndex []FileIndexEntry `json:"file_index"`
-	MDDocs    []MDDoc          `json:"md_docs"`
-	Hints     *M1Hints         `json:"hints,omitempty"`
-	Limits    *M1Limits        `json:"limits,omitempty"`
+	FileIndex []t.FileIndexEntry `json:"file_index"`
+	MDDocs    []t.MDDoc          `json:"md_docs"`
+	Hints     *M1Hints           `json:"hints,omitempty"`
+	Limits    *M1Limits          `json:"limits,omitempty"`
 }

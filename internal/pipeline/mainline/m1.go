@@ -1,12 +1,12 @@
-package pipeline
+package mainline
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
-	"insightify/internal/llm"
-	t "insightify/internal/types"
+	llmclient "insightify/internal/llmClient"
+	ml "insightify/internal/types/mainline"
 )
 
 const prologue = `You are an experienced software engineer analyzing an unfamiliar codebase.
@@ -79,17 +79,17 @@ Constraints:
 - Propose at most limits.max_next (default 8) across next_files + next_patterns.
 - Evidence must reference provided paths; if you cannot identify lines, set lines to null and explain in notes.`
 
-type M1 struct{ LLM llm.LLMClient }
+type M1 struct{ LLM llmclient.LLMClient }
 
 // Run now accepts a single M1In to mirror M1's API.
-func (p *M1) Run(ctx context.Context, in t.M1In) (t.M1Out, error) {
+func (p *M1) Run(ctx context.Context, in ml.M1In) (ml.M1Out, error) {
 	hints := in.Hints
 	if hints == nil {
-		hints = &t.M1Hints{}
+		hints = &ml.M1Hints{}
 	}
 	limits := in.Limits
 	if limits == nil {
-		limits = &t.M1Limits{MaxNext: 8}
+		limits = &ml.M1Limits{MaxNext: 8}
 	}
 	input := map[string]any{
 		"file_index": in.FileIndex,
@@ -99,11 +99,11 @@ func (p *M1) Run(ctx context.Context, in t.M1In) (t.M1Out, error) {
 	}
 	raw, err := p.LLM.GenerateJSON(ctx, promptM1, input)
 	if err != nil {
-		return t.M1Out{}, err
+		return ml.M1Out{}, err
 	}
-	var out t.M1Out
+	var out ml.M1Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return t.M1Out{}, fmt.Errorf("M1 JSON invalid: %w", err)
+		return ml.M1Out{}, fmt.Errorf("M1 JSON invalid: %w", err)
 	}
 	return out, nil
 }

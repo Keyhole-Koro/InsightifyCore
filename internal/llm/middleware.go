@@ -1,21 +1,23 @@
 package llm
 
 import (
-    "context"
-    "encoding/json"
-    "log"
-    "os"
-    "strconv"
-    "time"
+	"context"
+	"encoding/json"
+	"log"
+	"os"
+	"strconv"
+	"time"
+
+	"insightify/internal/llmClient"
 )
 
 // Middleware decorates an LLMClient to inject cross-cutting concerns
 // (rate limiting, retries, logging, hooks, etc.).
-type Middleware func(LLMClient) LLMClient
+type Middleware func(llmclient.LLMClient) llmclient.LLMClient
 
 // Wrap applies middlewares in left-to-right order.
 // Example: Wrap(inner, A, B) => A(B(inner))
-func Wrap(inner LLMClient, mws ...Middleware) LLMClient {
+func Wrap(inner llmclient.LLMClient, mws ...Middleware) llmclient.LLMClient {
 	out := inner
 	for i := len(mws) - 1; i >= 0; i-- {
 		out = mws[i](out)
@@ -28,14 +30,14 @@ func Wrap(inner LLMClient, mws ...Middleware) LLMClient {
 // RateLimit limits request rate using the custom rpsLimiter.
 // If rps <= 0, the limiter is effectively disabled.
 func RateLimit(rps float64, burst int) Middleware {
-	return func(next LLMClient) LLMClient {
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		rl := newRPSLimiter(rps, burst) // nil when disabled
 		return &rateLimited{next: next, rl: rl}
 	}
 }
 
 type rateLimited struct {
-	next LLMClient
+	next llmclient.LLMClient
 	rl   *rpsLimiter
 }
 
@@ -91,7 +93,7 @@ func RateLimitFromEnv(prefixes ...string) Middleware {
 		}
 		return ""
 	}
-	return func(next LLMClient) LLMClient {
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		rps := readFloat(find("_RPS"))
 		burst := readInt(find("_BURST"))
 		rl := newRPSLimiter(rps, burst) // nil when disabled
@@ -104,29 +106,31 @@ func RateLimitFromEnv(prefixes ...string) Middleware {
 // MultiLimit applies minute/day request limits and tokens-per-minute.
 // Pass 0 to disable a specific limiter. Burst is derived as the nominal rate.
 func MultiLimit(rpm, rpd, tpm int) Middleware {
-    // Default to a constant token-per-request estimate to avoid per-call
-    // marshaling and string work. Adjust via MultiLimitConstTokens if needed.
-    const defaultTokensPerRequest = 1000
-    return MultiLimitConstTokens(rpm, rpd, tpm, defaultTokensPerRequest)
+	// Default to a constant token-per-request estimate to avoid per-call
+	// marshaling and string work. Adjust via MultiLimitConstTokens if needed.
+	const defaultTokensPerRequest = 1000
+	return MultiLimitConstTokens(rpm, rpd, tpm, defaultTokensPerRequest)
 }
 
 // MultiLimitConstTokens is like MultiLimit but uses a constant tokens-per-request
 // estimate for the TPM limiter.
 func MultiLimitConstTokens(rpm, rpd, tpm int, tokensPerRequest int) Middleware {
-    var rpmL, rpdL, tpmL *rpsLimiter
-    if rpm > 0 {
-        rpmL = newRPSLimiter(float64(rpm)/60.0, max1(rpm))
-    }
-    if rpd > 0 {
-        rpdL = newRPSLimiter(float64(rpd)/86400.0, max1(rpd))
-    }
-    if tpm > 0 {
-        tpmL = newRPSLimiter(float64(tpm)/60.0, max1(tpm))
-    }
-    if tokensPerRequest < 1 { tokensPerRequest = 1 }
-    return func(next LLMClient) LLMClient {
-        return &multiLimited{next: next, rpm: rpmL, rpd: rpdL, tpm: tpmL, tpr: tokensPerRequest}
-    }
+	var rpmL, rpdL, tpmL *rpsLimiter
+	if rpm > 0 {
+		rpmL = newRPSLimiter(float64(rpm)/60.0, max1(rpm))
+	}
+	if rpd > 0 {
+		rpdL = newRPSLimiter(float64(rpd)/86400.0, max1(rpd))
+	}
+	if tpm > 0 {
+		tpmL = newRPSLimiter(float64(tpm)/60.0, max1(tpm))
+	}
+	if tokensPerRequest < 1 {
+		tokensPerRequest = 1
+	}
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
+		return &multiLimited{next: next, rpm: rpmL, rpd: rpdL, tpm: tpmL, tpr: tokensPerRequest}
+	}
 }
 
 // MultiLimitFromEnv reads _RPM, _RPD, _TPM (ints) using prefixes priority.
@@ -154,18 +158,18 @@ func MultiLimitFromEnv(prefixes ...string) Middleware {
 		}
 		return ""
 	}
-    rpm := readInt(find("_RPM"))
-    rpd := readInt(find("_RPD"))
-    tpm := readInt(find("_TPM"))
-    return MultiLimit(rpm, rpd, tpm)
+	rpm := readInt(find("_RPM"))
+	rpd := readInt(find("_RPD"))
+	tpm := readInt(find("_TPM"))
+	return MultiLimit(rpm, rpd, tpm)
 }
 
 type multiLimited struct {
-    next LLMClient
-    rpm  *rpsLimiter
-    rpd  *rpsLimiter
-    tpm  *rpsLimiter
-    tpr  int // tokens per request (constant estimate)
+	next llmclient.LLMClient
+	rpm  *rpsLimiter
+	rpd  *rpsLimiter
+	tpm  *rpsLimiter
+	tpr  int // tokens per request (constant estimate)
 }
 
 func (m *multiLimited) Name() string { return m.next.Name() }
@@ -186,15 +190,17 @@ func (m *multiLimited) GenerateJSON(ctx context.Context, prompt string, input an
 			}
 		}
 	}
-    // Tokens-per-minute using a constant per-request estimate.
-    if m.tpm != nil {
-        est := m.tpr
-        if est < 1 { est = 1 }
-        if err := m.tpm.AcquireN(ctx, est); err != nil {
-            return nil, err
-        }
-    }
-    return m.next.GenerateJSON(ctx, prompt, input)
+	// Tokens-per-minute using a constant per-request estimate.
+	if m.tpm != nil {
+		est := m.tpr
+		if est < 1 {
+			est = 1
+		}
+		if err := m.tpm.AcquireN(ctx, est); err != nil {
+			return nil, err
+		}
+	}
+	return m.next.GenerateJSON(ctx, prompt, input)
 }
 
 func max1(n int) int {
@@ -215,13 +221,13 @@ func Retry(maxAttempts int, baseDelay time.Duration) Middleware {
 	if baseDelay <= 0 {
 		baseDelay = 300 * time.Millisecond
 	}
-	return func(next LLMClient) LLMClient {
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		return &retrying{next: next, max: maxAttempts, base: baseDelay}
 	}
 }
 
 type retrying struct {
-	next LLMClient
+	next llmclient.LLMClient
 	max  int
 	base time.Duration
 }
@@ -255,13 +261,13 @@ func WithLogging(logger *log.Logger) Middleware {
 	if logger == nil {
 		logger = log.Default()
 	}
-	return func(next LLMClient) LLMClient {
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		return &logging{next: next, log: logger}
 	}
 }
 
 type logging struct {
-	next LLMClient
+	next llmclient.LLMClient
 	log  *log.Logger
 }
 
@@ -280,12 +286,12 @@ func (l *logging) GenerateJSON(ctx context.Context, prompt string, input any) (j
 // WithHooks calls HookFrom(ctx).Before/After around GenerateJSON.
 // If no hook is present in the context, it is a no-op.
 func WithHooks() Middleware {
-	return func(next LLMClient) LLMClient {
+	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		return &hooked{next: next}
 	}
 }
 
-type hooked struct{ next LLMClient }
+type hooked struct{ next llmclient.LLMClient }
 
 func (h *hooked) Name() string { return h.next.Name() }
 func (h *hooked) Close() error { return h.next.Close() }

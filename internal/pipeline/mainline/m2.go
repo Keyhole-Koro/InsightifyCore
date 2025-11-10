@@ -1,4 +1,4 @@
-package pipeline
+package mainline
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"insightify/internal/llm"
-	t "insightify/internal/types"
+	llmclient "insightify/internal/llmClient"
+	ml "insightify/internal/types/mainline"
 )
 
 // Preamble is assumed to be defined elsewhere as `prologue`. We rely on it.
@@ -108,10 +108,10 @@ Rules & Guidance:
 
 `
 
-type M2 struct{ LLM llm.LLMClient }
+type M2 struct{ LLM llmclient.LLMClient }
 
 // Run executes M2 with robust JSON handling and normalization.
-func (p *M2) Run(ctx context.Context, in t.M2In) (t.M2Out, error) {
+func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 	input := map[string]any{
 		"previous":       in.Previous,
 		"opened_files":   in.OpenedFiles,
@@ -123,11 +123,11 @@ func (p *M2) Run(ctx context.Context, in t.M2In) (t.M2Out, error) {
 
 	raw, err := p.LLM.GenerateJSON(ctx, promptM2, input)
 	if err != nil {
-		return t.M2Out{}, err
+		return ml.M2Out{}, err
 	}
 	fmt.Printf("M2 raw output (%d bytes)\n", len(raw))
 
-	var out t.M2Out
+	var out ml.M2Out
 	if err := json.Unmarshal(raw, &out); err == nil {
 		return out, nil
 	}
@@ -135,10 +135,10 @@ func (p *M2) Run(ctx context.Context, in t.M2In) (t.M2Out, error) {
 	// Normalize known quirks and retry.
 	norm, nerr := normalizeM2JSON(raw)
 	if nerr != nil {
-		return t.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
+		return ml.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
 	}
 	if err := json.Unmarshal(norm, &out); err != nil {
-		return t.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
+		return ml.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
 	}
 	return out, nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"insightify/internal/llm"
+	llmclient "insightify/internal/llmClient"
 
 	"insightify/internal/runner"
 )
@@ -53,7 +54,7 @@ func main() {
 	// Prompt hook persists prompts & raw responses under artifacts/prompt/
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
-	var base llm.LLMClient
+	var base llmclient.LLMClient
 	var err error
 	if *fake {
 		base = llm.NewFakeClient()
@@ -65,14 +66,14 @@ func main() {
 			if apiKey == "" {
 				log.Fatal("GEMINI_API_KEY must be set (or use --fake)")
 			}
-			base, err = llm.NewGeminiClient(ctx, apiKey, *model)
+			base, err = llmclient.NewGeminiClient(ctx, apiKey, *model)
 		case "groq":
 			// Prefer GROQ_API_KEY for Groq
 			apiKey = os.Getenv("GROQ_API_KEY")
 			if apiKey == "" {
 				log.Fatal("GROQ_API_KEY must be set (or use --fake)")
 			}
-			base, err = llm.NewGroqClient(apiKey, *model)
+			base, err = llmclient.NewGroqClient(apiKey, *model)
 		default:
 			log.Fatalf("unknown --provider: %s (use gemini|groq)", *provider)
 		}
@@ -107,14 +108,14 @@ func main() {
 	}
 
 	reg := runner.BuildRegistry(env)       // m0/m1/m2
-	for k, v := range runner.BuildX(env) { // x0/x1
+	for k, v := range runner.BuildC(env) { // c0/c1
 		reg[k] = v
 	}
 
 	// ----- Execute requested phase -----
 	spec, ok := reg[key]
 	if !ok {
-		log.Fatalf("unknown --phase: %s (use m0|m1|m2|x0|x1|x2)", *phase)
+		log.Fatalf("unknown --phase: %s (use m0|m1|m2|c0|c1|c2)", *phase)
 	}
 	if err := runner.ExecutePhase(ctx, spec, env, reg); err != nil {
 		log.Fatal(err)

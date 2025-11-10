@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"insightify/internal/llm"
+	llmclient "insightify/internal/llmClient"
 	t "insightify/internal/types"
 	"insightify/internal/wordidx"
 )
@@ -25,7 +25,7 @@ type Env struct {
 	ModelSalt string
 	ForceFrom string
 
-	LLM llm.LLMClient
+	LLM llmclient.LLMClient
 
 	WordIndexer wordidx.AggIndex
 

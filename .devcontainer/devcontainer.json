@@ -7,14 +7,14 @@
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "containerEnv": {
-    "GOFLAGS": "-mod=mod"
+    "GOFLAGS": "-mod=mod",
+    "GOMODCACHE": "/workspaces/${localWorkspaceFolderBasename}/.gocache/mod",
+    "GOCACHE": "/workspaces/${localWorkspaceFolderBasename}/.gocache/build",
+    "XDG_CACHE_HOME": "/workspaces/${localWorkspaceFolderBasename}/.gocache/xdg"
   },
-  "mounts": [
-    "type=volume,source=go-pkg-cache,target=/go/pkg",
-    "type=volume,source=go-build-cache,target=/home/vscode/.cache/go-build"
-  ],
-  "postCreateCommand": "go mod download && go install github.com/go-delve/delve/cmd/dlv@latest",
-  "postStartCommand": "sudo mkdir -p /home/vscode/.cache/go-build /go/pkg/mod && sudo chown -R vscode:vscode /home/vscode/.cache/go-build /go/pkg/mod",
+  "mounts": [],
+  "postCreateCommand": "bash -lc 'mkdir -p .gocache/mod .gocache/build .gocache/xdg && if [ -f go.mod ]; then go mod download; fi && go install github.com/go-delve/delve/cmd/dlv@latest'",
+  "postStartCommand": "bash -lc 'mkdir -p .gocache/mod .gocache/build .gocache/xdg && chown -R vscode:vscode .gocache'",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -24,8 +24,6 @@
         "go.useLanguageServer": true,
         "go.toolsManagement.autoUpdate": true,
         "go.testExplorer.discoveryMode": "workspace",
-        "go.gopath": "/go",
-        "go.goroot": "/usr/local/go",
         "editor.formatOnSave": true
       }
     }

@@ -75,7 +75,7 @@ func TestAggIndex_StartFromScan_FindBlocksUntilDone(t *testing.T) {
 
 	seen := map[string]bool{}
 	for _, r := range refs {
-		seen[filepath.Base(r.File)] = true
+		seen[filepath.Base(r.FilePath)] = true
 	}
 	if !(seen["a.txt"] && seen["b.txt"]) {
 		t.Fatalf("expected hits in a.txt and b.txt, got=%v", seen)

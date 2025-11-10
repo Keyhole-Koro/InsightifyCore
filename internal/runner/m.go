@@ -4,12 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"insightify/internal/llm"
-	"insightify/internal/pipeline"
+	mlpipe "insightify/internal/pipeline/mainline"
 	"insightify/internal/scan"
-	t "insightify/internal/types"
+	baset "insightify/internal/types"
+	ml "insightify/internal/types/mainline"
 )
 
 // BuildRegistry defines m0/m1/m2 in one place.
@@ -21,52 +21,42 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 			Key:  "m0",
 			File: "m0.json",
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
-				// Scan for m0: depth-limited to 2
-				opts := scan.Options{MaxDepth: 2}
+				// Scan for m0: depth-limited to 1
+				opts := scan.Options{MaxDepth: 1}
 				extCounts := map[string]int{}
-				var idx []t.FileIndexEntry
+				var idx []baset.FileIndexEntry
 				_ = scan.ScanWithOptions(env.Repo, opts, func(f scan.FileVisit) {
 					if f.IsDir {
 						return
 					}
 					extCounts[f.Ext]++
-					idx = append(idx, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+					idx = append(idx, baset.FileIndexEntry{Path: env.Repo + "/" + f.Path, Size: f.Size})
 				})
-				// Build d1/d2 directory sets
-				d1set := map[string]struct{}{}
-				d2set := map[string]struct{}{}
+				// Build set of repo-relative directories (any depth) encountered during the scan
+				dirSet := map[string]struct{}{}
 				for _, it := range idx {
 					dir := filepath.ToSlash(filepath.Dir(it.Path))
 					if dir == "." || dir == "" {
 						continue
 					}
-					segs := strings.Split(dir, "/")
-					if len(segs) >= 1 {
-						d1set[segs[0]] = struct{}{}
-					}
-					if len(segs) >= 2 {
-						d2set[segs[0]+"/"+segs[1]] = struct{}{}
-					}
+					dirSet[dir] = struct{}{}
 				}
-				var d1, d2 []string
-				for k := range d1set {
-					d1 = append(d1, k)
+				var dirs []string
+				for k := range dirSet {
+					dirs = append(dirs, k)
 				}
-				for k := range d2set {
-					d2 = append(d2, k)
-				}
-				return t.M0In{ExtCounts: extCounts, DirsDepth1: d1, DirsDepth2: d2}, nil
+				return ml.M0In{ExtCounts: extCounts, DirsDepth1: dirs}, nil
 			},
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
 				ctx = llm.WithPhase(ctx, "m0")
-				p := pipeline.M0{LLM: env.LLM}
-				return p.Run(ctx, in.(t.M0In))
+				p := mlpipe.M0{LLM: env.LLM}
+				return p.Run(ctx, in.(ml.M0In))
 			},
 			Fingerprint: func(in any, env *Env) string {
 				return JSONFingerprint(struct {
-					In   t.M0In
+					In   ml.M0In
 					Salt string
-				}{in.(t.M0In), env.ModelSalt})
+				}{in.(ml.M0In), env.ModelSalt})
 			},
 			Downstream: []string{"m1", "m2"},
 			Strategy:   jsonStrategy{},
@@ -87,39 +77,39 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					ig = UniqueStrings(baseNames(m0prev.LibraryRoots...)...)
 				}
 				opts := scan.Options{IgnoreDirs: ig}
-				var idx []t.FileIndexEntry
-				var mds []t.MDDoc
+				var idx []baset.FileIndexEntry
+				var mds []baset.MDDoc
 				_ = scan.ScanWithOptions(env.Repo, opts, func(f scan.FileVisit) {
 					if f.IsDir {
 						return
 					}
-					idx = append(idx, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+					idx = append(idx, baset.FileIndexEntry{Path: f.Path, Size: f.Size})
 					if f.Ext == ".md" {
 						if b, e := os.ReadFile(f.AbsPath); e == nil {
 							txt := string(b)
 							txt = env.StripImgMD.ReplaceAllString(txt, "")
 							txt = env.StripImgHTML.ReplaceAllString(txt, "")
-							mds = append(mds, t.MDDoc{Path: f.Path, Text: txt})
+							mds = append(mds, baset.MDDoc{Path: f.Path, Text: txt})
 						}
 					}
 				})
-				return t.M1In{
+				return ml.M1In{
 					FileIndex: idx,
 					MDDocs:    mds,
-					Hints:     &t.M1Hints{},
-					Limits:    &t.M1Limits{MaxNext: env.MaxNext},
+					Hints:     &ml.M1Hints{},
+					Limits:    &ml.M1Limits{MaxNext: env.MaxNext},
 				}, nil
 			},
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
 				ctx = llm.WithPhase(ctx, "m1")
-				p := pipeline.M1{LLM: env.LLM}
-				return p.Run(ctx, in.(t.M1In))
+				p := mlpipe.M1{LLM: env.LLM}
+				return p.Run(ctx, in.(ml.M1In))
 			},
 			Fingerprint: func(in any, env *Env) string {
 				return JSONFingerprint(struct {
-					In   t.M1In
+					In   ml.M1In
 					Salt string
-				}{in.(t.M1In), env.ModelSalt})
+				}{in.(ml.M1In), env.ModelSalt})
 			},
 			Downstream: []string{"m2"},
 			Strategy:   jsonStrategy{},
@@ -131,12 +121,12 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 			File: "m2.json",
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
 				// Requires m1 output
-				var m1 t.M1Out
+				var m1 ml.M1Out
 				ReadJSON(env.OutDir, "m1.json", &m1)
 
 				// Prepare opened files and focus questions
-				var opened []t.OpenedFile
-				var focus []t.FocusQuestion
+				var opened []baset.OpenedFile
+				var focus []baset.FocusQuestion
 				picked := 0
 				for _, nf := range m1.NextFiles {
 					if picked >= env.MaxNext {
@@ -147,20 +137,20 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					if err != nil {
 						continue
 					}
-					opened = append(opened, t.OpenedFile{Path: nf.Path, Content: string(b)})
+					opened = append(opened, baset.OpenedFile{Path: nf.Path, Content: string(b)})
 					if len(nf.WhatToCheck) == 0 {
-						focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: "Review this file for key architecture details"})
+						focus = append(focus, baset.FocusQuestion{Path: nf.Path, Question: "Review this file for key architecture details"})
 					} else {
 						for _, q := range nf.WhatToCheck {
-							focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: q})
+							focus = append(focus, baset.FocusQuestion{Path: nf.Path, Question: q})
 						}
 					}
 					picked++
 				}
 
 				// Re-scan for context: full depth, ignore library_roots
-				var index []t.FileIndexEntry
-				var mdDocs []t.MDDoc
+				var index []baset.FileIndexEntry
+				var mdDocs []baset.MDDoc
 				ig2 := []string{}
 				var m0prev2 struct {
 					LibraryRoots []string `json:"library_roots"`
@@ -174,13 +164,13 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					if f.IsDir {
 						return
 					}
-					index = append(index, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+					index = append(index, baset.FileIndexEntry{Path: f.Path, Size: f.Size})
 					if f.Ext == ".md" {
 						if b, e := os.ReadFile(f.AbsPath); e == nil {
 							txt := string(b)
 							txt = env.StripImgMD.ReplaceAllString(txt, "")
 							txt = env.StripImgHTML.ReplaceAllString(txt, "")
-							mdDocs = append(mdDocs, t.MDDoc{Path: f.Path, Text: txt})
+							mdDocs = append(mdDocs, baset.MDDoc{Path: f.Path, Text: txt})
 						}
 					}
 				})
@@ -195,7 +185,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					}
 				}
 
-				return t.M2In{
+				return ml.M2In{
 					Previous:     m1,
 					OpenedFiles:  opened,
 					Focus:        focus,
@@ -206,14 +196,14 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 			},
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
 				ctx = llm.WithPhase(ctx, "m2")
-				p := pipeline.M2{LLM: env.LLM}
-				return p.Run(ctx, in.(t.M2In))
+				p := mlpipe.M2{LLM: env.LLM}
+				return p.Run(ctx, in.(ml.M2In))
 			},
 			Fingerprint: func(in any, env *Env) string {
 				return JSONFingerprint(struct {
-					In   t.M2In
+					In   ml.M2In
 					Salt string
-				}{in.(t.M2In), env.ModelSalt})
+				}{in.(ml.M2In), env.ModelSalt})
 			},
 			Downstream: nil,
 			Strategy:   jsonStrategy{},

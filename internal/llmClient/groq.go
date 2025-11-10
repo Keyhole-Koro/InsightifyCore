@@ -1,14 +1,14 @@
-package llm
+package llmclient
 
 import (
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "os"
-    "time"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"time"
 )
 
 // GroqClient calls the Groq Chat Completions API (OpenAI-compatible) and asks for JSON.

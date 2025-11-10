@@ -1,13 +1,15 @@
-package types
+package mainline
+
+import types "insightify/internal/types"
 
 // M2In is the input envelope for milestone M2.
 type M2In struct {
-	Previous     any              `json:"previous"`       // prior hypothesis snapshot (opaque)
-	OpenedFiles  []OpenedFile     `json:"opened_files"`   // newly opened files (content included)
-	Focus        []FocusQuestion  `json:"focus"`          // questions we want to answer
-	FileIndex    []FileIndexEntry `json:"file_index"`     // searchable index (path/size/kind/etc.)
-	MDDocs       []MDDoc          `json:"md_docs"`        // markdown docs (text only)
-	LimitMaxNext int              `json:"limit_max_next"` // cap for next_files+next_patterns
+	Previous     any                    `json:"previous"`       // prior hypothesis snapshot (opaque)
+	OpenedFiles  []types.OpenedFile     `json:"opened_files"`   // newly opened files (content included)
+	Focus        []types.FocusQuestion  `json:"focus"`          // questions we want to answer
+	FileIndex    []types.FileIndexEntry `json:"file_index"`     // searchable index (path/size/kind/etc.)
+	MDDocs       []types.MDDoc          `json:"md_docs"`        // markdown docs (text only)
+	LimitMaxNext int                    `json:"limit_max_next"` // cap for next_files+next_patterns
 }
 
 // -------------------- M2Out --------------------
