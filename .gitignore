@@ -35,6 +35,9 @@ Thumbs.db
 
 .env
 
+go.mod
+go.sum
+
 out
 artifacts
 

@@ -19,9 +19,11 @@ import (
 
 // Env is the shared environment passed to builders/runners.
 type Env struct {
-	Repo      string
-	OutDir    string
-	MaxNext   int
+	Repo     string
+	RepoRoot string
+	OutDir   string
+	MaxNext  int
+
 	ModelSalt string
 	ForceFrom string
 

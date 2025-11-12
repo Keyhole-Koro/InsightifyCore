@@ -2,6 +2,7 @@ package wordidx
 
 import (
 	"context"
+	"errors"
 	"hash/fnv"
 	"os"
 	"path/filepath"
@@ -123,6 +124,143 @@ type PosRef struct {
 	Line     int
 }
 
+// Builder allows fluent configuration of an AggIndex run.
+type Builder struct {
+	roots    []string
+	workers  int
+	allowExt []string
+	opts     scan.Options
+	err      error
+}
+
+// New returns a Builder with sensible defaults (cache bypass and common ignores).
+func New() *Builder {
+	return &Builder{
+		opts: scan.Options{
+			IgnoreDirs:  []string{".git", "node_modules", "vendor"},
+			BypassCache: true,
+		},
+	}
+}
+
+// Root sets one or more repository roots to index. Passing no arguments leaves
+// the previously configured roots unchanged. A blank argument is ignored.
+func (b *Builder) Root(paths ...string) *Builder {
+	if b == nil {
+		return b
+	}
+	if len(paths) == 0 {
+		return b
+	}
+	var cleaned []string
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		resolved, err := scan.ResolveRoot(p)
+		if err != nil {
+			b.err = err
+			return b
+		}
+		cleaned = append(cleaned, resolved)
+	}
+	if len(cleaned) == 0 {
+		return b
+	}
+	b.roots = cleaned
+	return b
+}
+
+// AddRoot appends another root to the existing list (duplicates are ignored).
+func (b *Builder) AddRoot(path string) *Builder {
+	if b == nil || path == "" {
+		return b
+	}
+	p, err := scan.ResolveRoot(path)
+	if err != nil {
+		b.err = err
+		return b
+	}
+	for _, existing := range b.roots {
+		if existing == p {
+			return b
+		}
+	}
+	b.roots = append(b.roots, p)
+	return b
+}
+
+// Repo resolves a repo name (folder inside scan.ReposDir) and adds it as a root.
+func (b *Builder) Repo(name string) *Builder {
+	if b == nil || name == "" {
+		return b
+	}
+	return b.AddRoot(name)
+}
+
+// Allow restricts indexed files to the given extensions (e.g., "go", "ts").
+func (b *Builder) Allow(exts ...string) *Builder {
+	if b == nil {
+		return b
+	}
+	if len(exts) == 0 {
+		b.allowExt = nil
+		return b
+	}
+	b.allowExt = append([]string(nil), exts...)
+	return b
+}
+
+// Workers overrides the number of indexing workers. <=0 uses GOMAXPROCS.
+func (b *Builder) Workers(n int) *Builder {
+	if b == nil {
+		return b
+	}
+	b.workers = n
+	return b
+}
+
+// Options replaces the scan options used during traversal.
+func (b *Builder) Options(opts scan.Options) *Builder {
+	if b == nil {
+		return b
+	}
+	b.opts = opts
+	return b
+}
+
+// Start kicks off indexing with the configured settings and returns the AggIndex.
+func (b *Builder) Start(ctx context.Context) *AggIndex {
+	if b == nil {
+		return nil
+	}
+	if b.err != nil {
+		agg := NewAgg()
+		agg.setErr(b.err)
+		agg.doneOnce.Do(func() { close(agg.doneCh) })
+		return agg
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	roots := b.roots
+	if len(roots) == 0 {
+		b.err = errors.New("wordidx: no roots configured; call Root or Repo")
+		agg := NewAgg()
+		agg.setErr(b.err)
+		agg.doneOnce.Do(func() { close(agg.doneCh) })
+		return agg
+	}
+	roots = append([]string(nil), roots...) // avoid external mutation
+	var filter func(scan.FileVisit) bool
+	if len(b.allowExt) > 0 {
+		filter = ExtAllow(b.allowExt...)
+	}
+	agg := NewAgg()
+	agg.StartFromScans(ctx, roots, b.opts, b.workers, filter)
+	return agg
+}
+
 // AggIndex aggregates indices across files asynchronously.
 // StartFromScan begins indexing; Wait/Find synchronize on completion.
 type AggIndex struct {
@@ -136,7 +274,7 @@ type AggIndex struct {
 	firstErr error
 }
 
-// NewAgg creates an empty aggregator.
+// NewAgg creates an empty aggregator. Prefer Builder for fluent setup.
 func NewAgg() *AggIndex {
 	return &AggIndex{
 		byHash: make(map[uint64][]PosRef),
@@ -148,6 +286,12 @@ func NewAgg() *AggIndex {
 // fileFilter: optional predicate to include specific files (e.g., by extension).
 // It returns immediately; Find/Wait can be used to await completion.
 func (a *AggIndex) StartFromScan(ctx context.Context, root string, sopts scan.Options, workers int, fileFilter func(scan.FileVisit) bool) {
+	a.StartFromScans(ctx, []string{root}, sopts, workers, fileFilter)
+}
+
+// StartFromScans indexes all provided roots sequentially using a shared worker pool.
+// It returns immediately; Find/Wait can be used to await completion.
+func (a *AggIndex) StartFromScans(ctx context.Context, roots []string, sopts scan.Options, workers int, fileFilter func(scan.FileVisit) bool) {
 	if workers <= 0 {
 		workers = runtime.GOMAXPROCS(0)
 		if workers <= 0 {
@@ -174,25 +318,37 @@ func (a *AggIndex) StartFromScan(ctx context.Context, root string, sopts scan.Op
 		}()
 	}
 	go func() {
-		err := scan.ScanWithOptions(root, sopts, func(fv scan.FileVisit) {
-			if fv.IsDir {
+		defer func() {
+			close(tasks)
+			wg.Wait()
+			a.doneOnce.Do(func() { close(a.doneCh) })
+		}()
+		for _, root := range roots {
+			if ctx.Err() != nil {
 				return
 			}
-			if fileFilter != nil && !fileFilter(fv) {
+			if root == "" {
+				root = "."
+			}
+			root = filepath.Clean(root)
+			err := scan.ScanWithOptions(root, sopts, func(fv scan.FileVisit) {
+				if fv.IsDir {
+					return
+				}
+				if fileFilter != nil && !fileFilter(fv) {
+					return
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case tasks <- fv.AbsPath:
+				}
+			})
+			if err != nil {
+				a.setErr(err)
 				return
 			}
-			select {
-			case <-ctx.Done():
-				return
-			case tasks <- fv.AbsPath:
-			}
-		})
-		if err != nil {
-			a.setErr(err)
 		}
-		close(tasks)
-		wg.Wait()
-		a.doneOnce.Do(func() { close(a.doneCh) })
 	}()
 }
 

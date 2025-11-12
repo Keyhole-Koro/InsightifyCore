@@ -17,7 +17,7 @@ type C0Out struct {
 }
 
 type ExtractorSpec struct {
-	Ext                 []string       `json:"ext"`      // e.g. [".ts",".js"]
+	Exts                []string       `json:"exts"`     // e.g. [".ts",".js"]
 	Language            []Language     `json:"language"` // e.g. ["TypeScript","JavaScript"]
 	Rules               Rules          `json:"rules"`
 	CommentLinePattern  []string       `json:"comment_line_pattern"`
@@ -30,7 +30,7 @@ type C0Spec = ExtractorSpec
 
 type Language struct {
 	Name string   `json:"name"` // e.g. "TypeScript"
-	Ext  []string `json:"ext"`  // e.g. [".ts"]
+	Exts []string `json:"exts"` // e.g. [".ts"]
 }
 
 type Rules struct {

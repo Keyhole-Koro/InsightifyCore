@@ -21,7 +21,8 @@ func write(t *testing.T, root, rel, content string) string {
 }
 
 func TestStream_FilesOnly(t *testing.T) {
-	root := t.TempDir()
+	repos := setupTestReposDir(t)
+	root := ensureRepoDir(t, repos, "repo1")
 	write(t, root, "a.txt", "root file")
 	write(t, root, "dir1/b.txt", "child file")
 	write(t, root, "dir1/vendor/skip.txt", "ignored vendor")
@@ -57,7 +58,8 @@ func TestStream_FilesOnly(t *testing.T) {
 }
 
 func TestScan_IgnoresAndDepth(t *testing.T) {
-	root := t.TempDir()
+	repos := setupTestReposDir(t)
+	root := ensureRepoDir(t, repos, "repo2")
 	write(t, root, "a.txt", "root file")
 	write(t, root, "dir1/b.txt", "child file")
 	write(t, root, "dir1/c.txt", "child file2")
@@ -87,6 +89,28 @@ func TestScan_IgnoresAndDepth(t *testing.T) {
 
 	sort.Strings(files)
 	want := []string{"a.txt"}
+	if !slices.Equal(files, want) {
+		t.Fatalf("files=%v want=%v", files, want)
+	}
+}
+
+func TestScan_WithRepoName(t *testing.T) {
+	repos := setupTestReposDir(t)
+	root := ensureRepoDir(t, repos, "repoName")
+	write(t, root, "a.txt", "root file")
+	write(t, root, "dir/b.txt", "child file")
+
+	var files []string
+	if err := ScanWithOptions("repoName", Options{BypassCache: true}, func(fv FileVisit) {
+		if fv.IsDir {
+			return
+		}
+		files = append(files, fv.Path)
+	}); err != nil {
+		t.Fatalf("scan repo name: %v", err)
+	}
+	want := []string{"a.txt", "dir/b.txt"}
+	sort.Strings(files)
 	if !slices.Equal(files, want) {
 		t.Fatalf("files=%v want=%v", files, want)
 	}

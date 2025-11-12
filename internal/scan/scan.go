@@ -66,7 +66,11 @@ func Scan(root string, cb VisitFunc) error {
 // If CacheSubtrees is false, it uses whole-tree caching (compatible with previous behavior).
 // If CacheSubtrees is true, it uses subtree caching and can re-scan only changed prefixes.
 func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
-	rClean := filepath.Clean(root)
+	resolved, err := ResolveRoot(root)
+	if err != nil {
+		return err
+	}
+	rClean := filepath.Clean(resolved)
 
 	if fi, err := os.Stat(rClean); err != nil {
 		abs, _ := filepath.Abs(rClean)
@@ -146,7 +150,7 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 		// BypassCache means: don't use subtree cache at all; do full recursive traversal and overwrite caches.
 		// Run traversal in parallel.
 		pc := newParallelCtx()
-		err := walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, ig, igKey, cb, opts.BypassCache, pc)
+		err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, ig, igKey, cb, opts.BypassCache, pc)
 		pc.wg.Wait()
 		if err == nil {
 			err = pc.getErr()
@@ -156,7 +160,7 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 
 	// Fallback: full re-scan without caching, in parallel
 	pc := newParallelCtx()
-	err := walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, normalizeIgnores(opts.IgnoreDirs), "", cb, true, pc)
+	err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, normalizeIgnores(opts.IgnoreDirs), "", cb, true, pc)
 	pc.wg.Wait()
 	if err == nil {
 		err = pc.getErr()

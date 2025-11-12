@@ -30,7 +30,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 						return
 					}
 					extCounts[f.Ext]++
-					idx = append(idx, baset.FileIndexEntry{Path: env.Repo + "/" + f.Path, Size: f.Size})
+					idx = append(idx, baset.FileIndexEntry{Path: f.Path, Size: f.Size})
 				})
 				// Build set of repo-relative directories (any depth) encountered during the scan
 				dirSet := map[string]struct{}{}
@@ -132,7 +132,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					if picked >= env.MaxNext {
 						break
 					}
-					full := filepath.Join(env.Repo, filepath.Clean(nf.Path))
+					full := filepath.Join(env.RepoRoot, filepath.Clean(nf.Path))
 					b, err := os.ReadFile(full)
 					if err != nil {
 						continue

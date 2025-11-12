@@ -52,7 +52,8 @@ func itoa(x int) string {
 
 func TestWholeCacheImprovesScanTime(t *testing.T) {
 	t.Parallel()
-	dir := t.TempDir()
+	repos := setupTestReposDir(t)
+	dir := ensureRepoDir(t, repos, "repo-cache-fast")
 	// Create 200 directories x 10 files = 2000 files
 	makeTree(t, dir, 200, 10)
 
@@ -88,7 +89,8 @@ func TestWholeCacheImprovesScanTime(t *testing.T) {
 
 func TestBypassCacheSeesNewFiles(t *testing.T) {
 	t.Parallel()
-	dir := t.TempDir()
+	repos := setupTestReposDir(t)
+	dir := ensureRepoDir(t, repos, "repo-cache-bypass")
 	_ = makeTree(t, dir, 20, 5) // 100 files
 
 	ClearCache()

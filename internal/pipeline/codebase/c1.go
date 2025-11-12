@@ -9,82 +9,173 @@ import (
 
 	"insightify/internal/scan"
 	cb "insightify/internal/types/codebase"
+	"insightify/internal/wordidx"
 )
 
-// C1 builds a dependency graph from extractor specs (X0 output) by scanning files.
-// This pipeline does not use an LLM — it is entirely programmatic.
+// ---- Internal models (optional middle-layer types) ----
+
+type TargetCount struct {
+	Target string
+	Count  int
+}
+
+type FileDeps struct {
+	Path         string
+	TargetCounts []TargetCount
+}
+
+// ---- Pipeline ----
+
 type C1 struct{}
 
+// Run executes the C1 pipeline for dependency extraction.
 func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
 	log.Printf("C1: starting scan in repo %s", in.Repo)
 
+	var out []cb.Dependencies
 	for family, specs := range in.Specs {
-		targetFiles, err := FilesWithExtensions(in.Repo, in.Roots.MainSourceRoots, specs.Ext, scan.Options{})
+		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, specs.Exts)
 		if err != nil {
 			return cb.C1Out{}, err
 		}
-		log.Printf("C1: found %d files for family %s", len(targetFiles), family)
+		log.Printf("C1: found %d dependencies for family %s", len(dep.Dependencies), family)
+		out = append(out, dep)
 	}
-
-	return cb.C1Out{PossibleDependencies: nil}, nil
+	return cb.C1Out{PossibleDependencies: out}, nil
 }
 
-func FilesWithExtensions(repo string, roots []string, exts []string, opts scan.Options) ([]string, error) {
-	if len(exts) == 0 || len(roots) == 0 {
-		return nil, nil
-	}
-
-	repoDir := strings.TrimSpace(repo)
-	if repoDir == "" {
-		repoDir = "."
-	}
-	repoAbs, err := filepath.Abs(repoDir)
+// Dependencies scans once for a given (repo, roots, exts) and returns a single cb.Dependencies.
+func Dependencies(ctx context.Context, repo string, roots []string, exts []string) (cb.Dependencies, error) {
+	base, err := scan.ResolveRepo(repo)
 	if err != nil {
-		return nil, err
+		return cb.Dependencies{}, err
 	}
 
-	seen := make(map[string]struct{})
-	var files []string
-
-	for _, root := range roots {
-		root = strings.TrimSpace(root)
-		if root == "" {
-			continue
-		}
-		rootPath := root
-		if !filepath.IsAbs(rootPath) {
-			rootPath = filepath.Join(repoAbs, rootPath)
-		}
-		rootPath = filepath.Clean(rootPath)
-
-		matches, err := scan.FilesWithExtensions(rootPath, exts, opts)
-		if err != nil {
-			return nil, err
-		}
-
-		relPrefix, err := filepath.Rel(repoAbs, rootPath)
-		if err != nil {
-			relPrefix = rootPath
-		}
-		relPrefix = filepath.ToSlash(relPrefix)
-
-		for _, match := range matches {
-			repoRel := match
-			if relPrefix != "." && relPrefix != "" {
-				repoRel = filepath.ToSlash(filepath.Join(relPrefix, match))
-			}
-			repoRel = strings.TrimPrefix(repoRel, "./")
-			if repoRel == "" {
+	// Resolve search roots
+	var resolvedRoots []string
+	if len(roots) == 0 {
+		resolvedRoots = []string{repo}
+	} else {
+		for _, r := range roots {
+			r = strings.TrimSpace(r)
+			if r == "" {
 				continue
 			}
-			if _, dup := seen[repoRel]; dup {
-				continue
+			resolvedRoots = append(resolvedRoots, filepath.Join(base, filepath.Clean(r)))
+		}
+	}
+	if len(resolvedRoots) == 0 {
+		resolvedRoots = []string{repo}
+	}
+
+	// Initialize the indexer
+	agg := wordidx.New().
+		Root(resolvedRoots...).
+		Allow(exts...).
+		Workers(2).
+		Options(scan.Options{BypassCache: true}).
+		Start(ctx)
+
+	if err := agg.Wait(ctx); err != nil {
+		return cb.Dependencies{}, err
+	}
+
+	// Build the filename index for O(1) lookups
+	filenameIndex := buildFilenameIndex(ctx, agg)
+
+	// Infer dependencies
+	var srcDeps []cb.SourceDependency
+	for _, fi := range agg.Files(ctx) {
+		from := fi.Path
+		counts := make(map[string]int)
+
+		for _, w := range fi.Index.Words {
+			tok := strings.ToLower(w.Text)
+			if paths, ok := filenameIndex[tok]; ok {
+				for p := range paths {
+					if p != from {
+						counts[p]++
+					}
+				}
 			}
-			seen[repoRel] = struct{}{}
-			files = append(files, repoRel)
+		}
+
+		reqs := keysSorted(counts)
+		log.Printf("C1: %s requires %d targets", from, len(reqs))
+		srcDeps = append(srcDeps, cb.SourceDependency{
+			Path:     from,
+			Language: "", // fill if you want (derive from ext)
+			Ext:      strings.TrimPrefix(filepath.Ext(from), "."),
+			Requires: reqs,
+		})
+	}
+
+	// Sort for deterministic output
+	sort.Slice(srcDeps, func(i, j int) bool { return srcDeps[i].Path < srcDeps[j].Path })
+
+	log.Printf("C1: scanned %d files in repo %s", len(srcDeps), repo)
+	return cb.Dependencies{
+		Repo:         repo,
+		Roots:        roots,
+		Exts:         exts,
+		Dependencies: srcDeps,
+	}, nil
+}
+
+// ---- Helpers ----
+
+// buildFilenameIndex constructs a fast lookup index mapping tokens to file paths.
+// Example for "foo.bar.ts":
+//   - "foo.bar.ts"  (basename)
+//   - "foo.bar"     (stem = basename without extension)
+//   - "foo", "bar", "ts"  (dot-split tokens)
+func buildFilenameIndex(ctx context.Context, agg *wordidx.AggIndex) map[string]map[string]struct{} {
+	idx := make(map[string]map[string]struct{})
+
+	add := func(token, fullpath string) {
+		token = strings.ToLower(strings.TrimSpace(token))
+		if token == "" {
+			return
+		}
+		m := idx[token]
+		if m == nil {
+			m = make(map[string]struct{})
+			idx[token] = m
+		}
+		m[fullpath] = struct{}{}
+	}
+
+	for _, fi := range agg.Files(ctx) {
+		base := filepath.Base(fi.Path) // e.g. "foo.bar.ts"
+
+		// (1) Basename
+		add(base, fi.Path)
+
+		// (2) Stem (basename without the final extension)
+		if ext := filepath.Ext(base); ext != "" {
+			stem := base[:len(base)-len(ext)] // e.g. "foo.bar"
+			add(stem, fi.Path)
+		}
+
+		// (3) Dot-split tokens (e.g. ["foo", "bar", "ts"])
+		for _, part := range strings.Split(base, ".") {
+			add(part, fi.Path)
 		}
 	}
 
-	sort.Strings(files)
-	return files, nil
+	for k, v := range idx {
+		log.Printf("C1: filename index token=%q has %d entries", k, len(v))
+	}
+
+	return idx
+}
+
+// keysSorted returns map keys in ascending order.
+func keysSorted(m map[string]int) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

@@ -8,7 +8,8 @@ import (
 )
 
 func TestFilesWithExtensions(t *testing.T) {
-	root := t.TempDir()
+	repos := setupTestReposDir(t)
+	root := ensureRepoDir(t, repos, "repo-filter")
 
 	mustWrite := func(rel string) {
 		path := filepath.Join(root, rel)

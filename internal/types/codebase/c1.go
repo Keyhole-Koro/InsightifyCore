@@ -15,10 +15,17 @@ type C1In struct {
 
 // C1Out is a minimal dependency graph.
 type C1Out struct {
-	PossibleDependencies []FileWithDependency `json:"possible_dependencies,omitempty"`
+	PossibleDependencies []Dependencies `json:"possible_dependencies,omitempty"`
 }
 
-type FileWithDependency struct {
+type Dependencies struct {
+	Repo         string             `json:"repo"`
+	Roots        []string           `json:"roots"`
+	Exts         []string           `json:"exts"`
+	Dependencies []SourceDependency `json:"dependencies"`
+}
+
+type SourceDependency struct {
 	Path     string   `json:"path"`
 	Language string   `json:"language,omitempty"`
 	Ext      string   `json:"ext,omitempty"`

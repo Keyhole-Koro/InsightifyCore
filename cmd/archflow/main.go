@@ -15,11 +15,12 @@ import (
 	llmclient "insightify/internal/llmClient"
 
 	"insightify/internal/runner"
+	"insightify/internal/scan"
 )
 
 func main() {
 	// ----- Flags -----
-	repo := flag.String("repo", "", "path to repository root")
+	repo := flag.String("repo", "", "repository folder name under ./repos")
 	outDir := flag.String("out", "artifacts", "output directory")
 	provider := flag.String("provider", "gemini", "LLM provider (gemini|groq)")
 	model := flag.String("model", "gemini-2.5-pro", "LLM model id (provider-specific)")
@@ -30,8 +31,15 @@ func main() {
 	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
 	flag.Parse()
 
+	var err error
+
 	if *repo == "" {
 		log.Fatal("--repo is required")
+	}
+	repoName := strings.TrimSpace(*repo)
+	repoPath, err := scan.ResolveRepo(repoName)
+	if err != nil {
+		log.Fatal(err)
 	}
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		log.Fatal(err)
@@ -55,7 +63,6 @@ func main() {
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
 	var base llmclient.LLMClient
-	var err error
 	if *fake {
 		base = llm.NewFakeClient()
 	} else {
@@ -95,7 +102,8 @@ func main() {
 
 	// ----- Build environment & registry -----
 	env := &runner.Env{
-		Repo:         *repo,
+		Repo:         repoName,
+		RepoRoot:     repoPath,
 		OutDir:       *outDir,
 		MaxNext:      *maxNext,
 		ModelSalt:    os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
