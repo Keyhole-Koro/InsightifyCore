@@ -18,6 +18,36 @@ import (
 	"insightify/internal/wordidx"
 )
 
+// SpecResolver resolves phase keys to specs, enabling cross-registry lookup.
+type SpecResolver interface {
+	Get(key string) (PhaseSpec, bool)
+}
+
+// MapResolver is a simple SpecResolver backed by a map keyed by normalized phase keys.
+type MapResolver struct {
+	specs map[string]PhaseSpec
+}
+
+// Get returns the PhaseSpec for the provided key, if present.
+func (r MapResolver) Get(key string) (PhaseSpec, bool) {
+	if len(r.specs) == 0 {
+		return PhaseSpec{}, false
+	}
+	spec, ok := r.specs[normalizeKey(key)]
+	return spec, ok
+}
+
+// MergeRegistries flattens multiple phase registries into a single resolver.
+func MergeRegistries(regs ...map[string]PhaseSpec) SpecResolver {
+	merged := make(map[string]PhaseSpec, 16)
+	for _, reg := range regs {
+		for k, v := range reg {
+			merged[normalizeKey(k)] = v
+		}
+	}
+	return MapResolver{specs: merged}
+}
+
 // Env is the shared environment passed to builders/runners.
 type Env struct {
 	Repo       string
@@ -26,6 +56,7 @@ type Env struct {
 	MaxNext    int
 	RepoFS     *safeio.SafeFS
 	ArtifactFS *safeio.SafeFS
+	Resolver   SpecResolver
 
 	ModelSalt string
 	ForceFrom string
@@ -49,7 +80,8 @@ type PhaseSpec struct {
 	Run         func(ctx context.Context, in any, env *Env) (any, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
 	Downstream  []string                      // phases to invalidate when forced
-	Strategy    CacheStrategy                 // how to cache (json, versioned, none)
+	Requires    []string
+	Strategy    CacheStrategy // how to cache (json, versioned, none)
 }
 
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
@@ -168,7 +200,16 @@ func (versionedStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *En
 // --------------------- Execution with force+cache middlewares ----------------
 
 // ExecutePhase builds input, applies force-from + strategy caching, runs, then invalidates downstream.
-func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env, registry map[string]PhaseSpec) error {
+func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
+	if len(spec.Requires) > 0 {
+		visiting := make(map[string]bool)
+		for _, r := range spec.Requires {
+			if err := ensureArtifact(ctx, r, env, visiting); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Build logical input
 	in, err := spec.BuildInput(ctx, env)
 	if err != nil {
@@ -196,12 +237,51 @@ func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env, registry map[st
 	}
 
 	// If forced, invalidate downstream caches (json-strategy only).
-	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
+	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) && env.Resolver != nil {
 		for _, d := range spec.Downstream {
-			if ds, ok := registry[d]; ok {
+			if ds, ok := env.Resolver.Get(d); ok {
 				_ = ds.Strategy.Invalidate(ctx, ds, env)
 			}
 		}
+	}
+	return nil
+}
+
+func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[string]bool) error {
+	if env == nil || env.Resolver == nil {
+		return fmt.Errorf("runner: resolver is not configured")
+	}
+	if normalizeKey(key) == "" {
+		return fmt.Errorf("runner: empty required phase key")
+	}
+	spec, ok := env.Resolver.Get(key)
+	if !ok {
+		fallback := filepath.Join(env.OutDir, normalizeKey(key)+".json")
+		if FileExists(env.ArtifactFS, fallback) {
+			return nil
+		}
+		return fmt.Errorf("runner: unknown required phase %s", key)
+	}
+	path := filepath.Join(env.OutDir, spec.File)
+	if FileExists(env.ArtifactFS, path) {
+		return nil
+	}
+	if visiting == nil {
+		visiting = make(map[string]bool)
+	}
+	specKey := normalizeKey(spec.Key)
+	if visiting[specKey] {
+		return fmt.Errorf("runner: cyclic phase dependency detected at %s", spec.Key)
+	}
+	visiting[specKey] = true
+	defer delete(visiting, specKey)
+	for _, r := range spec.Requires {
+		if err := ensureArtifact(ctx, r, env, visiting); err != nil {
+			return err
+		}
+	}
+	if err := ExecutePhase(ctx, spec, env); err != nil {
+		return fmt.Errorf("failed to build required phase %s: %w", spec.Key, err)
 	}
 	return nil
 }
@@ -236,6 +316,42 @@ func WriteJSON(dir, name string, v any) {
 	_ = os.WriteFile(filepath.Join(dir, name), b, 0o644)
 }
 
+func Artifact[T any](env *Env, key string) (T, error) {
+	var zero T
+	if env == nil {
+		return zero, fmt.Errorf("runner: env is nil")
+	}
+	norm := normalizeKey(key)
+	if norm == "" {
+		return zero, fmt.Errorf("runner: empty phase key")
+	}
+	filename := norm + ".json"
+	if env.Resolver != nil {
+		if spec, ok := env.Resolver.Get(key); ok && strings.TrimSpace(spec.File) != "" {
+			filename = spec.File
+		}
+	}
+	fs := ensureFS(env.ArtifactFS)
+	path := filepath.Join(env.OutDir, filename)
+	b, err := fs.SafeReadFile(path)
+	if err != nil {
+		return zero, fmt.Errorf("runner: read artifact %s: %w", filename, err)
+	}
+	var out T
+	if err := json.Unmarshal(b, &out); err != nil {
+		return zero, fmt.Errorf("runner: decode artifact %s: %w", filename, err)
+	}
+	return out, nil
+}
+
+func MustArtifact[T any](env *Env, key string) T {
+	v, err := Artifact[T](env, key)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 func NextVersion(outDir, key string) int {
 	entries, err := ensureFS(nil).SafeReadDir(outDir)
 	if err != nil {
@@ -257,6 +373,10 @@ func NextVersion(outDir, key string) int {
 		}
 	}
 	return max + 1
+}
+
+func normalizeKey(key string) string {
+	return strings.ToLower(strings.TrimSpace(key))
 }
 
 func ensureFS(fs *safeio.SafeFS) *safeio.SafeFS {

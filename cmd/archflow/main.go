@@ -104,7 +104,7 @@ func main() {
 	llmCli := llm.Wrap(base, mws...)
 	defer llmCli.Close()
 
-	// Scanning is performed per-phase inside runner.BuildRegistry via PlanScan.
+	// Scanning is performed per-phase inside runner.BuildRegistryMainline via PlanScan.
 
 	// ----- Build environment & registry -----
 	env := &runner.Env{
@@ -123,17 +123,16 @@ func main() {
 		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
 	}
 
-	reg := runner.BuildRegistry(env)       // m0/m1/m2
-	for k, v := range runner.BuildC(env) { // c0/c1
-		reg[k] = v
-	}
+	mainline := runner.BuildRegistryMainline(env) // m0/m1/m2
+	codebase := runner.BuildRegistryCodebase(env) // c0/c1
+	env.Resolver = runner.MergeRegistries(mainline, codebase)
 
 	// ----- Execute requested phase -----
-	spec, ok := reg[key]
+	spec, ok := env.Resolver.Get(key)
 	if !ok {
 		log.Fatalf("unknown --phase: %s (use m0|m1|m2|c0|c1|c2)", *phase)
 	}
-	if err := runner.ExecutePhase(ctx, spec, env, reg); err != nil {
+	if err := runner.ExecutePhase(ctx, spec, env); err != nil {
 		log.Fatal(err)
 	}
 }

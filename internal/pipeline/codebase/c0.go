@@ -4,9 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/scan"
+	"insightify/internal/types"
 	cb "insightify/internal/types/codebase"
+	mainline "insightify/internal/types/mainline"
 )
 
 // C0 prompt — imports/includes only, plus normalization hints for later post-processing.
@@ -84,6 +90,15 @@ For each family key "<familyKey>":
 type C0 struct{ LLM llmclient.LLMClient }
 
 func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
+	// Populate ext counts if missing so runner BuildInput can stay lightweight.
+	if len(in.ExtCounts) == 0 {
+		exts, err := computeExtCounts(ctx, in.Repo, in.Roots)
+		if err != nil {
+			return cb.C0Out{}, err
+		}
+		in.ExtCounts = exts
+	}
+
 	// add the content of runtime config files to the input later
 	raw, err := x.LLM.GenerateJSON(ctx, promptC0, in)
 	if err != nil {
@@ -95,4 +110,52 @@ func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
 		return cb.C0Out{}, fmt.Errorf("C0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	return out, nil
+}
+
+func computeExtCounts(ctx context.Context, repo string, roots mainline.M0Out) ([]types.ExtCount, error) {
+	_ = ctx
+	ignore := make(map[string]struct{})
+	for _, r := range roots.LibraryRoots {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		base := filepath.Base(filepath.ToSlash(r))
+		if base == "" {
+			continue
+		}
+		ignore[base] = struct{}{}
+	}
+	var ignoreDirs []string
+	for k := range ignore {
+		ignoreDirs = append(ignoreDirs, k)
+	}
+
+	extCountMap := map[string]int{}
+	if err := scan.ScanWithOptions(repo, scan.Options{IgnoreDirs: ignoreDirs}, func(f scan.FileVisit) {
+		if f.IsDir {
+			return
+		}
+		ext := f.Ext
+		if ext == "" {
+			ext = filepath.Ext(f.Path)
+		}
+		if ext != "" {
+			extCountMap[strings.ToLower(ext)]++
+		}
+	}); err != nil {
+		return nil, err
+	}
+
+	extCounts := make([]types.ExtCount, 0, len(extCountMap))
+	for ext, cnt := range extCountMap {
+		extCounts = append(extCounts, types.ExtCount{Ext: ext, Count: cnt})
+	}
+	sort.Slice(extCounts, func(i, j int) bool {
+		if extCounts[i].Count == extCounts[j].Count {
+			return extCounts[i].Ext < extCounts[j].Ext
+		}
+		return extCounts[i].Count > extCounts[j].Count
+	})
+	return extCounts, nil
 }
