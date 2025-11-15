@@ -34,6 +34,7 @@ func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
 
 	var out []cb.Dependencies
 	for family, specs := range in.Specs {
+		log.Printf("spec %s", family)
 		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, specs.Exts)
 		if err != nil {
 			return cb.C1Out{}, err
@@ -86,16 +87,18 @@ func Dependencies(ctx context.Context, repo string, roots []string, exts []strin
 	// Infer dependencies
 	var srcDeps []cb.SourceDependency
 	for _, fi := range agg.Files(ctx) {
-		from := fi.Path
+		from := repoRelative(base, fi.Path)
 		counts := make(map[string]int)
 
 		for _, w := range fi.Index.Words {
 			tok := strings.ToLower(w.Text)
 			if paths, ok := filenameIndex[tok]; ok {
 				for p := range paths {
-					if p != from {
-						counts[p]++
+					target := repoRelative(base, p)
+					if target == from {
+						continue
 					}
+					counts[target]++
 				}
 			}
 		}
@@ -178,4 +181,18 @@ func keysSorted(m map[string]int) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func repoRelative(root, path string) string {
+	if path == "" {
+		return ""
+	}
+	if root == "" {
+		return filepath.ToSlash(path)
+	}
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return filepath.ToSlash(path)
+	}
+	return filepath.ToSlash(rel)
 }

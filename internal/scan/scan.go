@@ -3,7 +3,6 @@ package scan
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -72,7 +71,8 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 	}
 	rClean := filepath.Clean(resolved)
 
-	if fi, err := os.Stat(rClean); err != nil {
+	fsys := safeFS()
+	if fi, err := fsys.SafeStat(rClean); err != nil {
 		abs, _ := filepath.Abs(rClean)
 		return fmt.Errorf("scan: root not found or not readable: %s (abs=%s): %w", rClean, abs, err)
 	} else if !fi.IsDir() {
@@ -117,7 +117,7 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 			if !d.IsDir() {
 				if fi, e := d.Info(); e == nil {
 					size = fi.Size()
-				} else if fi, e2 := os.Stat(path); e2 == nil {
+				} else if fi, e2 := fsys.SafeStat(path); e2 == nil {
 					size = fi.Size()
 				}
 			}
@@ -292,6 +292,7 @@ func (p *parallelCtx) getErr() error {
 }
 
 func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, ignores []string, ignoreKey string, cb VisitFunc, bypass bool, pc *parallelCtx) error {
+	fs := safeFS()
 	abs := joinAbs(root, relPrefix)
 	isRoot := relPrefix == "." || relPrefix == ""
 
@@ -329,7 +330,7 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 	}
 
 	// Not cached: list this directory and recursively visit children
-	entries, err := os.ReadDir(abs)
+	entries, err := fs.SafeReadDir(abs)
 	if err != nil {
 		return nil // swallow and continue
 	}
@@ -385,7 +386,7 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 			var size int64
 			if fi, e2 := e.Info(); e2 == nil {
 				size = fi.Size()
-			} else if fi, e3 := os.Stat(childAbs); e3 == nil {
+			} else if fi, e3 := fs.SafeStat(childAbs); e3 == nil {
 				size = fi.Size()
 			}
 

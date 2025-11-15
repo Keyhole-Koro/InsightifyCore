@@ -2,7 +2,6 @@ package scan
 
 import (
 	"bufio"
-	"os"
 	"path/filepath"
 )
 
@@ -30,7 +29,7 @@ func ReadSnippet(repo string, in SnippetInput) (Snippet, error) {
 		in.StartLine, in.EndLine = in.EndLine, in.StartLine
 	}
 	abs := filepath.Join(repo, filepath.FromSlash(in.FilePath))
-	f, err := os.Open(abs)
+	f, err := safeFS().SafeOpen(abs)
 	if err != nil {
 		return Snippet{}, err
 	}

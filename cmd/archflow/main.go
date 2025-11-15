@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -13,6 +15,7 @@ import (
 
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/safeio"
 
 	"insightify/internal/runner"
 	"insightify/internal/scan"
@@ -31,19 +34,22 @@ func main() {
 	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
 	flag.Parse()
 
-	var err error
-
-	if *repo == "" {
-		log.Fatal("--repo is required")
-	}
-	repoName := strings.TrimSpace(*repo)
-	repoPath, err := scan.ResolveRepo(repoName)
+	repoName, repoPath, repoFS, err := resolveRepoPaths(*repo)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := os.MkdirAll(*outDir, 0o755); err != nil {
+	outAbs, err := filepath.Abs(*outDir)
+	if err != nil {
 		log.Fatal(err)
 	}
+	if err := os.MkdirAll(outAbs, 0o755); err != nil {
+		log.Fatal(err)
+	}
+	artifactFS, err := safeio.NewSafeFS(outAbs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	safeio.SetDefault(repoFS)
 
 	// Determine requested phase key and default force behavior when cache is disabled
 	key := strings.ToLower(strings.TrimSpace(*phase))
@@ -104,8 +110,10 @@ func main() {
 	env := &runner.Env{
 		Repo:         repoName,
 		RepoRoot:     repoPath,
-		OutDir:       *outDir,
+		OutDir:       outAbs,
 		MaxNext:      *maxNext,
+		RepoFS:       repoFS,
+		ArtifactFS:   artifactFS,
 		ModelSalt:    os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
 		ForceFrom:    force,
 		LLM:          llmCli,
@@ -164,4 +172,28 @@ func buildRateMiddlewares(c LLMRateConfig) []llm.Middleware {
 		out = append(out, llm.RateLimit(c.RPS, c.Burst))
 	}
 	return out
+}
+
+func resolveRepoPaths(repo string) (string, string, *safeio.SafeFS, error) {
+	repoName := strings.TrimSpace(repo)
+	if repoName == "" {
+		return "", "", nil, fmt.Errorf("--repo is required")
+	}
+	reposRoot := strings.TrimSpace(os.Getenv("REPOS_ROOT"))
+	if reposRoot == "" {
+		return "", "", nil, fmt.Errorf("REPOS_ROOT must be set to the absolute repositories directory")
+	}
+	if abs, err := filepath.Abs(reposRoot); err == nil {
+		reposRoot = abs
+	}
+	scan.SetReposDir(reposRoot)
+	repoPath, err := scan.ResolveRepo(repoName)
+	if err != nil {
+		return "", "", nil, err
+	}
+	sfs, err := safeio.NewSafeFS(repoPath)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to initialize safe filesystem: %w", err)
+	}
+	return repoName, repoPath, sfs, nil
 }

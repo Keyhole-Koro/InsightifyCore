@@ -3,7 +3,6 @@ package scan
 import (
 	"errors"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -70,7 +69,7 @@ func GetSize(root, rel string) (int64, error) {
 	fiMu.RUnlock()
 
 	abs := filepath.Join(filepath.Clean(root), filepath.FromSlash(filepath.ToSlash(rel)))
-	st, err := os.Stat(abs)
+	st, err := safeFS().SafeStat(abs)
 	if err != nil {
 		return 0, err
 	}
@@ -106,7 +105,7 @@ func GetPreview(root, rel string, limit int) (string, error) {
 	fiMu.RUnlock()
 
 	abs := filepath.Join(filepath.Clean(root), filepath.FromSlash(filepath.ToSlash(rel)))
-	f, err := os.Open(abs)
+	f, err := safeFS().SafeOpen(abs)
 	if err != nil {
 		return "", err
 	}

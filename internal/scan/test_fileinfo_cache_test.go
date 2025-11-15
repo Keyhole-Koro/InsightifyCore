@@ -8,6 +8,7 @@ import (
 
 func TestGetSizeAndPreviewCache(t *testing.T) {
 	dir := t.TempDir()
+	setSafeFSForTest(t, dir)
 	p := filepath.Join(dir, "a.txt")
 	if err := os.WriteFile(p, []byte("hello world"), 0o644); err != nil {
 		t.Fatal(err)

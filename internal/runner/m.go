@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 
 	"insightify/internal/llm"
@@ -72,8 +71,8 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 				var m0prev struct {
 					LibraryRoots []string `json:"library_roots"`
 				}
-				if FileExists(filepath.Join(env.OutDir, "m0.json")) {
-					ReadJSON(env.OutDir, "m0.json", &m0prev)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "m0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "m0.json", &m0prev)
 					ig = UniqueStrings(baseNames(m0prev.LibraryRoots...)...)
 				}
 				opts := scan.Options{IgnoreDirs: ig}
@@ -85,7 +84,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					}
 					idx = append(idx, baset.FileIndexEntry{Path: f.Path, Size: f.Size})
 					if f.Ext == ".md" {
-						if b, e := os.ReadFile(f.AbsPath); e == nil {
+						if b, e := ensureFS(env.RepoFS).SafeReadFile(f.AbsPath); e == nil {
 							txt := string(b)
 							txt = env.StripImgMD.ReplaceAllString(txt, "")
 							txt = env.StripImgHTML.ReplaceAllString(txt, "")
@@ -122,7 +121,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
 				// Requires m1 output
 				var m1 ml.M1Out
-				ReadJSON(env.OutDir, "m1.json", &m1)
+				ReadJSON(env.ArtifactFS, env.OutDir, "m1.json", &m1)
 
 				// Prepare opened files and focus questions
 				var opened []baset.OpenedFile
@@ -133,7 +132,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 						break
 					}
 					full := filepath.Join(env.RepoRoot, filepath.Clean(nf.Path))
-					b, err := os.ReadFile(full)
+					b, err := ensureFS(env.RepoFS).SafeReadFile(full)
 					if err != nil {
 						continue
 					}
@@ -155,8 +154,8 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 				var m0prev2 struct {
 					LibraryRoots []string `json:"library_roots"`
 				}
-				if FileExists(filepath.Join(env.OutDir, "m0.json")) {
-					ReadJSON(env.OutDir, "m0.json", &m0prev2)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "m0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "m0.json", &m0prev2)
 					ig2 = UniqueStrings(baseNames(m0prev2.LibraryRoots...)...)
 				}
 				opts := scan.Options{IgnoreDirs: ig2}
@@ -166,7 +165,7 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 					}
 					index = append(index, baset.FileIndexEntry{Path: f.Path, Size: f.Size})
 					if f.Ext == ".md" {
-						if b, e := os.ReadFile(f.AbsPath); e == nil {
+						if b, e := ensureFS(env.RepoFS).SafeReadFile(f.AbsPath); e == nil {
 							txt := string(b)
 							txt = env.StripImgMD.ReplaceAllString(txt, "")
 							txt = env.StripImgHTML.ReplaceAllString(txt, "")
@@ -177,8 +176,8 @@ func BuildRegistry(env *Env) map[string]PhaseSpec {
 				var m0c struct {
 					MainSourceRoots []string `json:"main_source_roots"`
 				}
-				if FileExists(filepath.Join(env.OutDir, "m0.json")) {
-					ReadJSON(env.OutDir, "m0.json", &m0c)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "m0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "m0.json", &m0c)
 					if len(m0c.MainSourceRoots) > 0 {
 						index = FilterIndexByRoots(index, m0c.MainSourceRoots)
 						mdDocs = FilterMDDocsByRoots(mdDocs, m0c.MainSourceRoots)

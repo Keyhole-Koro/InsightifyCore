@@ -26,8 +26,8 @@ func BuildC(env *Env) map[string]PhaseSpec {
 			File: "c0.json", // latest pointer; versioned writes also occur
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
 				var m0prev ml.M0Out
-				if FileExists(filepath.Join(env.OutDir, "m0.json")) {
-					ReadJSON(env.OutDir, "m0.json", &m0prev)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "m0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "m0.json", &m0prev)
 				}
 
 				ignore := UniqueStrings(m0prev.LibraryRoots...)
@@ -94,12 +94,12 @@ func BuildC(env *Env) map[string]PhaseSpec {
 			File: "c1.json",
 			BuildInput: func(ctx context.Context, env *Env) (any, error) {
 				var c0prev cb.C0Out
-				if FileExists(filepath.Join(env.OutDir, "c0.json")) {
-					ReadJSON(env.OutDir, "c0.json", &c0prev)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "c0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "c0.json", &c0prev)
 				}
 				var m0prev ml.M0Out
-				if FileExists(filepath.Join(env.OutDir, "m0.json")) {
-					ReadJSON(env.OutDir, "m0.json", &m0prev)
+				if FileExists(env.ArtifactFS, filepath.Join(env.OutDir, "m0.json")) {
+					ReadJSON(env.ArtifactFS, env.OutDir, "m0.json", &m0prev)
 				}
 				in := cb.C1In{
 					Repo:  env.Repo,

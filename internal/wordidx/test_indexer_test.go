@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"insightify/internal/safeio"
 	"insightify/internal/scan"
 )
 
@@ -16,7 +17,16 @@ func setupWordidxRepos(t *testing.T) string {
 	base := t.TempDir()
 	prev := scan.ReposDir()
 	scan.SetReposDir(base)
-	t.Cleanup(func() { scan.SetReposDir(prev) })
+	prevFS := scan.CurrentSafeFS()
+	fs, err := safeio.NewSafeFS(base)
+	if err != nil {
+		t.Fatalf("safe fs: %v", err)
+	}
+	scan.SetSafeFS(fs)
+	t.Cleanup(func() {
+		scan.SetSafeFS(prevFS)
+		scan.SetReposDir(prev)
+	})
 	return base
 }
 
@@ -97,7 +107,6 @@ func TestAggIndex_StartFromScan_FindBlocksUntilDone(t *testing.T) {
 func TestAggIndex_FilterExtensions(t *testing.T) {
 	base := setupWordidxRepos(t)
 	root := mkrepo(t, base)
-
 	agg := New().
 		Root(root).
 		Allow("bin").

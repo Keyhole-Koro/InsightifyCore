@@ -3,8 +3,8 @@ package wordidx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"hash/fnv"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -12,7 +12,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"insightify/internal/scan" // adjust to your module path
+	"insightify/internal/safeio"
+	"insightify/internal/scan"
 )
 
 /*
@@ -131,6 +132,7 @@ type Builder struct {
 	allowExt []string
 	opts     scan.Options
 	err      error
+	fs       *safeio.SafeFS
 }
 
 // New returns a Builder with sensible defaults (cache bypass and common ignores).
@@ -229,6 +231,15 @@ func (b *Builder) Options(opts scan.Options) *Builder {
 	return b
 }
 
+// FS injects a SafeFS to use for file reads. Defaults to safeio.Default().
+func (b *Builder) FS(fs *safeio.SafeFS) *Builder {
+	if b == nil {
+		return b
+	}
+	b.fs = fs
+	return b
+}
+
 // Start kicks off indexing with the configured settings and returns the AggIndex.
 func (b *Builder) Start(ctx context.Context) *AggIndex {
 	if b == nil {
@@ -257,6 +268,9 @@ func (b *Builder) Start(ctx context.Context) *AggIndex {
 		filter = ExtAllow(b.allowExt...)
 	}
 	agg := NewAgg()
+	if b.fs != nil {
+		agg.fs = b.fs
+	}
 	agg.StartFromScans(ctx, roots, b.opts, b.workers, filter)
 	return agg
 }
@@ -272,6 +286,8 @@ type AggIndex struct {
 
 	errMu    sync.Mutex
 	firstErr error
+
+	fs *safeio.SafeFS
 }
 
 // NewAgg creates an empty aggregator. Prefer Builder for fluent setup.
@@ -442,9 +458,13 @@ func (a *AggIndex) Files(ctx context.Context) []FileIndex {
 /* -------- internal helpers -------- */
 
 func (a *AggIndex) indexOne(path string) {
-	data, err := os.ReadFile(path)
+	fs := a.safeFS()
+	if fs == nil {
+		return
+	}
+	data, err := fs.SafeReadFile(path)
 	if err != nil {
-		a.setErr(err)
+		a.setErr(fmt.Errorf("wordidx: read %s: %w", path, err))
 		return
 	}
 	idx := Build(data)
@@ -474,6 +494,28 @@ func (a *AggIndex) getErr() error {
 	a.errMu.Lock()
 	defer a.errMu.Unlock()
 	return a.firstErr
+}
+
+func (a *AggIndex) safeFS() *safeio.SafeFS {
+	if a == nil {
+		if fs := scan.CurrentSafeFS(); fs != nil {
+			return fs
+		}
+		return safeio.Default()
+	}
+	if a.fs != nil {
+		return a.fs
+	}
+	if dfs := scan.CurrentSafeFS(); dfs != nil {
+		a.fs = dfs
+		return dfs
+	}
+	if dfs := safeio.Default(); dfs != nil {
+		a.fs = dfs
+		return dfs
+	}
+	a.setErr(errors.New("wordidx: safe filesystem is not configured"))
+	return nil
 }
 
 // ExtAllow returns a file filter that accepts only given extensions (e.g., "go","ts").

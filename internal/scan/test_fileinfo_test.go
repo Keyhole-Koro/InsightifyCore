@@ -8,6 +8,7 @@ import (
 
 func TestFileInfo_Basic(t *testing.T) {
 	dir := t.TempDir()
+	setSafeFSForTest(t, dir)
 	p := filepath.Join(dir, "a.txt")
 	if err := os.WriteFile(p, []byte("hello world"), 0o644); err != nil {
 		t.Fatal(err)
@@ -39,6 +40,7 @@ func TestFileInfo_Basic(t *testing.T) {
 
 func TestFileInfo_DirectoryError(t *testing.T) {
 	dir := t.TempDir()
+	setSafeFSForTest(t, dir)
 	if _, _, err := FileInfo(dir, ".", 10); err == nil {
 		t.Fatalf("expected error for directory path")
 	}

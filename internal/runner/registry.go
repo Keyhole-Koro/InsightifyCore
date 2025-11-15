@@ -13,16 +13,19 @@ import (
 	"time"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/safeio"
 	t "insightify/internal/types"
 	"insightify/internal/wordidx"
 )
 
 // Env is the shared environment passed to builders/runners.
 type Env struct {
-	Repo     string
-	RepoRoot string
-	OutDir   string
-	MaxNext  int
+	Repo       string
+	RepoRoot   string
+	OutDir     string
+	MaxNext    int
+	RepoFS     *safeio.SafeFS
+	ArtifactFS *safeio.SafeFS
 
 	ModelSalt string
 	ForceFrom string
@@ -80,15 +83,16 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inp
 	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
 		return nil, false
 	}
+	fs := ensureFS(env.ArtifactFS)
 	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
-	if !FileExists(mp) || !FileExists(op) {
+	if !FileExists(fs, mp) || !FileExists(fs, op) {
 		return nil, false
 	}
 	var m cacheMeta
-	if b, err := os.ReadFile(mp); err == nil && json.Unmarshal(b, &m) == nil {
+	if b, err := fs.SafeReadFile(mp); err == nil && json.Unmarshal(b, &m) == nil {
 		if m.Inputs == inputFP && m.Salt == env.ModelSalt {
 			var out any
-			if b, err := os.ReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
+			if b, err := fs.SafeReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
 				log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), op)
 				return out, true
 			}
@@ -141,7 +145,7 @@ func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out
 	_ = os.WriteFile(mp, mb, 0o644)
 
 	// Best-effort pruning of other versions (x0_vN.json where N != 1)
-	entries, _ := os.ReadDir(env.OutDir)
+	entries, _ := ensureFS(env.ArtifactFS).SafeReadDir(env.OutDir)
 	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
 	for _, e := range entries {
 		if e.IsDir() {
@@ -210,13 +214,15 @@ func JSONFingerprint(v any) string {
 	return fmt.Sprintf("%x", sum[:])[:16]
 }
 
-func FileExists(path string) bool {
-	fi, err := os.Stat(path)
+func FileExists(fs *safeio.SafeFS, path string) bool {
+	fs = ensureFS(fs)
+	fi, err := fs.SafeStat(path)
 	return err == nil && !fi.IsDir()
 }
 
-func ReadJSON(dir, name string, v any) {
-	b, err := os.ReadFile(filepath.Join(dir, name))
+func ReadJSON(fs *safeio.SafeFS, dir, name string, v any) {
+	fs = ensureFS(fs)
+	b, err := fs.SafeReadFile(filepath.Join(dir, name))
 	if err != nil {
 		log.Fatalf("failed to read %s: %v", name, err)
 	}
@@ -231,7 +237,7 @@ func WriteJSON(dir, name string, v any) {
 }
 
 func NextVersion(outDir, key string) int {
-	entries, err := os.ReadDir(outDir)
+	entries, err := ensureFS(nil).SafeReadDir(outDir)
 	if err != nil {
 		return 1
 	}
@@ -251,6 +257,17 @@ func NextVersion(outDir, key string) int {
 		}
 	}
 	return max + 1
+}
+
+func ensureFS(fs *safeio.SafeFS) *safeio.SafeFS {
+	if fs != nil {
+		return fs
+	}
+	if dfs := safeio.Default(); dfs != nil {
+		return dfs
+	}
+	log.Fatal("safe filesystem is not configured")
+	return nil
 }
 
 // Utility transforms used in several phases

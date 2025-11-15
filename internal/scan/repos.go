@@ -64,7 +64,7 @@ func ResolveRepo(name string) (string, error) {
 		return "", err
 	}
 	path := filepath.Join(baseAbs, name)
-	fi, err := os.Stat(path)
+	fi, err := safeFS().SafeStat(path)
 	if err != nil {
 		return "", fmt.Errorf("scan: repo %q not found under %s: %w", name, baseAbs, err)
 	}
