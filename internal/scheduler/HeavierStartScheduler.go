@@ -130,7 +130,7 @@ func ScheduleHeavierStart(ctx context.Context, p Params) error {
 				break
 			}
 
-			chunk := buildChunkDesc(cands, weightOf, capPerChunk, desc)
+			chunk := buildChunkDesc(cands, weightOf, capPerChunk, desc, adj, indeg, need, completed)
 			if len(chunk) == 0 {
 				// if any candidate exceeds capacity, that is an error
 				var heavy []int
@@ -336,29 +336,88 @@ func descendantCounts(adj [][]int) ([]int, error) {
 
 // buildChunkDesc selects nodes under capacity using the priority:
 // 1) larger descendant-count, 2) smaller weight, 3) smaller node id (stable tie-break).
-func buildChunkDesc(cands []int, weightOf WeightFn, capPerChunk int, desc []int) []int {
-	order := append([]int(nil), cands...)
-	sort.SliceStable(order, func(i, j int) bool {
-		ui, uj := order[i], order[j]
-		di, dj := desc[ui], desc[uj]
-		if di != dj {
-			return di > dj
-		}
-		wi, wj := weightOf(ui), weightOf(uj)
-		if wi != wj {
-			return wi < wj
-		}
-		return ui < uj
-	})
-	chunk := make([]int, 0, len(order))
+// It performs a small lookahead within a chunk: when a node is admitted we tentatively
+// decrease indegrees of its dependents and allow newly satisfied nodes into the chunk,
+// so dependent chains can be packed together before launching the chunk.
+func buildChunkDesc(
+	cands []int,
+	weightOf WeightFn,
+	capPerChunk int,
+	desc []int,
+	adj [][]int,
+	indeg []int,
+	need map[int]struct{},
+	completed IntSet,
+) []int {
+	if capPerChunk <= 0 {
+		return nil
+	}
+	simIndeg := append([]int(nil), indeg...) // copy; we mutate during lookahead
+	chunk := make([]int, 0, len(cands))
 	total := 0
-	for _, u := range order {
-		w := weightOf(u)
-		if total+w <= capPerChunk {
+
+	ready := make(map[int]struct{}, len(cands))
+	for _, u := range cands {
+		ready[u] = struct{}{}
+	}
+	inChunk := make(map[int]struct{}, len(cands))
+
+	for len(ready) > 0 {
+		order := make([]int, 0, len(ready))
+		for u := range ready {
+			order = append(order, u)
+		}
+		sort.SliceStable(order, func(i, j int) bool {
+			ui, uj := order[i], order[j]
+			di, dj := desc[ui], desc[uj]
+			if di != dj {
+				return di > dj
+			}
+			wi, wj := weightOf(ui), weightOf(uj)
+			if wi != wj {
+				return wi < wj
+			}
+			return ui < uj
+		})
+
+		added := false
+		for _, u := range order {
+			w := weightOf(u)
+			if total+w > capPerChunk {
+				continue
+			}
+			delete(ready, u)
+			inChunk[u] = struct{}{}
 			chunk = append(chunk, u)
 			total += w
+			added = true
+
+			for _, v := range adj[u] {
+				simIndeg[v]--
+				if simIndeg[v] == 0 {
+					if completed.Has(v) {
+						continue
+					}
+					if _, ok := need[v]; !ok {
+						continue
+					}
+					if _, ok := inChunk[v]; ok {
+						continue
+					}
+					if _, ok := ready[v]; ok {
+						continue
+					}
+					ready[v] = struct{}{}
+				}
+			}
+
+			break
+		}
+		if !added {
+			break
 		}
 	}
+
 	return chunk
 }
 

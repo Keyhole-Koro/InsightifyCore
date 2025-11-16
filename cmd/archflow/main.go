@@ -28,10 +28,11 @@ func main() {
 	provider := flag.String("provider", "gemini", "LLM provider (gemini|groq)")
 	model := flag.String("model", "gemini-2.5-pro", "LLM model id (provider-specific)")
 	fake := flag.Bool("fake", false, "use a fake LLM (no network)")
-	phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|c0|c1|c2)")
+	phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|c0|c1|c2|c3|c4)")
 	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|c0|c1|c2)")
 	cache := flag.Bool("cache", false, "use cached artifacts (default: off)")
 	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
+	tokenCap := flag.Int("token_cap", 0, "max total tokens per scheduler chunk (default depends on provider)")
 	flag.Parse()
 
 	repoName, repoPath, repoFS, err := resolveRepoPaths(*repo)
@@ -68,9 +69,14 @@ func main() {
 	// Prompt hook persists prompts & raw responses under artifacts/prompt/
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
+	capacity := *tokenCap
+	if capacity <= 0 {
+		capacity = defaultTokenCapacity(*provider, *model)
+	}
+
 	var base llmclient.LLMClient
 	if *fake {
-		base = llm.NewFakeClient()
+		base = llm.NewFakeClient(capacity)
 	} else {
 		switch strings.ToLower(strings.TrimSpace(*provider)) {
 		case "gemini":
@@ -79,16 +85,19 @@ func main() {
 			if apiKey == "" {
 				log.Fatal("GEMINI_API_KEY must be set (or use --fake)")
 			}
-			base, err = llmclient.NewGeminiClient(ctx, apiKey, *model)
+			base, err = llmclient.NewGeminiClient(ctx, apiKey, *model, capacity)
 		case "groq":
 			// Prefer GROQ_API_KEY for Groq
 			apiKey = os.Getenv("GROQ_API_KEY")
 			if apiKey == "" {
 				log.Fatal("GROQ_API_KEY must be set (or use --fake)")
 			}
-			base, err = llmclient.NewGroqClient(apiKey, *model)
+			base, err = llmclient.NewGroqClient(apiKey, *model, capacity)
+		case "fake":
+			base = llm.NewFakeClient(capacity)
+			err = nil
 		default:
-			log.Fatalf("unknown --provider: %s (use gemini|groq)", *provider)
+			log.Fatalf("unknown --provider: %s (use gemini|groq|fake)", *provider)
 		}
 		if err != nil {
 			log.Fatal(err)
@@ -130,7 +139,7 @@ func main() {
 	// ----- Execute requested phase -----
 	spec, ok := env.Resolver.Get(key)
 	if !ok {
-		log.Fatalf("unknown --phase: %s (use m0|m1|m2|c0|c1|c2)", *phase)
+		log.Fatalf("unknown --phase: %s (use m0|m1|m2|c0|c1|c2|c3|c4)", *phase)
 	}
 	if err := runner.ExecutePhase(ctx, spec, env); err != nil {
 		log.Fatal(err)
@@ -158,6 +167,18 @@ func defaultLLMRateConfig(provider, model string) LLMRateConfig {
 		return LLMRateConfig{RPM: 30, RPS: 1, Burst: 1}
 	default:
 		return LLMRateConfig{RPS: 1, Burst: 1}
+	}
+}
+
+func defaultTokenCapacity(provider, model string) int {
+	_ = model
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "gemini":
+		return 12000
+	case "groq":
+		return 6000
+	default:
+		return 1000
 	}
 }
 

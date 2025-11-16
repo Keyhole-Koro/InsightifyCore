@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/scan"
+	t "insightify/internal/types"
 	ml "insightify/internal/types/mainline"
 )
 
@@ -83,6 +87,15 @@ type M1 struct{ LLM llmclient.LLMClient }
 
 // Run now accepts a single M1In to mirror M1's API.
 func (p *M1) Run(ctx context.Context, in ml.M1In) (ml.M1Out, error) {
+	if len(in.FileIndex) == 0 || len(in.MDDocs) == 0 {
+		idx, mds := scanForM1(in.Repo, in.IgnoreDirs)
+		if len(in.FileIndex) == 0 {
+			in.FileIndex = idx
+		}
+		if len(in.MDDocs) == 0 {
+			in.MDDocs = mds
+		}
+	}
 	hints := in.Hints
 	if hints == nil {
 		hints = &ml.M1Hints{}
@@ -106,4 +119,26 @@ func (p *M1) Run(ctx context.Context, in ml.M1In) (ml.M1Out, error) {
 		return ml.M1Out{}, fmt.Errorf("M1 JSON invalid: %w", err)
 	}
 	return out, nil
+}
+
+func scanForM1(repo string, ignore []string) ([]t.FileIndexEntry, []t.MDDoc) {
+	var idx []t.FileIndexEntry
+	var mds []t.MDDoc
+	stripMD := regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+	stripHTML := regexp.MustCompile(`(?is)<img[^>]*>`)
+	_ = scan.ScanWithOptions(repo, scan.Options{IgnoreDirs: ignore}, func(f scan.FileVisit) {
+		if f.IsDir {
+			return
+		}
+		idx = append(idx, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+		if strings.EqualFold(f.Ext, ".md") {
+			if b, e := scan.CurrentSafeFS().SafeReadFile(f.AbsPath); e == nil {
+				txt := string(b)
+				txt = stripMD.ReplaceAllString(txt, "")
+				txt = stripHTML.ReplaceAllString(txt, "")
+				mds = append(mds, t.MDDoc{Path: f.Path, Text: txt})
+			}
+		}
+	})
+	return idx, mds
 }

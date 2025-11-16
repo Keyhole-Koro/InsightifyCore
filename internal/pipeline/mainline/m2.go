@@ -5,8 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/scan"
+	t "insightify/internal/types"
 	ml "insightify/internal/types/mainline"
 )
 
@@ -112,6 +117,40 @@ type M2 struct{ LLM llmclient.LLMClient }
 
 // Run executes M2 with robust JSON handling and normalization.
 func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
+	if len(in.FileIndex) == 0 || len(in.MDDocs) == 0 || len(in.OpenedFiles) == 0 || len(in.Focus) == 0 {
+		var m1 ml.M1Out
+		if prev, ok := in.Previous.(ml.M1Out); ok {
+			m1 = prev
+		}
+		var ignore []string
+		var roots []string
+		if in.Roots != nil {
+			ignore = uniqueStrings(baseNames(in.Roots.LibraryRoots...))
+			roots = in.Roots.MainSourceRoots
+		}
+		if len(in.OpenedFiles) == 0 || len(in.Focus) == 0 {
+			opened, focus := buildOpenedAndFocus(m1, in.RepoRoot, in.LimitMaxNext)
+			if len(in.OpenedFiles) == 0 {
+				in.OpenedFiles = opened
+			}
+			if len(in.Focus) == 0 {
+				in.Focus = focus
+			}
+		}
+		if len(in.FileIndex) == 0 || len(in.MDDocs) == 0 {
+			idx, mds := scanForM2(in.Repo, ignore)
+			if len(roots) > 0 {
+				idx = filterIndexByRoots(idx, roots)
+				mds = filterMDDocsByRoots(mds, roots)
+			}
+			if len(in.FileIndex) == 0 {
+				in.FileIndex = idx
+			}
+			if len(in.MDDocs) == 0 {
+				in.MDDocs = mds
+			}
+		}
+	}
 	input := map[string]any{
 		"previous":       in.Previous,
 		"opened_files":   in.OpenedFiles,
@@ -208,4 +247,128 @@ func normalizeM2JSON(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	return bytes.TrimSpace(buf.Bytes()), nil
+}
+
+func buildOpenedAndFocus(m1 ml.M1Out, repoRoot string, limit int) ([]t.OpenedFile, []t.FocusQuestion) {
+	var opened []t.OpenedFile
+	var focus []t.FocusQuestion
+	if limit <= 0 {
+		limit = 8
+	}
+	fs := scan.CurrentSafeFS()
+	picked := 0
+	for _, nf := range m1.NextFiles {
+		if picked >= limit {
+			break
+		}
+		full := filepath.Join(repoRoot, filepath.Clean(nf.Path))
+		b, err := fs.SafeReadFile(full)
+		if err != nil {
+			continue
+		}
+		opened = append(opened, t.OpenedFile{Path: nf.Path, Content: string(b)})
+		if len(nf.WhatToCheck) == 0 {
+			focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: "Review this file for key architecture details"})
+		} else {
+			for _, q := range nf.WhatToCheck {
+				focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: q})
+			}
+		}
+		picked++
+	}
+	return opened, focus
+}
+
+func scanForM2(repo string, ignore []string) ([]t.FileIndexEntry, []t.MDDoc) {
+	var index []t.FileIndexEntry
+	var mdDocs []t.MDDoc
+	stripMD := regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+	stripHTML := regexp.MustCompile(`(?is)<img[^>]*>`)
+	_ = scan.ScanWithOptions(repo, scan.Options{IgnoreDirs: ignore}, func(f scan.FileVisit) {
+		if f.IsDir {
+			return
+		}
+		index = append(index, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+		if strings.EqualFold(f.Ext, ".md") {
+			if b, e := scan.CurrentSafeFS().SafeReadFile(f.AbsPath); e == nil {
+				txt := string(b)
+				txt = stripMD.ReplaceAllString(txt, "")
+				txt = stripHTML.ReplaceAllString(txt, "")
+				mdDocs = append(mdDocs, t.MDDoc{Path: f.Path, Text: txt})
+			}
+		}
+	})
+	return index, mdDocs
+}
+
+func filterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexEntry {
+	if len(roots) == 0 {
+		return index
+	}
+	var out []t.FileIndexEntry
+	for _, it := range index {
+		for _, r := range roots {
+			r = strings.Trim(strings.TrimSpace(r), "/")
+			if r == "" {
+				continue
+			}
+			if strings.HasPrefix(strings.ToLower(it.Path), strings.ToLower(r+"/")) || strings.EqualFold(it.Path, r) {
+				out = append(out, it)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func filterMDDocsByRoots(docs []t.MDDoc, roots []string) []t.MDDoc {
+	if len(roots) == 0 {
+		return docs
+	}
+	var out []t.MDDoc
+	for _, d := range docs {
+		for _, r := range roots {
+			r = strings.Trim(strings.TrimSpace(r), "/")
+			if r == "" {
+				continue
+			}
+			if strings.HasPrefix(strings.ToLower(d.Path), strings.ToLower(r+"/")) || strings.EqualFold(d.Path, r) {
+				out = append(out, d)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func uniqueStrings(in []string) []string {
+	m := map[string]struct{}{}
+	var out []string
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := m[s]; ok {
+			continue
+		}
+		m[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func baseNames(paths ...string) []string {
+	var out []string
+	for _, p := range paths {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		b := filepath.Base(filepath.ToSlash(p))
+		if b != "" {
+			out = append(out, b)
+		}
+	}
+	return out
 }

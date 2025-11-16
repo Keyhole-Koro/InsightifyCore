@@ -6,11 +6,25 @@ import (
 )
 
 // FakeClient returns deterministic, minimal JSON payloads per phase for offline/testing.
-type FakeClient struct{}
+type FakeClient struct {
+	tokenCap int
+}
 
-func NewFakeClient() *FakeClient   { return &FakeClient{} }
+func NewFakeClient(cap int) *FakeClient {
+	if cap <= 0 {
+		cap = 4096
+	}
+	return &FakeClient{tokenCap: cap}
+}
 func (f *FakeClient) Name() string { return "FakeLLM" }
 func (f *FakeClient) Close() error { return nil }
+func (f *FakeClient) CountTokens(text string) int {
+	if len(text) == 0 {
+		return 0
+	}
+	return len(text) / 4
+}
+func (f *FakeClient) TokenCapacity() int { return f.tokenCap }
 
 func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	phase := PhaseFrom(ctx)

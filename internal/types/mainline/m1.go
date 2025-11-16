@@ -71,8 +71,10 @@ type M1Out struct {
 
 // M1In bundles inputs for the M1 milestone to align with M1's single-arg Run.
 type M1In struct {
-	FileIndex []t.FileIndexEntry `json:"file_index"`
-	MDDocs    []t.MDDoc          `json:"md_docs"`
-	Hints     *M1Hints           `json:"hints,omitempty"`
-	Limits    *M1Limits          `json:"limits,omitempty"`
+	Repo       string             `json:"repo"`
+	IgnoreDirs []string           `json:"ignore_dirs,omitempty"`
+	FileIndex  []t.FileIndexEntry `json:"file_index"`
+	MDDocs     []t.MDDoc          `json:"md_docs"`
+	Hints      *M1Hints           `json:"hints,omitempty"`
+	Limits     *M1Limits          `json:"limits,omitempty"`
 }

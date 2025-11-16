@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/scan"
 	ml "insightify/internal/types/mainline"
 )
 
@@ -44,6 +46,15 @@ Rules:
 type M0 struct{ LLM llmclient.LLMClient }
 
 func (p *M0) Run(ctx context.Context, in ml.M0In) (ml.M0Out, error) {
+	if len(in.ExtCounts) == 0 || len(in.DirsDepth1) == 0 {
+		exts, dirs := scanDepth1(in.Repo)
+		if len(in.ExtCounts) == 0 {
+			in.ExtCounts = exts
+		}
+		if len(in.DirsDepth1) == 0 {
+			in.DirsDepth1 = dirs
+		}
+	}
 	input := map[string]any{
 		"ext_counts":  in.ExtCounts,
 		"dirs_depth1": in.DirsDepth1,
@@ -57,4 +68,28 @@ func (p *M0) Run(ctx context.Context, in ml.M0In) (ml.M0Out, error) {
 		return ml.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	return out, nil
+}
+
+func scanDepth1(repo string) (map[string]int, []string) {
+	extCounts := map[string]int{}
+	var idx []string
+	_ = scan.ScanWithOptions(repo, scan.Options{MaxDepth: 1}, func(f scan.FileVisit) {
+		if f.IsDir {
+			return
+		}
+		extCounts[f.Ext]++
+		dir := filepath.ToSlash(filepath.Dir(f.Path))
+		if dir != "" && dir != "." {
+			idx = append(idx, dir)
+		}
+	})
+	dirSet := map[string]struct{}{}
+	for _, d := range idx {
+		dirSet[d] = struct{}{}
+	}
+	var dirs []string
+	for d := range dirSet {
+		dirs = append(dirs, d)
+	}
+	return extCounts, dirs
 }

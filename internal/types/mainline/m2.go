@@ -4,6 +4,9 @@ import types "insightify/internal/types"
 
 // M2In is the input envelope for milestone M2.
 type M2In struct {
+	Repo         string                 `json:"repo"`
+	RepoRoot     string                 `json:"repo_root,omitempty"`
+	Roots        *M0Out                 `json:"roots,omitempty"`
 	Previous     any                    `json:"previous"`       // prior hypothesis snapshot (opaque)
 	OpenedFiles  []types.OpenedFile     `json:"opened_files"`   // newly opened files (content included)
 	Focus        []types.FocusQuestion  `json:"focus"`          // questions we want to answer

@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,8 +14,10 @@ import (
 // fast fake client that returns immediately
 type fastClient struct{}
 
-func (f *fastClient) Name() string { return "fast" }
-func (f *fastClient) Close() error { return nil }
+func (f *fastClient) Name() string                { return "fast" }
+func (f *fastClient) Close() error                { return nil }
+func (f *fastClient) CountTokens(text string) int { return len(strings.Fields(text)) }
+func (f *fastClient) TokenCapacity() int          { return 1024 }
 func (f *fastClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	return json.RawMessage([]byte(`{}`)), nil
 }
@@ -28,6 +31,10 @@ type spyingClient struct {
 
 func (s *spyingClient) Name() string { return s.next.Name() }
 func (s *spyingClient) Close() error { return s.next.Close() }
+func (s *spyingClient) CountTokens(text string) int {
+	return s.next.CountTokens(text)
+}
+func (s *spyingClient) TokenCapacity() int { return s.next.TokenCapacity() }
 func (s *spyingClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	s.rec.times = append(s.rec.times, time.Now())
 	return s.next.GenerateJSON(ctx, prompt, input)

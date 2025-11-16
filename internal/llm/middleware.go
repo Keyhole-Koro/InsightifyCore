@@ -43,6 +43,10 @@ type rateLimited struct {
 
 func (c *rateLimited) Name() string { return c.next.Name() }
 func (c *rateLimited) Close() error { return c.next.Close() }
+func (c *rateLimited) CountTokens(text string) int {
+	return c.next.CountTokens(text)
+}
+func (c *rateLimited) TokenCapacity() int { return c.next.TokenCapacity() }
 func (c *rateLimited) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	if c.rl != nil {
 		// Prefer reserved credits embedded in the context.
@@ -174,6 +178,10 @@ type multiLimited struct {
 
 func (m *multiLimited) Name() string { return m.next.Name() }
 func (m *multiLimited) Close() error { return m.next.Close() }
+func (m *multiLimited) CountTokens(text string) int {
+	return m.next.CountTokens(text)
+}
+func (m *multiLimited) TokenCapacity() int { return m.next.TokenCapacity() }
 func (m *multiLimited) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	// Requests-per-minute/day
 	if m.rpm != nil {
@@ -234,6 +242,10 @@ type retrying struct {
 
 func (r *retrying) Name() string { return r.next.Name() }
 func (r *retrying) Close() error { return r.next.Close() }
+func (r *retrying) CountTokens(text string) int {
+	return r.next.CountTokens(text)
+}
+func (r *retrying) TokenCapacity() int { return r.next.TokenCapacity() }
 func (r *retrying) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	var last error
 	for i := 0; i < r.max; i++ {
@@ -273,6 +285,10 @@ type logging struct {
 
 func (l *logging) Name() string { return l.next.Name() }
 func (l *logging) Close() error { return l.next.Close() }
+func (l *logging) CountTokens(text string) int {
+	return l.next.CountTokens(text)
+}
+func (l *logging) TokenCapacity() int { return l.next.TokenCapacity() }
 func (l *logging) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	in, _ := json.MarshalIndent(input, "", "  ")
 	l.log.Printf("LLM request (%s): %d bytes", PhaseFrom(ctx), len(prompt)+len(in))
@@ -295,6 +311,10 @@ type hooked struct{ next llmclient.LLMClient }
 
 func (h *hooked) Name() string { return h.next.Name() }
 func (h *hooked) Close() error { return h.next.Close() }
+func (h *hooked) CountTokens(text string) int {
+	return h.next.CountTokens(text)
+}
+func (h *hooked) TokenCapacity() int { return h.next.TokenCapacity() }
 func (h *hooked) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	if hook := HookFrom(ctx); hook != nil {
 		hook.Before(ctx, PhaseFrom(ctx), prompt, input)

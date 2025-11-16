@@ -14,8 +14,10 @@ type fakeClient struct {
 	calls int
 }
 
-func (f *fakeClient) Name() string { return f.name }
-func (f *fakeClient) Close() error { return nil }
+func (f *fakeClient) Name() string                { return f.name }
+func (f *fakeClient) Close() error                { return nil }
+func (f *fakeClient) CountTokens(text string) int { return len(text) }
+func (f *fakeClient) TokenCapacity() int          { return 1024 }
 func (f *fakeClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	f.calls++
 	return json.RawMessage([]byte(`{}`)), nil

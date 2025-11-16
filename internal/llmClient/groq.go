@@ -8,33 +8,47 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
 // GroqClient calls the Groq Chat Completions API (OpenAI-compatible) and asks for JSON.
 // See: https://console.groq.com/docs/api-reference
 type GroqClient struct {
-	http    *http.Client
-	apiKey  string
-	model   string
-	baseURL string
+	http     *http.Client
+	apiKey   string
+	model    string
+	baseURL  string
+	tokenCap int
 }
 
 // NewGroqClient creates a Groq client. If apiKey is empty, it falls back to GROQ_API_KEY env var.
-func NewGroqClient(apiKey, model string) (*GroqClient, error) {
+func NewGroqClient(apiKey, model string, tokenCap int) (*GroqClient, error) {
 	if apiKey == "" {
 		apiKey = os.Getenv("GROQ_API_KEY")
 	}
+	if tokenCap <= 0 {
+		tokenCap = 6000
+	}
 	return &GroqClient{
-		http:    &http.Client{Timeout: 60 * time.Second},
-		apiKey:  apiKey,
-		model:   model,
-		baseURL: "https://api.groq.com/openai/v1/chat/completions",
+		http:     &http.Client{Timeout: 60 * time.Second},
+		apiKey:   apiKey,
+		model:    model,
+		baseURL:  "https://api.groq.com/openai/v1/chat/completions",
+		tokenCap: tokenCap,
 	}, nil
 }
 
 func (g *GroqClient) Name() string { return "Groq:" + g.model }
 func (g *GroqClient) Close() error { return nil }
+func (g *GroqClient) CountTokens(text string) int {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return 0
+	}
+	return CountTokens(text)
+}
+func (g *GroqClient) TokenCapacity() int { return g.tokenCap }
 
 type groqChatReq struct {
 	Model          string            `json:"model"`

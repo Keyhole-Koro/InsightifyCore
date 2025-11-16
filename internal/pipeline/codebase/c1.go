@@ -2,11 +2,13 @@ package codebase
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"insightify/internal/safeio"
 	"insightify/internal/scan"
 	cb "insightify/internal/types/codebase"
 	"insightify/internal/wordidx"
@@ -34,7 +36,6 @@ func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
 
 	var out []cb.Dependencies
 	for family, specs := range in.Specs {
-		log.Printf("spec %s", family)
 		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, specs.Exts)
 		if err != nil {
 			return cb.C1Out{}, err
@@ -47,15 +48,19 @@ func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
 
 // Dependencies scans once for a given (repo, roots, exts) and returns a single cb.Dependencies.
 func Dependencies(ctx context.Context, repo string, roots []string, exts []string) (cb.Dependencies, error) {
-	base, err := scan.ResolveRepo(repo)
-	if err != nil {
-		return cb.Dependencies{}, err
+	fs := scan.CurrentSafeFS()
+	if fs == nil {
+		fs = safeio.Default()
 	}
+	if fs == nil {
+		return cb.Dependencies{}, fmt.Errorf("c1: safe filesystem not configured")
+	}
+	base := fs.Root()
 
 	// Resolve search roots
 	var resolvedRoots []string
 	if len(roots) == 0 {
-		resolvedRoots = []string{repo}
+		resolvedRoots = []string{base}
 	} else {
 		for _, r := range roots {
 			r = strings.TrimSpace(r)
@@ -66,7 +71,7 @@ func Dependencies(ctx context.Context, repo string, roots []string, exts []strin
 		}
 	}
 	if len(resolvedRoots) == 0 {
-		resolvedRoots = []string{repo}
+		resolvedRoots = []string{base}
 	}
 
 	// Initialize the indexer
@@ -104,7 +109,6 @@ func Dependencies(ctx context.Context, repo string, roots []string, exts []strin
 		}
 
 		reqs := keysSorted(counts)
-		log.Printf("C1: %s requires %d targets", from, len(reqs))
 		srcDeps = append(srcDeps, cb.SourceDependency{
 			Path:     from,
 			Language: "", // fill if you want (derive from ext)
@@ -164,10 +168,6 @@ func buildFilenameIndex(ctx context.Context, agg *wordidx.AggIndex) map[string]m
 		for _, part := range strings.Split(base, ".") {
 			add(part, fi.Path)
 		}
-	}
-
-	for k, v := range idx {
-		log.Printf("C1: filename index token=%q has %d entries", k, len(v))
 	}
 
 	return idx

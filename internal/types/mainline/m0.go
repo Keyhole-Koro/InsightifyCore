@@ -3,6 +3,7 @@ package mainline
 // M0 summarizes the repository surface for a lightweight
 // directory classification pass.
 type M0In struct {
+	Repo       string         `json:"repo"`
 	ExtCounts  map[string]int `json:"ext_counts"`
 	DirsDepth1 []string       `json:"dirs_depth1"` // repo-relative folders encountered during the scan
 }
