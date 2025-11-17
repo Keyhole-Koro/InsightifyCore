@@ -7,10 +7,10 @@ import (
 
 // C1In carries inputs to build a dependency graph from extractor specs.
 type C1In struct {
-	Repo      string                   `json:"repo"`
-	Roots     mainline.M0Out           `json:"roots"`
-	Specs     map[string]ExtractorSpec `json:"specs"`
-	WordIndex wordidx.AggIndex         `json:"word_index"`
+	Repo      string           `json:"repo"`
+	Roots     mainline.M0Out   `json:"roots"`
+	Families  []FamilySpec     `json:"families"`
+	WordIndex wordidx.AggIndex `json:"word_index"`
 }
 
 // C1Out is a minimal dependency graph.
@@ -19,17 +19,18 @@ type C1Out struct {
 }
 
 type Dependencies struct {
-	Repo         string             `json:"repo"`
-	Roots        []string           `json:"roots"`
-	Exts         []string           `json:"exts"`
-	Dependencies []SourceDependency `json:"dependencies"`
+	Repo    string             `json:"repo"`
+	Roots   []string           `json:"roots"`
+	Exts    []string           `json:"exts"`
+	Family  string             `json:"family,omitempty"`
+	SpecKey string             `json:"spec_key,omitempty"`
+	Files   []SourceDependency `json:"files"`
 }
 
 type SourceDependency struct {
-	Path     string   `json:"path"`
-	Language string   `json:"language,omitempty"`
-	Ext      string   `json:"ext,omitempty"`
-	Requires []string `json:"requires"`
+	File     FileRef   `json:"file"`
+	Language string    `json:"language,omitempty"`
+	Requires []FileRef `json:"requires"`
 }
 
 // ImportStatementRange identifies a contiguous range of lines that likely contain

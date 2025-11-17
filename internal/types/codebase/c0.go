@@ -14,6 +14,7 @@ type C0In struct {
 type C0Out struct {
 	FamilyKeys map[string][]string      `json:"familyKeys"`
 	Specs      map[string]ExtractorSpec `json:"specs"`
+	Families   []FamilySpec             `json:"families"`
 }
 
 type ExtractorSpec struct {
@@ -45,4 +46,10 @@ type NormalizeHints struct {
 type AliasPair struct {
 	Original   string `json:"original"`
 	Normalized string `json:"normalized"`
+}
+
+type FamilySpec struct {
+	Family string        `json:"family"`
+	Key    string        `json:"key"`
+	Spec   ExtractorSpec `json:"spec"`
 }

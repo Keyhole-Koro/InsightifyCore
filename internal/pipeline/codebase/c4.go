@@ -38,7 +38,15 @@ Output STRICT JSON:
         {
           "name": "string",
           "role": "string",                 // function, class, handler, etc.
+          "summary": "string",              // natural language description of what it does
           "lines": [start, end],            // 1-based inclusive line numbers
+          "requires": [                     // identifiers this implementation depends on
+            {
+              "path": "string",             // file path of the dependency
+              "identifier": "string",       // name of the dependency
+              "origin": "user|library|runtime|vendor|stdlib|framework" // classify source (user code, third-party, runtime/builtin, vendored, stdlib, framework)
+            }
+          ],
           "scope": {
             "level": "local|file|module|package|repository",
             "access": "string",             // describe visibility (e.g., exported, private)
@@ -52,6 +60,11 @@ Output STRICT JSON:
 
 Rules:
 - Describe only concrete identifiers defined in each file.
+- For each identifier, add a natural language summary of what the identifier does.
+- Summary detail scales with span length: if the implementation spans many lines (e.g., >20), provide a concise but richer summary to compress the logic; for very short spans (e.g., <=5), summary may be empty.
+- If no summary is provided, omit notes as well.
+- For each identifier, list the identifiers it requires/uses in "requires" with both path and identifier name when known.
+- For each identifier, list the identifiers it requires/uses in "requires" with both path and identifier name when known, and classify each as user|library|runtime|vendor|stdlib|framework in "origin".
 - Return every input file once; if no identifiers exist, return an empty list.
 - Start <= end; omit duplicates.
 - Use "lines": null when unknown.
@@ -68,9 +81,21 @@ func (p C4) Run(ctx context.Context, in cb.C4In) (cb.C4Out, error) {
 	fs := in.RepoFS
 
 	nodes := in.Tasks.Nodes
+	for i := range nodes {
+		if nodes[i].File.Path == "" && nodes[i].Path != "" {
+			nodes[i].File = cb.NewFileRef(nodes[i].Path)
+		}
+		if nodes[i].Path == "" {
+			nodes[i].Path = nodes[i].File.Path
+		}
+	}
 	results := make([]cb.IdentifierReport, len(nodes))
 	for i, n := range nodes {
-		results[i].Path = n.Path
+		if n.Path != "" {
+			results[i].Path = n.Path
+		} else {
+			results[i].Path = n.File.Path
+		}
 	}
 
 	var (
@@ -88,7 +113,7 @@ func (p C4) Run(ctx context.Context, in cb.C4In) (cb.C4Out, error) {
 				continue
 			}
 			totalWeight += nodes[id].Weight
-			fmt.Printf("  - id=%d weight=%d path=%s\n", id, nodes[id].Weight, nodes[id].Path)
+			fmt.Printf("  - id=%d weight=%d path=%s\n", id, nodes[id].Weight, nodes[id].File.Path)
 		}
 		if cap := p.LLM.TokenCapacity(); cap > 0 {
 			fmt.Printf("  total weight=%d cap=%d\n", totalWeight, cap)
@@ -184,17 +209,25 @@ func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, no
 			continue
 		}
 		node := nodes[id]
-		data, err := fs.SafeReadFile(filepath.Clean(node.Path))
+		path := node.File.Path
+		if path == "" {
+			path = node.Path
+		}
+		if strings.TrimSpace(path) == "" {
+			perNodeErr[id] = fmt.Errorf("empty path for node %d", id)
+			continue
+		}
+		data, err := fs.SafeReadFile(filepath.Clean(path))
 		if err != nil {
-			perNodeErr[id] = fmt.Errorf("read %s: %w", node.Path, err)
+			perNodeErr[id] = fmt.Errorf("read %s: %w", path, err)
 			continue
 		}
 		payload.Files = append(payload.Files, filePayload{
-			Path:     node.Path,
-			Language: strings.TrimPrefix(filepath.Ext(node.Path), "."),
+			Path:     path,
+			Language: strings.TrimPrefix(filepath.Ext(path), "."),
 			Content:  string(data),
 		})
-		pathToIDs[node.Path] = append(pathToIDs[node.Path], id)
+		pathToIDs[path] = append(pathToIDs[path], id)
 	}
 
 	if len(payload.Files) == 0 {

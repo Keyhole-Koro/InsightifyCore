@@ -6,22 +6,18 @@ type C2In struct {
 	Dependencies []Dependencies `json:"dependencies"`
 }
 
-// C2Out represents a directed dependency graph.
+// C2Out represents a dependency graph with fully materialized node metadata.
 type C2Out struct {
-	Repo       string                 `json:"repo"`
-	Nodes      []string               `json:"nodes"`
-	Edges      []DependencyEdge       `json:"edges"`
-	Dependents []DependencyDependents `json:"dependents"`
+	Repo  string          `json:"repo"`
+	Graph DependencyGraph `json:"graph"`
 }
 
-type DependencyEdge struct {
-	From string   `json:"from"`
-	To   []string `json:"to"`
+type DependencyGraph struct {
+	Nodes     []DependencyNode `json:"nodes"`
+	Adjacency [][]int          `json:"adjacency"`
 }
 
-// DependencyDependents lists, for a given node, all direct dependents (reverse edges).
-// This is convenient for topological ordering starting from leaf dependencies.
-type DependencyDependents struct {
-	Node       string   `json:"node"`
-	Dependents []string `json:"dependents"`
+type DependencyNode struct {
+	ID   int     `json:"id"`
+	File FileRef `json:"file"`
 }

@@ -35,19 +35,19 @@ func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
 	log.Printf("C1: starting scan in repo %s", in.Repo)
 
 	var out []cb.Dependencies
-	for family, specs := range in.Specs {
-		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, specs.Exts)
+	for _, fam := range in.Families {
+		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, fam)
 		if err != nil {
 			return cb.C1Out{}, err
 		}
-		log.Printf("C1: found %d dependencies for family %s", len(dep.Dependencies), family)
+		log.Printf("C1: found %d dependencies for family %s (%s)", len(dep.Files), fam.Family, fam.Key)
 		out = append(out, dep)
 	}
 	return cb.C1Out{PossibleDependencies: out}, nil
 }
 
 // Dependencies scans once for a given (repo, roots, exts) and returns a single cb.Dependencies.
-func Dependencies(ctx context.Context, repo string, roots []string, exts []string) (cb.Dependencies, error) {
+func Dependencies(ctx context.Context, repo string, roots []string, family cb.FamilySpec) (cb.Dependencies, error) {
 	fs := scan.CurrentSafeFS()
 	if fs == nil {
 		fs = safeio.Default()
@@ -77,7 +77,7 @@ func Dependencies(ctx context.Context, repo string, roots []string, exts []strin
 	// Initialize the indexer
 	agg := wordidx.New().
 		Root(resolvedRoots...).
-		Allow(exts...).
+		Allow(family.Spec.Exts...).
 		Workers(2).
 		Options(scan.Options{BypassCache: true}).
 		Start(ctx)
@@ -109,23 +109,28 @@ func Dependencies(ctx context.Context, repo string, roots []string, exts []strin
 		}
 
 		reqs := keysSorted(counts)
+		reqRefs := make([]cb.FileRef, 0, len(reqs))
+		for _, req := range reqs {
+			reqRefs = append(reqRefs, cb.NewFileRef(req))
+		}
 		srcDeps = append(srcDeps, cb.SourceDependency{
-			Path:     from,
-			Language: "", // fill if you want (derive from ext)
-			Ext:      strings.TrimPrefix(filepath.Ext(from), "."),
-			Requires: reqs,
+			File:     cb.NewFileRef(from),
+			Language: "",
+			Requires: reqRefs,
 		})
 	}
 
 	// Sort for deterministic output
-	sort.Slice(srcDeps, func(i, j int) bool { return srcDeps[i].Path < srcDeps[j].Path })
+	sort.Slice(srcDeps, func(i, j int) bool { return srcDeps[i].File.Path < srcDeps[j].File.Path })
 
 	log.Printf("C1: scanned %d files in repo %s", len(srcDeps), repo)
 	return cb.Dependencies{
-		Repo:         repo,
-		Roots:        roots,
-		Exts:         exts,
-		Dependencies: srcDeps,
+		Repo:    repo,
+		Roots:   roots,
+		Exts:    family.Spec.Exts,
+		Family:  family.Family,
+		SpecKey: family.Key,
+		Files:   srcDeps,
 	}, nil
 }
 

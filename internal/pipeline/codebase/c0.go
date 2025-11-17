@@ -109,6 +109,28 @@ func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return cb.C0Out{}, fmt.Errorf("C0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
+	out.Families = out.Families[:0]
+	for family, specKeys := range out.FamilyKeys {
+		keys := append([]string(nil), specKeys...)
+		sort.Strings(keys)
+		for _, key := range keys {
+			spec, ok := out.Specs[key]
+			if !ok {
+				continue
+			}
+			out.Families = append(out.Families, cb.FamilySpec{
+				Family: family,
+				Key:    key,
+				Spec:   spec,
+			})
+		}
+	}
+	sort.Slice(out.Families, func(i, j int) bool {
+		if out.Families[i].Family == out.Families[j].Family {
+			return out.Families[i].Key < out.Families[j].Key
+		}
+		return out.Families[i].Family < out.Families[j].Family
+	})
 	return out, nil
 }
 

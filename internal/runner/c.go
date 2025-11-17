@@ -61,9 +61,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				return nil, err
 			}
 			in := cb.C1In{
-				Repo:  env.Repo,
-				Specs: c0prev.Specs,
-				Roots: m0prev,
+				Repo:     env.Repo,
+				Families: c0prev.Families,
+				Roots:    m0prev,
 			}
 			return in, nil
 		},
@@ -127,7 +127,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			return cb.C3In{
 				Repo:        env.Repo,
 				RepoFS:      env.RepoFS,
-				Graph:       graph,
+				Graph:       graph.Graph,
 				CapPerChunk: capPerChunk,
 			}, nil
 		},
