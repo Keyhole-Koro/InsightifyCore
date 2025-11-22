@@ -63,6 +63,36 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Strategy: jsonStrategy{},
 	}
 
+	reg["x1"] = PhaseSpec{
+		Key:      "x1",
+		File:     "x1.json",
+		Requires: []string{"x0"},
+		BuildInput: func(ctx context.Context, env *Env) (any, error) {
+			prev, err := Artifact[ex.X0Out](env, "x0")
+			if err != nil {
+				return nil, err
+			}
+			files := collectGapFiles(env.RepoFS, env.RepoRoot, prev.EvidenceGaps, 24, 64000)
+			return ex.X1In{
+				Repo:     env.Repo,
+				Previous: prev,
+				Files:    files,
+			}, nil
+		},
+		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+			ctx = llm.WithPhase(ctx, "x1")
+			p := extpipe.X1{LLM: env.LLM}
+			return p.Run(ctx, in.(ex.X1In))
+		},
+		Fingerprint: func(in any, env *Env) string {
+			return JSONFingerprint(struct {
+				In   ex.X1In
+				Salt string
+			}{in.(ex.X1In), env.ModelSalt})
+		},
+		Strategy: jsonStrategy{},
+	}
+
 	return reg
 }
 
@@ -207,6 +237,48 @@ func selectIdentifierSummaries(reports []cb.IdentifierReport, repoRoot string, r
 		priority = append(priority, fallback[:need]...)
 	}
 	return priority
+}
+
+func collectGapFiles(fs *safeio.SafeFS, repoRoot string, gaps []ex.EvidenceGap, maxFiles, maxBytes int) []t.OpenedFile {
+	if fs == nil || maxFiles <= 0 {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var samples []t.OpenedFile
+	for _, gap := range gaps {
+		for _, suggestion := range gap.Suggested {
+			if !isFileLikeSuggestion(suggestion.Kind) {
+				continue
+			}
+			path := normalizeCandidatePath(suggestion.Path)
+			if path == "" {
+				continue
+			}
+			if _, ok := seen[path]; ok {
+				continue
+			}
+			of, err := readFileSample(fs, repoRoot, path, maxBytes)
+			if err != nil {
+				continue
+			}
+			seen[path] = struct{}{}
+			samples = append(samples, of)
+			if len(samples) >= maxFiles {
+				return samples
+			}
+		}
+	}
+	return samples
+}
+
+func isFileLikeSuggestion(kind string) bool {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	switch kind {
+	case "", "file", "config", "doc", "document":
+		return true
+	default:
+		return false
+	}
 }
 
 func usesExternalRequirement(reqs []cb.IdentifierRequirement) bool {

@@ -110,6 +110,23 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 			"evidence_gaps": []any{},
 			"notes":         []string{"fake x0 output"},
 		}
+	case "x1":
+		obj = map[string]any{
+			"delta": map[string]any{
+				"added":   []string{},
+				"removed": []string{},
+				"modified": []any{
+					map[string]any{
+						"field":  "external_overview.confidence",
+						"before": "0.5",
+						"after":  "0.75",
+					},
+				},
+			},
+			"needs_input": []string{},
+			"stop_when":   []string{},
+			"notes":       []string{"fake x1 output"},
+		}
 	default:
 		// generic empty JSON object
 		obj = map[string]any{}
