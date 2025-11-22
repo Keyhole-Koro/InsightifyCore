@@ -5,92 +5,42 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/scan"
+	"insightify/internal/snippet"
 	t "insightify/internal/types"
 	ml "insightify/internal/types/mainline"
+	"insightify/internal/wordidx"
 )
 
 // Preamble is assumed to be defined elsewhere as `prologue`. We rely on it.
-// The schema below adds `updated_hypothesis.verification_targets`.
+// M2 now focuses on delta-only updates; updated_hypothesis is not re-emitted.
 const promptM2 = prologue + `
 
-You MUST output STRICT JSON that exactly matches the schema below. 
-No comments, no trailing commas, no ellipses “…”, no backticks. 
-If something is unknown, return null or an empty array/string explicitly. 
-Paths must be repository-relative. Evidence line numbers are 1-based and inclusive; 
-if unknown, set "lines": null (do NOT guess). 
-Do not invent files, symbols, or line ranges.
+You MUST output STRICT JSON that exactly matches the schema below.
+No comments, no trailing commas, no ellipses “…”, no backticks.
+If something is unknown, return null or an empty array/string explicitly.
+Paths must be repository-relative. Do not invent files, symbols, or line ranges.
 
 Schema:
 {
-  "updated_hypothesis": {
-    "purpose": "string",                          // What the system does and overall architecture, including external nodes/services
-    "summary": "string",                          // One-paragraph hypothesis
-    "key_components": [                           // Major parts you see or infer
-      {
-        "name": "string",
-        "kind": "string",                         // Free-form (no fixed vocab)
-        "responsibility": "string",
-        "evidence": [ {"path":"string","lines":[1,2] | null} ],
-        "likely_dependent_paths": ["string"]      // Folders/files that likely depend on this component
-      }
-    ],
-    "execution_model": "string",                  // Free-form description
-    "tech_stack": {
-      "platforms": ["string"],                    // Free-form (e.g., "AWS API Gateway")
-      "languages": ["string"],                    // Free-form (e.g., "TypeScript")
-      "build_tools": ["string"]                   // Free-form
-    },
-    "assumptions": ["string"],                    // Clearly label inferences
-    "unknowns": ["string"],                       // List open unknowns
-    "confidence": 0.0,                            // 0.0 - 1.0
-    "verification_targets": [                     // Direct verification targets for this hypothesis
-      {"kind":"file|pattern|dir","path":"string","reason":"string","what_to_check":["string"],"coverage":"high|medium|low","priority":1}
-    ]
-  },
-
-  "question_status": [                            // Map each Focus question -> status
-    {
-      "path": "string",                           // The main file you used (or intend) for this question
-      "question": "string",                       // The focus item verbatim or normalized
-      "status": "confirmed|refuted|inconclusive",
-      "evidence": [ {"path":"string","lines":[1,2] | null} ],
-      "note": "string"
-    }
-  ],
-
-  "delta": {                                      // Changes vs previous hypothesis
+  "delta": {                                      // Changes vs previous hypothesis (from m1 or prior m2)
     "added":   ["string"],
     "removed": ["string"],
     "modified": [
       {
-        "field": "string",                        // e.g., "updated_hypothesis.summary" or "updated_hypothesis.key_components[2].responsibility"
-        "before": any,                            // Type MUST match the target field's natural type; if unsure, use a string
+        "field": "string",                        // e.g., "architecture.summary" or "architecture.key_components[2].responsibility"
+        "before": any,                            // Use strings if unsure
         "after":  any
       }
     ]
   },
-
-  "contradictions": [                             // Explicit conflicts you found
-    {
-      "claim": "string",
-      "supports":  [ {"path":"string","lines":[1,2] | null} ],
-      "conflicts": [ {"path":"string","lines":[1,2] | null} ],
-      "resolution_hint": "string"
-    }
-  ],
-
-  "next_files": [                                  // Concrete files to open next
-    {"path":"string","reason":"string","what_to_check":["string"],"priority":1}
-  ],
-  "next_patterns": [                               // Globs/regex to expand search surface
-    {"pattern":"string","reason":"string","what_to_check":["string"],"priority":2}
-  ],
 
   "needs_input": ["string"],                       // Questions for the human
   "stop_when":  ["string"],                        // Convergence criteria
@@ -98,25 +48,61 @@ Schema:
 }
 
 Rules & Guidance:
-- No fixed vocabularies: use precise, observed wording. Do NOT normalize to preset enums.
-- Evidence: prefer exact line ranges; if you only know the file proves the point but cannot quote lines reliably, set "lines": null.
-- Statusing: Every focus question MUST appear in "question_status". 
-  - confirmed: direct evidence supports it; cite file+lines.
-  - refuted: direct evidence contradicts it; cite file+lines.
-  - inconclusive: not enough evidence in the opened files; propose where to look next.
-- Verification vs. Next: 
-  - "updated_hypothesis.verification_targets" = files/patterns that would directly verify statements INSIDE the current hypothesis.
-  - "next_files"/"next_patterns" = the most informative items to open in the NEXT iteration (limit total across both to ≤ limit_max_next).
-- For each key component, populate "likely_dependent_paths" with repository-relative folders/files that likely depend on, import, or call into that component. Prefer concrete subfolders (e.g., "src/routes/", "internal/handlers/") when evident.
-- Delta.modified.field: use dotted/Indexed paths (e.g., "updated_hypothesis.key_components[1].evidence[0]").
+- No fixed vocabularies: use precise, observed wording.
+- Delta reflects how you would change the current architecture draft. Only include real differences.
+- If any component has low confidence or unknowns, emit actionable items in "needs_input".
+  - Use clear directives such as:
+    - "snippet:path=<file> identifier=<name> reason=<...>"
+    - "wordsearch:term=<token> hint_path=<folder or file> reason=<...>"
 - JSON only. Do not include Markdown, code fences, or prose outside the JSON object.
 
 `
 
-type M2 struct{ LLM llmclient.LLMClient }
+type M2 struct {
+	LLM             llmclient.LLMClient
+	SnippetProvider snippet.Provider
+	WordIndex       *wordidx.AggIndex
+}
 
-// Run executes M2 with robust JSON handling and normalization.
+// Run executes M2 with robust JSON handling, including up to 5 iterations to resolve needs_input.
 func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
+	var final ml.M2Out
+	var agg ml.Delta
+	seenOpened := make(map[string]bool)
+	for _, of := range in.OpenedFiles {
+		seenOpened[of.Path] = true
+	}
+
+	for i := 0; i < 5; i++ {
+		out, err := p.runOnce(ctx, in)
+		if err != nil {
+			return ml.M2Out{}, err
+		}
+		final = out
+		agg = mergeDelta(agg, out.Delta)
+		if len(out.NeedsInput) == 0 {
+			break
+		}
+		newFiles := p.fetchInputs(ctx, out.NeedsInput)
+		added := 0
+		for _, nf := range newFiles {
+			if nf.Path == "" || seenOpened[nf.Path] {
+				continue
+			}
+			in.OpenedFiles = append(in.OpenedFiles, nf)
+			seenOpened[nf.Path] = true
+			added++
+		}
+		if added == 0 {
+			break
+		}
+	}
+	final.Delta = agg
+	return final, nil
+}
+
+// runOnce executes a single LLM call with current inputs.
+func (p *M2) runOnce(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 	if len(in.FileIndex) == 0 || len(in.MDDocs) == 0 || len(in.OpenedFiles) == 0 || len(in.Focus) == 0 {
 		var m1 ml.M1Out
 		if prev, ok := in.Previous.(ml.M1Out); ok {
@@ -180,6 +166,102 @@ func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 		return ml.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
 	}
 	return out, nil
+}
+
+// fetchInputs processes needs_input directives and returns opened files to feed next iteration.
+func (p *M2) fetchInputs(ctx context.Context, needs []string) []t.OpenedFile {
+	var opened []t.OpenedFile
+	for _, n := range needs {
+		n = strings.TrimSpace(n)
+		switch {
+		case strings.HasPrefix(n, "snippet:"):
+			req := parseSnippetRequest(n)
+			if req.Path == "" || req.Name == "" || p.SnippetProvider == nil {
+				continue
+			}
+			snips, err := p.SnippetProvider.Collect(ctx, snippet.Query{
+				Seeds:     []snippet.Identifier{{Path: req.Path, Name: req.Name}},
+				MaxTokens: 4000,
+			})
+			if err != nil {
+				continue
+			}
+			for _, s := range snips {
+				opened = append(opened, t.OpenedFile{
+					Path:    s.Identifier.Path + "#" + s.Identifier.Name,
+					Content: s.Code,
+				})
+			}
+		case strings.HasPrefix(n, "wordsearch:"):
+			term := parseWordRequest(n)
+			if term == "" || p.WordIndex == nil {
+				continue
+			}
+			refs := p.WordIndex.Find(ctx, term)
+			for _, r := range refs {
+				if content, err := readFileContent(r.FilePath); err == nil {
+					opened = append(opened, t.OpenedFile{Path: r.FilePath, Content: content})
+				}
+			}
+		}
+	}
+	return opened
+}
+
+type snippetReq struct {
+	Path string
+	Name string
+}
+
+func parseSnippetRequest(s string) snippetReq {
+	s = strings.TrimPrefix(s, "snippet:")
+	fields := strings.FieldsFunc(s, func(r rune) bool { return r == ' ' || r == ',' })
+	var req snippetReq
+	for _, f := range fields {
+		if strings.HasPrefix(f, "path=") {
+			req.Path = strings.TrimPrefix(f, "path=")
+		} else if strings.HasPrefix(f, "identifier=") {
+			req.Name = strings.TrimPrefix(f, "identifier=")
+		} else if strings.HasPrefix(f, "name=") {
+			req.Name = strings.TrimPrefix(f, "name=")
+		}
+	}
+	return req
+}
+
+func parseWordRequest(s string) string {
+	s = strings.TrimPrefix(s, "wordsearch:")
+	parts := strings.FieldsFunc(s, func(r rune) bool { return r == ' ' || r == ',' })
+	for _, p := range parts {
+		if strings.HasPrefix(p, "term=") {
+			return strings.TrimPrefix(p, "term=")
+		}
+	}
+	return ""
+}
+
+func readFileContent(path string) (string, error) {
+	f, err := scan.CurrentSafeFS().SafeOpen(path)
+	if err != nil {
+		// fallback to default FS or direct OS open
+		if data, e := os.ReadFile(path); e == nil {
+			return string(data), nil
+		}
+		return "", err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func mergeDelta(base, add ml.Delta) ml.Delta {
+	base.Added = append(base.Added, add.Added...)
+	base.Removed = append(base.Removed, add.Removed...)
+	base.Modified = append(base.Modified, add.Modified...)
+	return base
 }
 
 // normalizeM2JSON coerces known-quirk fields into a stable shape expected by t.M2Out:

@@ -90,8 +90,25 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 		}
 	case "x0":
 		obj = map[string]any{
-			"version": 1,
-			"specs":   []any{},
+			"external_overview": map[string]any{
+				"purpose":              "fake external summary",
+				"architecture_summary": "fake architecture summary",
+				"external_systems": []any{
+					map[string]any{
+						"name":        "FakeAPI",
+						"kind":        "REST",
+						"interaction": "calls FakeAPI for demo",
+						"evidence":    []any{},
+						"confidence":  0.5,
+					},
+				},
+				"infra_components": []any{},
+				"build_and_deploy": []any{},
+				"runtime_configs":  []any{},
+				"confidence":       0.5,
+			},
+			"evidence_gaps": []any{},
+			"notes":         []string{"fake x0 output"},
 		}
 	default:
 		// generic empty JSON object
