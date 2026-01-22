@@ -358,7 +358,8 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 
 		if e.IsDir() {
 			// Depth check for child
-			if maxDepth > 0 && depth >= maxDepth {
+			childDepth := depth + 1
+			if maxDepth > 0 && childDepth >= maxDepth {
 				// Do not descend further, but still emit the directory node (already handled above only for relPrefix)
 				// Here we still want to emit this child directory itself as a node.
 				dirNode := FileVisit{Path: ".", AbsPath: childAbs, IsDir: true, Ext: "", Size: 0}
@@ -373,12 +374,12 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 				go func(cr string) {
 					defer pc.wg.Done()
 					defer func() { <-pc.sem }()
-					if e := walkSubtreeCached(root, cr, depth+1, maxDepth, ignores, ignoreKey, cb, bypass, pc); e != nil {
+					if e := walkSubtreeCached(root, cr, childDepth, maxDepth, ignores, ignoreKey, cb, bypass, pc); e != nil {
 						pc.setErr(e)
 					}
 				}(childRel)
 			} else {
-				if err := walkSubtreeCached(root, childRel, depth+1, maxDepth, ignores, ignoreKey, cb, bypass, nil); err != nil {
+				if err := walkSubtreeCached(root, childRel, childDepth, maxDepth, ignores, ignoreKey, cb, bypass, nil); err != nil {
 					return err
 				}
 			}
@@ -422,7 +423,7 @@ func slashCount(rel string) int {
 			n++
 		}
 	}
-	return n
+	return n + 1
 }
 
 // normalizeIgnores trims and sorts ignore basenames.

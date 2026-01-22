@@ -22,9 +22,14 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 	reg := map[string]PhaseSpec{}
 
 	reg["x0"] = PhaseSpec{
-		Key:      "x0",
-		File:     "x0.json",
-		Requires: []string{"m1", "c4"},
+		Key:         "x0",
+		File:        "x0.json",
+		Requires:    []string{"m1", "c4"},
+		Description: "LLM summarizes external systems/infra using architecture (m1) + identifier refs (c4), surfacing evidence gaps.",
+		Consumes:    []string{"architecture_hypothesis", "references", "layout_roots"},
+		Produces:    []string{"external_overview", "evidence_gaps"},
+		UsesLLM:     true,
+		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			m0, err := Artifact[ml.M0Out](env, "m0")
 			if err != nil {
@@ -64,9 +69,14 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 	}
 
 	reg["x1"] = PhaseSpec{
-		Key:      "x1",
-		File:     "x1.json",
-		Requires: []string{"x0"},
+		Key:         "x1",
+		File:        "x1.json",
+		Requires:    []string{"x0"},
+		Description: "LLM drills into evidence gaps from x0 by opening targeted files/snippets.",
+		Consumes:    []string{"external_overview", "evidence_gaps"},
+		Produces:    []string{"external_verification"},
+		UsesLLM:     true,
+		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			prev, err := Artifact[ex.X0Out](env, "x0")
 			if err != nil {

@@ -16,9 +16,14 @@ import (
 func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 	reg := map[string]PhaseSpec{}
 	reg["c0"] = PhaseSpec{
-		Key:      "c0",
-		File:     "c0.json", // latest pointer; versioned writes also occur
-		Requires: []string{"m0"},
+		Key:         "c0",
+		File:        "c0.json", // latest pointer; versioned writes also occur
+		Requires:    []string{"m0"},
+		Description: "LLM infers language families/import heuristics from extension counts and roots.",
+		Consumes:    []string{"layout_roots", "ext_counts"},
+		Produces:    []string{"language_families"},
+		UsesLLM:     true,
+		Tags:        []string{"codebase", "language-detection"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			m0prev, err := Artifact[ml.M0Out](env, "m0")
 			if err != nil {
@@ -48,9 +53,13 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 	}
 
 	reg["c1"] = PhaseSpec{
-		Key:      "c1",
-		File:     "c1.json",
-		Requires: []string{"c0", "m0"},
+		Key:         "c1",
+		File:        "c1.json",
+		Requires:    []string{"c0", "m0"},
+		Description: "Word-index dependency sweep across source roots to collect possible file-level dependencies.",
+		Consumes:    []string{"language_families", "layout_roots", "file_index"},
+		Produces:    []string{"raw_dependencies"},
+		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			c0prev, err := Artifact[cb.C0Out](env, "c0")
 			if err != nil {
@@ -84,9 +93,13 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 	}
 
 	reg["c2"] = PhaseSpec{
-		Key:      "c2",
-		File:     "c2.json",
-		Requires: []string{"c1"},
+		Key:         "c2",
+		File:        "c2.json",
+		Requires:    []string{"c1"},
+		Description: "Normalize dependency hits into a DAG and drop weaker bidirectional edges.",
+		Consumes:    []string{"raw_dependencies"},
+		Produces:    []string{"dependency_graph"},
+		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			c1out, err := Artifact[cb.C1Out](env, "c1")
 			if err != nil {
@@ -112,9 +125,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 	}
 
 	reg["c3"] = PhaseSpec{
-		Key:      "c3",
-		File:     "c3.json",
-		Requires: []string{"c2"},
+		Key:         "c3",
+		File:        "c3.json",
+		Requires:    []string{"c2"},
+		Description: "Chunk graph nodes into LLM-sized tasks with token estimates per file.",
+		Consumes:    []string{"dependency_graph"},
+		Produces:    []string{"llm_task_graph"},
+		UsesLLM:     true,
+		Tags:        []string{"codebase", "chunking"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			graph, err := Artifact[cb.C2Out](env, "c2")
 			if err != nil {
@@ -146,9 +164,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 	}
 
 	reg["c4"] = PhaseSpec{
-		Key:      "c4",
-		File:     "c4.json",
-		Requires: []string{"c3"},
+		Key:         "c4",
+		File:        "c4.json",
+		Requires:    []string{"c3"},
+		Description: "LLM traverses tasks to build identifier reference maps (outgoing/incoming).",
+		Consumes:    []string{"llm_task_graph"},
+		Produces:    []string{"references"},
+		UsesLLM:     true,
+		Tags:        []string{"codebase", "references"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			c3out, err := Artifact[cb.C3Out](env, "c3")
 			if err != nil {

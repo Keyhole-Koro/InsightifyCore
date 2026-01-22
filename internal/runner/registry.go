@@ -13,6 +13,7 @@ import (
 	"time"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
 	t "insightify/internal/types"
 	"insightify/internal/wordidx"
@@ -74,6 +75,14 @@ type Env struct {
 
 // PhaseSpec declares "what" a phase needs, not "how" the app calls it.
 type PhaseSpec struct {
+	// Human/LLM-facing metadata about the phase.
+	Description string
+	Consumes    []string
+	Produces    []string
+	UsesLLM     bool
+	Tags        []string
+	Metadata    map[string]string
+
 	Key         string                                           // e.g. "m0"
 	File        string                                           // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, env *Env) (any, error) // produce logical input
@@ -82,6 +91,49 @@ type PhaseSpec struct {
 	Downstream  []string                      // phases to invalidate when forced
 	Requires    []string
 	Strategy    CacheStrategy // how to cache (json, versioned, none)
+}
+
+// Descriptor converts a PhaseSpec into a plan.PhaseDescriptor with defensive copies.
+func (spec PhaseSpec) Descriptor() plan.PhaseDescriptor {
+	copySlice := func(in []string) []string {
+		if len(in) == 0 {
+			return nil
+		}
+		out := make([]string, len(in))
+		copy(out, in)
+		return out
+	}
+	copyMap := func(in map[string]string) map[string]string {
+		if len(in) == 0 {
+			return nil
+		}
+		out := make(map[string]string, len(in))
+		for k, v := range in {
+			out[k] = v
+		}
+		return out
+	}
+
+	return plan.PhaseDescriptor{
+		Key:        spec.Key,
+		Summary:    spec.Description,
+		Consumes:   copySlice(spec.Consumes),
+		Produces:   copySlice(spec.Produces),
+		Requires:   copySlice(spec.Requires),
+		Downstream: copySlice(spec.Downstream),
+		UsesLLM:    spec.UsesLLM,
+		Tags:       copySlice(spec.Tags),
+		Metadata:   copyMap(spec.Metadata),
+	}
+}
+
+// DescribeRegistry flattens a registry to descriptors for LLM planning.
+func DescribeRegistry(reg map[string]PhaseSpec) []plan.PhaseDescriptor {
+	out := make([]plan.PhaseDescriptor, 0, len(reg))
+	for _, spec := range reg {
+		out = append(out, spec.Descriptor())
+	}
+	return out
 }
 
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
