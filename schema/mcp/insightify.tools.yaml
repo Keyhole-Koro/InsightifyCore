@@ -1,0 +1,128 @@
+version: 1
+tools:
+  - name: wordidx.search
+    description: Search for exact word occurrences under repo roots using the word index.
+    input_schema:
+      type: object
+      required: [roots, word]
+      properties:
+        roots:
+          type: array
+          description: Repo-relative roots to scan (e.g. ["src", "internal"]).
+          items:
+            type: string
+        word:
+          type: string
+          description: Exact token/word to search for.
+        allow_ext:
+          type: array
+          description: Optional file extensions to include (e.g. [".go", ".ts"]).
+          items:
+            type: string
+        max_results:
+          type: integer
+          description: Max number of matches to return.
+          default: 200
+    output_schema:
+      type: object
+      properties:
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              path: { type: string }
+              line: { type: integer }
+              column: { type: integer }
+
+  - name: snippet.collect
+    description: Collect related code snippets for identifiers (uses existing codebase artifacts).
+    input_schema:
+      type: object
+      required: [seeds]
+      properties:
+        seeds:
+          type: array
+          description: Seed identifiers to expand from.
+          items:
+            type: object
+            required: [path, name]
+            properties:
+              path: { type: string }
+              name: { type: string }
+        max_tokens:
+          type: integer
+          description: Token budget for total snippets (<=0 means unlimited).
+          default: 0
+    output_schema:
+      type: object
+      properties:
+        snippets:
+          type: array
+          items:
+            type: object
+            properties:
+              path: { type: string }
+              name: { type: string }
+              provider: { type: string }
+              tokens: { type: integer }
+              code: { type: string }
+
+  - name: scan.list
+    description: List files under repo roots with optional depth and extension filters.
+    input_schema:
+      type: object
+      required: [roots]
+      properties:
+        roots:
+          type: array
+          description: Repo-relative roots to scan (e.g. ["src", "internal"]).
+          items:
+            type: string
+        max_depth:
+          type: integer
+          description: Maximum directory depth to traverse (0 = root only).
+          default: 3
+        allow_ext:
+          type: array
+          description: Optional file extensions to include (e.g. [".go", ".ts"]).
+          items:
+            type: string
+        max_files:
+          type: integer
+          description: Max number of file entries to return.
+          default: 2000
+    output_schema:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              path: { type: string }
+              size_bytes: { type: integer }
+              ext: { type: string }
+
+  - name: fs.read
+    description: Read a file (or a slice) from the repo, with size limits.
+    input_schema:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Repo-relative file path.
+        start:
+          type: integer
+          description: Optional byte offset to start reading from.
+          default: 0
+        length:
+          type: integer
+          description: Optional max bytes to read.
+          default: 65536
+    output_schema:
+      type: object
+      properties:
+        path: { type: string }
+        content: { type: string }
