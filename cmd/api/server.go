@@ -6,6 +6,7 @@ import (
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	"insightify/gen/go/insightify/v1/insightifyv1connect"
+	pipelinev1connect "insightify/gen/go/pipeline/v1/pipelinev1connect"
 )
 
 // apiServer wires Connect handlers and HTTP helpers.
@@ -27,6 +28,7 @@ func newAPIServer() *apiServer {
 func buildMux(s *apiServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle(insightifyv1connect.NewPipelineServiceHandler(s))
+	mux.Handle(pipelinev1connect.NewGatewayServiceHandler(s))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

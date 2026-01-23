@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -93,7 +92,7 @@ type PhaseSpec struct {
 	Key         string                                           // e.g. "m0"
 	File        string                                           // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, env *Env) (any, error) // produce logical input
-	Run         func(ctx context.Context, in any, env *Env) (any, error)
+	Run         func(ctx context.Context, in any, env *Env) (PhaseOutput, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
 	Downstream  []string                      // phases to invalidate when forced
 	Requires    []string
@@ -146,9 +145,9 @@ func DescribeRegistry(reg map[string]PhaseSpec) []plan.PhaseDescriptor {
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
 type CacheStrategy interface {
 	// TryLoad returns (out, true) if cache hit and not forced.
-	TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (any, bool)
+	TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool)
 	// Save persists result and metadata.
-	Save(ctx context.Context, spec PhaseSpec, env *Env, out any, inputFP string) error
+	Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error
 	// Invalidate removes outputs/meta for this phase (used for downstream invalidation).
 	Invalidate(ctx context.Context, spec PhaseSpec, env *Env) error
 }
@@ -170,14 +169,15 @@ func (jsonStrategy) outPath(spec PhaseSpec, env *Env) string {
 	return filepath.Join(env.OutDir, spec.File)
 }
 
-func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (any, bool) {
+func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool) {
+	var zero PhaseOutput
 	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
-		return nil, false
+		return zero, false
 	}
 	fs := ensureFS(env.ArtifactFS)
 	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
 	if !FileExists(fs, mp) || !FileExists(fs, op) {
-		return nil, false
+		return zero, false
 	}
 	var m cacheMeta
 	if b, err := fs.SafeReadFile(mp); err == nil && json.Unmarshal(b, &m) == nil {
@@ -185,16 +185,16 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inp
 			var out any
 			if b, err := fs.SafeReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
 				log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), op)
-				return out, true
+				return PhaseOutput{RuntimeState: out, ClientView: nil}, true
 			}
 		}
 	}
-	return nil, false
+	return zero, false
 }
 
-func (s jsonStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out any, inputFP string) error {
+func (s jsonStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error {
 	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
-	if b, e := json.MarshalIndent(out, "", "  "); e == nil {
+	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(op, b, 0o644)
 	}
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
@@ -215,18 +215,18 @@ func (s jsonStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *Env) 
 // Cache read is intentionally disabled (x0 is exploratory / append-only).
 type versionedStrategy struct{}
 
-func (versionedStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (any, bool) {
+func (versionedStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool) {
 	// Never reuse cache for versioned phases (consistent with previous x0 behavior).
-	return nil, false
+	return PhaseOutput{}, false
 }
 
-func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out any, inputFP string) error {
+func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error {
 	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
 	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
 	versionedPath := filepath.Join(env.OutDir, versioned)
 	latestPath := filepath.Join(env.OutDir, spec.File)
 
-	if b, e := json.MarshalIndent(out, "", "  "); e == nil {
+	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(versionedPath, b, 0o644)
 		_ = os.WriteFile(latestPath, b, 0o644)
 	}
@@ -288,7 +288,7 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 
 	// Try cache (if strategy supports it)
 	if out, ok := spec.Strategy.TryLoad(ctx, spec, env, fp); ok {
-		return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+		return out, nil
 	}
 
 	// Run phase
@@ -297,13 +297,8 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 		return zero, err
 	}
 
-	po, ok := out.(PhaseOutput)
-	if !ok {
-		return zero, fmt.Errorf("runner: phase %s must return PhaseOutput", spec.Key)
-	}
-
 	// Persist artifact via strategy (only RuntimeState should be cached)
-	if err := spec.Strategy.Save(ctx, spec, env, po.RuntimeState, fp); err != nil {
+	if err := spec.Strategy.Save(ctx, spec, env, out, fp); err != nil {
 		return zero, err
 	}
 
@@ -315,7 +310,7 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 			}
 		}
 	}
-	return po, nil
+	return out, nil
 }
 
 func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[string]bool) error {
@@ -355,191 +350,4 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 		return fmt.Errorf("failed to build required phase %s: %w", spec.Key, err)
 	}
 	return nil
-}
-
-// --------------------- Common helpers (hash, json, files) -------------------
-
-func JSONFingerprint(v any) string {
-	b, _ := json.Marshal(v)
-	sum := sha256.Sum256(b)
-	return fmt.Sprintf("%x", sum[:])[:16]
-}
-
-func FileExists(fs *safeio.SafeFS, path string) bool {
-	fs = ensureFS(fs)
-	fi, err := fs.SafeStat(path)
-	return err == nil && !fi.IsDir()
-}
-
-func ReadJSON(fs *safeio.SafeFS, dir, name string, v any) {
-	fs = ensureFS(fs)
-	b, err := fs.SafeReadFile(filepath.Join(dir, name))
-	if err != nil {
-		log.Fatalf("failed to read %s: %v", name, err)
-	}
-	if err := json.Unmarshal(b, v); err != nil {
-		log.Fatalf("failed to unmarshal %s: %v\nraw: %s", name, err, string(b))
-	}
-}
-
-func WriteJSON(dir, name string, v any) {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	_ = os.WriteFile(filepath.Join(dir, name), b, 0o644)
-}
-
-func Artifact[T any](env *Env, key string) (T, error) {
-	var zero T
-	if env == nil {
-		return zero, fmt.Errorf("runner: env is nil")
-	}
-	norm := normalizeKey(key)
-	if norm == "" {
-		return zero, fmt.Errorf("runner: empty phase key")
-	}
-	filename := norm + ".json"
-	if env.Resolver != nil {
-		if spec, ok := env.Resolver.Get(key); ok && strings.TrimSpace(spec.File) != "" {
-			filename = spec.File
-		}
-	}
-	fs := ensureFS(env.ArtifactFS)
-	path := filepath.Join(env.OutDir, filename)
-	b, err := fs.SafeReadFile(path)
-	if err != nil {
-		return zero, fmt.Errorf("runner: read artifact %s: %w", filename, err)
-	}
-	var out T
-	if err := json.Unmarshal(b, &out); err != nil {
-		return zero, fmt.Errorf("runner: decode artifact %s: %w", filename, err)
-	}
-	return out, nil
-}
-
-func MustArtifact[T any](env *Env, key string) T {
-	v, err := Artifact[T](env, key)
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
-func NextVersion(outDir, key string) int {
-	entries, err := ensureFS(nil).SafeReadDir(outDir)
-	if err != nil {
-		return 1
-	}
-	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(key)))
-	max := 0
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		m := re.FindStringSubmatch(e.Name())
-		if len(m) == 2 {
-			var n int
-			_, _ = fmt.Sscanf(m[1], "%d", &n)
-			if n > max {
-				max = n
-			}
-		}
-	}
-	return max + 1
-}
-
-func normalizeKey(key string) string {
-	return strings.ToLower(strings.TrimSpace(key))
-}
-
-func ensureFS(fs *safeio.SafeFS) *safeio.SafeFS {
-	if fs != nil {
-		return fs
-	}
-	if dfs := safeio.Default(); dfs != nil {
-		return dfs
-	}
-	log.Fatal("safe filesystem is not configured")
-	return nil
-}
-
-// Utility transforms used in several phases
-
-func UniqueStrings(in ...string) []string {
-	seen := map[string]struct{}{}
-	out := make([]string, 0, len(in))
-	for _, s := range in {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			continue
-		}
-		if _, ok := seen[s]; ok {
-			continue
-		}
-		seen[s] = struct{}{}
-		out = append(out, s)
-	}
-	return out
-}
-
-func FilterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexEntry {
-	if len(roots) == 0 {
-		return index
-	}
-	var out []t.FileIndexEntry
-	for _, it := range index {
-		for _, r := range roots {
-			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")
-			if r == "" {
-				continue
-			}
-			if strings.HasPrefix(strings.ToLower(it.Path), strings.ToLower(r+"/")) || strings.EqualFold(it.Path, r) {
-				out = append(out, it)
-				break
-			}
-		}
-	}
-	return out
-}
-
-func FilterMDDocsByRoots(docs []t.MDDoc, roots []string) []t.MDDoc {
-	if len(roots) == 0 {
-		return docs
-	}
-	var out []t.MDDoc
-	for _, d := range docs {
-		for _, r := range roots {
-			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")
-			if r == "" {
-				continue
-			}
-			if strings.HasPrefix(strings.ToLower(d.Path), strings.ToLower(r+"/")) || strings.EqualFold(d.Path, r) {
-				out = append(out, d)
-				break
-			}
-		}
-	}
-	return out
-}
-
-func Min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// baseNames returns the final path segment for each provided path.
-// Inputs may be repo-relative or absolute; empty segments are ignored.
-func baseNames(paths ...string) []string {
-	out := make([]string, 0, len(paths))
-	for _, p := range paths {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		b := filepath.Base(filepath.ToSlash(p))
-		if b != "" {
-			out = append(out, b)
-		}
-	}
-	return out
 }

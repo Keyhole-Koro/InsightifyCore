@@ -36,12 +36,12 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c0")
 			x := pipelineC0{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(cb.C0In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -81,12 +81,12 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c1")
 			x := pipelineC1{}
 			out, err := x.Run(ctx, in.(cb.C1In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -118,12 +118,12 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Dependencies: c1out.PossibleDependencies,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c2")
 			var c2 codepipe.C2
 			out, err := c2.Run(ctx, in.(cb.C2In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -161,12 +161,12 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				CapPerChunk: capPerChunk,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c3")
 			x := pipelineC3{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(cb.C3In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -199,12 +199,12 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Tasks:  c3out,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c4")
 			x := pipelineC4{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(cb.C4In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},

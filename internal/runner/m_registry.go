@@ -23,12 +23,12 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			return ml.M0In{Repo: env.Repo}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m0")
 			p := mlpipe.M0{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(ml.M0In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -64,12 +64,12 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				Limits:     &ml.M1Limits{MaxNext: env.MaxNext},
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m1")
 			p := mlpipe.M1{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(ml.M1In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
@@ -108,12 +108,12 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				LimitMaxNext: env.MaxNext,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m2")
 			p := mlpipe.M2{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(ml.M2In))
 			if err != nil {
-				return nil, err
+				return PhaseOutput{}, err
 			}
 			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},

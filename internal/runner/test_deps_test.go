@@ -37,7 +37,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
 			return nil, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			runs["m0"]++
 			return PhaseOutput{RuntimeState: testArtifact{Value: "m0"}, ClientView: nil}, nil
 		},
@@ -57,7 +57,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 			}
 			return testArtifact{Value: prev.Value + "+m1"}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			runs["m1"]++
 			return PhaseOutput{RuntimeState: in, ClientView: nil}, nil
 		},
@@ -77,7 +77,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 			}
 			return testArtifact{Value: prev.Value + "+m2"}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (any, error) {
+		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			runs["m2"]++
 			return PhaseOutput{RuntimeState: in, ClientView: nil}, nil
 		},
@@ -139,7 +139,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			File:       "a.json",
 			Requires:   []string{"b"},
 			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
-			Run: func(ctx context.Context, in any, env *Env) (any, error) {
+			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 				return PhaseOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
 			},
 			Fingerprint: func(in any, env *Env) string { return "a" },
@@ -150,7 +150,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			File:       "b.json",
 			Requires:   []string{"a"},
 			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
-			Run: func(ctx context.Context, in any, env *Env) (any, error) {
+			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 				return PhaseOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
 			},
 			Fingerprint: func(in any, env *Env) string { return "b" },
