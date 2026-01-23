@@ -57,7 +57,11 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "x0")
 			p := extpipe.X0{LLM: env.LLM}
-			return p.Run(ctx, in.(ex.X0In))
+			out, err := p.Run(ctx, in.(ex.X0In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -92,7 +96,11 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "x1")
 			p := extpipe.X1{LLM: env.LLM}
-			return p.Run(ctx, in.(ex.X1In))
+			out, err := p.Run(ctx, in.(ex.X1In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

@@ -39,7 +39,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "c0")
 			x := pipelineC0{LLM: env.LLM}
-			return x.Run(ctx, in.(cb.C0In))
+			out, err := x.Run(ctx, in.(cb.C0In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			// Even though versioned, keep a meta fingerprint for traceability.
@@ -80,7 +84,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "c1")
 			x := pipelineC1{}
-			return x.Run(ctx, in.(cb.C1In))
+			out, err := x.Run(ctx, in.(cb.C1In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -113,7 +121,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "c2")
 			var c2 codepipe.C2
-			return c2.Run(ctx, in.(cb.C2In))
+			out, err := c2.Run(ctx, in.(cb.C2In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -152,7 +164,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "c3")
 			x := pipelineC3{LLM: env.LLM}
-			return x.Run(ctx, in.(cb.C3In))
+			out, err := x.Run(ctx, in.(cb.C3In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -186,7 +202,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "c4")
 			x := pipelineC4{LLM: env.LLM}
-			return x.Run(ctx, in.(cb.C4In))
+			out, err := x.Run(ctx, in.(cb.C4In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

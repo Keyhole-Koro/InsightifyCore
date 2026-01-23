@@ -26,7 +26,11 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "m0")
 			p := mlpipe.M0{LLM: env.LLM}
-			return p.Run(ctx, in.(ml.M0In))
+			out, err := p.Run(ctx, in.(ml.M0In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -63,7 +67,11 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "m1")
 			p := mlpipe.M1{LLM: env.LLM}
-			return p.Run(ctx, in.(ml.M1In))
+			out, err := p.Run(ctx, in.(ml.M1In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -103,7 +111,11 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			ctx = llm.WithPhase(ctx, "m2")
 			p := mlpipe.M2{LLM: env.LLM}
-			return p.Run(ctx, in.(ml.M2In))
+			out, err := p.Run(ctx, in.(ml.M2In))
+			if err != nil {
+				return nil, err
+			}
+			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

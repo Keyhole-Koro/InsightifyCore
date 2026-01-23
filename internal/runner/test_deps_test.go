@@ -39,7 +39,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		},
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			runs["m0"]++
-			return testArtifact{Value: "m0"}, nil
+			return PhaseOutput{RuntimeState: testArtifact{Value: "m0"}, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return "fp0"
@@ -59,7 +59,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		},
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			runs["m1"]++
-			return in, nil
+			return PhaseOutput{RuntimeState: in, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return "fp1"
@@ -79,7 +79,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		},
 		Run: func(ctx context.Context, in any, env *Env) (any, error) {
 			runs["m2"]++
-			return in, nil
+			return PhaseOutput{RuntimeState: in, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return "fp2"
@@ -140,7 +140,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			Requires:   []string{"b"},
 			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
-				return testArtifact{Value: "a"}, nil
+				return PhaseOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
 			},
 			Fingerprint: func(in any, env *Env) string { return "a" },
 			Strategy:    jsonStrategy{},
@@ -151,7 +151,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			Requires:   []string{"a"},
 			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (any, error) {
-				return testArtifact{Value: "b"}, nil
+				return PhaseOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
 			},
 			Fingerprint: func(in any, env *Env) string { return "b" },
 			Strategy:    jsonStrategy{},

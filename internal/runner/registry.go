@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
@@ -71,6 +72,12 @@ type Env struct {
 
 	StripImgMD   *regexp.Regexp
 	StripImgHTML *regexp.Regexp
+}
+
+// PhaseOutput bundles internal RuntimeState with an optional ClientView payload for the client.
+type PhaseOutput struct {
+	RuntimeState any
+	ClientView   proto.Message
 }
 
 // PhaseSpec declares "what" a phase needs, not "how" the app calls it.
@@ -253,11 +260,19 @@ func (versionedStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *En
 
 // ExecutePhase builds input, applies force-from + strategy caching, runs, then invalidates downstream.
 func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
+	_, err := ExecutePhaseWithResult(ctx, spec, env)
+	return err
+}
+
+// ExecutePhaseWithResult is the same as ExecutePhase but also returns PhaseOutput.
+// RuntimeState is populated from the legacy Run() return; ClientView is nil unless a phase chooses to set it.
+func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (PhaseOutput, error) {
+	var zero PhaseOutput
 	if len(spec.Requires) > 0 {
 		visiting := make(map[string]bool)
 		for _, r := range spec.Requires {
 			if err := ensureArtifact(ctx, r, env, visiting); err != nil {
-				return err
+				return zero, err
 			}
 		}
 	}
@@ -265,7 +280,7 @@ func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
 	// Build logical input
 	in, err := spec.BuildInput(ctx, env)
 	if err != nil {
-		return err
+		return zero, err
 	}
 
 	// Compute fingerprint
@@ -273,19 +288,23 @@ func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
 
 	// Try cache (if strategy supports it)
 	if out, ok := spec.Strategy.TryLoad(ctx, spec, env, fp); ok {
-		_ = out // nothing else to do
-		return nil
+		return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
 	}
 
 	// Run phase
 	out, err := spec.Run(ctx, in, env)
 	if err != nil {
-		return err
+		return zero, err
 	}
 
-	// Persist artifact via strategy
-	if err := spec.Strategy.Save(ctx, spec, env, out, fp); err != nil {
-		return err
+	po, ok := out.(PhaseOutput)
+	if !ok {
+		return zero, fmt.Errorf("runner: phase %s must return PhaseOutput", spec.Key)
+	}
+
+	// Persist artifact via strategy (only RuntimeState should be cached)
+	if err := spec.Strategy.Save(ctx, spec, env, po.RuntimeState, fp); err != nil {
+		return zero, err
 	}
 
 	// If forced, invalidate downstream caches (json-strategy only).
@@ -296,7 +315,7 @@ func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
 			}
 		}
 	}
-	return nil
+	return po, nil
 }
 
 func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[string]bool) error {
