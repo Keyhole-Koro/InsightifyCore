@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"insightify/internal/adaptors/snippet"
+	"insightify/internal/snippet"
 	cb "insightify/internal/types/codebase"
 )
 

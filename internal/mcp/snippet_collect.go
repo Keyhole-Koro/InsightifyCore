@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"insightify/internal/adaptors/snippet"
+	"insightify/internal/snippet"
 	"insightify/internal/pipeline/codebase"
 	cb "insightify/internal/types/codebase"
 )

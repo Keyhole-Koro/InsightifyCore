@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/adaptors/snippet"
+	"insightify/internal/snippet"
 	cb "insightify/internal/types/codebase"
 )
 

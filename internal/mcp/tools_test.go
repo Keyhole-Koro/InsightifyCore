@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/adaptors/snippet"
+	"insightify/internal/snippet"
 	"insightify/internal/safeio"
 	"insightify/internal/scan"
 	cb "insightify/internal/types/codebase"
