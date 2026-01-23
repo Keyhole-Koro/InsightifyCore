@@ -17,6 +17,7 @@ import (
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/safeio"
 
+	"insightify/internal/mcp"
 	"insightify/internal/runner"
 	"insightify/internal/scan"
 )
@@ -131,6 +132,9 @@ func main() {
 		StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
 		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
 	}
+	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
+	env.MCP = mcp.NewRegistry()
+	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
 	mainline := runner.BuildRegistryMainline(env) // m0/m1/m2
 	codebase := runner.BuildRegistryCodebase(env) // c0..c4

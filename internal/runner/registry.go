@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/mcp"
 	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
 	t "insightify/internal/types"
@@ -58,6 +59,9 @@ type Env struct {
 	RepoFS     *safeio.SafeFS
 	ArtifactFS *safeio.SafeFS
 	Resolver   SpecResolver
+
+	MCP     *mcp.Registry
+	MCPHost mcp.Host
 
 	ModelSalt string
 	ForceFrom string

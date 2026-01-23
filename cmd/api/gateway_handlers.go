@@ -14,6 +14,7 @@ import (
 	pipelinev1 "insightify/gen/go/pipeline/v1"
 	"insightify/gen/go/pipeline/v1/pipelinev1connect"
 	"insightify/internal/llm"
+	"insightify/internal/mcp"
 	"insightify/internal/runner"
 	"insightify/internal/safeio"
 )
@@ -58,6 +59,9 @@ func (s *apiServer) RunPipeline(ctx context.Context, req *connect.Request[pipeli
 		StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
 		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
 	}
+	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
+	env.MCP = mcp.NewRegistry()
+	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
 	mainline := runner.BuildRegistryMainline(env)
 	codebase := runner.BuildRegistryCodebase(env)
