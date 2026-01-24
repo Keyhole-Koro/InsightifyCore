@@ -7,41 +7,41 @@ import (
 	"path/filepath"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 	"insightify/internal/scan"
 	ml "insightify/internal/types/mainline"
 )
 
-const promptM0 = `You are classifying the layout of a repository.
-
-Input JSON provides:
-- ext_counts: map of file extensions to counts across the repo (e.g., ".ts": 120)
-- dirs_depth1: repo-relative folder paths discovered during a shallow scan
-
-Produce STRICT JSON with exactly the following fields (omit arrays when empty):
-{
-  "main_source_roots":     ["<dir>"],  // primary application code directories
-  "library_roots":         ["<dir>"],  // shared libs or vendored deps to skip in analysis (e.g., node_modules, vendor)
-  "config_roots":          ["<dir>"],  // configuration/infra/ops directories (e.g., .github, config/, scripts/)
-  "runtime_config_roots":  ["<dir>"],  // directories whose files affect runtime behaviour (env/templates/migrations/etc.)
-  "config_files":          ["<file>"], // specific config file paths (e.g., .env, docker-compose.yml)
-  "runtime_config_files":  ["<file>"], // runtime-impacting file paths (e.g., env files, migrations, templates)
-  "runtime_configs": [
-    { "path": "<file>", "ext": "<dot-extension>" }
-  ],
-  "build_roots":          ["<dir>"],
-  "notes":                ["<short rationale>"]
-}
-
-Rules:
-- Use **absolute (full) paths** with forward slashes for both directories and files.
-- Entries in config_files, runtime_config_files, and runtime_configs.path must be concrete file paths (include extension when present).
-- Prefer depth-1 or depth-2 subpaths; avoid listing deep descendants unless unavoidable.
-- If unsure, keep the list small and explain uncertainty in notes.
-- JSON only; no comments or extra fields. Maintain the field order above.
-- Treat large dependency/vendor directories as library_roots when present (e.g., node_modules, vendor, third_party, .venv, venv).
-- Keep lists concise; do not enumerate every child of large vendor directories.
-- For runtime_configs entries, omit "content" and any other fields not shown; include "ext" with the leading dot or "" if the file has no extension.
-`
+var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:    "Classify repository layout from extension counts and a shallow directory scan.",
+	Background: "Phase M0 identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
+	OutputFields: []llmtool.PromptField{
+		{Name: "main_source_roots", Type: "[]string", Required: true, Description: "Primary application code directories."},
+		{Name: "library_roots", Type: "[]string", Required: true, Description: "Shared libs or vendored deps to skip in analysis."},
+		{Name: "config_roots", Type: "[]string", Required: true, Description: "Configuration/infra/ops directories."},
+		{Name: "runtime_config_roots", Type: "[]string", Required: true, Description: "Directories whose files affect runtime behavior."},
+		{Name: "config_files", Type: "[]string", Required: true, Description: "Specific config file paths."},
+		{Name: "runtime_config_files", Type: "[]string", Required: true, Description: "Runtime-impacting file paths."},
+		{Name: "runtime_configs", Type: "[]RuntimeConfig", Required: true, Description: "Runtime config files with {path, ext}."},
+		{Name: "build_roots", Type: "[]string", Required: true, Description: "Build or packaging directories."},
+		{Name: "notes", Type: "[]string", Required: true, Description: "Short rationale or uncertainty notes."},
+	},
+	Constraints: []string{
+		"Maintain the field order shown in OUTPUT.",
+		"Use absolute (full) paths with forward slashes for both directories and files.",
+		"config_files, runtime_config_files, and runtime_configs.path must be concrete file paths.",
+		"Prefer depth-1 or depth-2 subpaths; avoid deep descendants unless unavoidable.",
+		"Treat vendor/dependency dirs as library_roots when present (node_modules, vendor, third_party, .venv, venv).",
+		"Keep lists concise; do not enumerate every child of large vendor directories.",
+		"runtime_configs.ext must include the leading dot or be empty when there is no extension.",
+	},
+	Rules: []string{
+		"If unsure, keep lists small and explain uncertainty in notes.",
+	},
+	Assumptions:  []string{"Missing categories can be empty arrays."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent(), llmtool.PresetCautious())
 
 type M0 struct{ LLM llmclient.LLMClient }
 
@@ -59,7 +59,11 @@ func (p *M0) Run(ctx context.Context, in ml.M0In) (ml.M0Out, error) {
 		"ext_counts":  in.ExtCounts,
 		"dirs_depth1": in.DirsDepth1,
 	}
-	raw, err := p.LLM.GenerateJSON(ctx, promptM0, input)
+	prompt, err := llmtool.StructuredPromptBuilder(m0PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
+	if err != nil {
+		return ml.M0Out{}, err
+	}
+	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
 		return ml.M0Out{}, err
 	}

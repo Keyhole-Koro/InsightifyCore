@@ -50,6 +50,54 @@ func (l *ToolLoop) Run(
 
 If you need a custom prompt layout, implement `PromptBuilder`.
 
+## StructuredPromptBuilder
+
+For most phases, prefer the structured builder:
+
+```go
+spec := llmtool.StructuredPromptSpec{
+  Purpose:      "Summarize the repository.",
+  Background:   "Phase M0 - overview.",
+  OutputFormat: "JSON only.",
+  Language:     "English",
+  OutputFields: []llmtool.PromptField{
+    {Name: "summary", Type: "string", Required: true, Description: "Short summary."},
+    {Name: "risks", Type: "[]string"},
+  },
+  Constraints: []string{"No markdown."},
+  Rules:       []string{"Be concise."},
+  Assumptions: []string{"If unsure, return empty strings."},
+}
+
+finalJSON, state, err := loop.Run(ctx, input, llmtool.StructuredPromptBuilder(spec))
+```
+
+The builder renders these sections:
+- `PURPOSE`
+- `BACKGROUND`
+- `INPUT` (JSON payload)
+- `OUTPUT` (simple field list)
+- `CONSTRAINTS`
+- `RULES`
+- `ASSUMPTIONS`
+- `OUTPUT_FORMAT`
+- `LANGUAGE`
+- `TOOLS`
+- `MCP_RESULTS`
+
+## Presets
+
+You can prepend shared constraints/rules via presets:
+
+```go
+spec := llmtool.ApplyPresets(
+  llmtool.StructuredPromptSpec{ /* ... */ },
+  llmtool.PresetStrictJSON(),
+  llmtool.PresetNoInvent(),
+  llmtool.PresetCautious(),
+)
+```
+
 ## Errors
 
 - `ErrMaxIterations` : reached maxIters

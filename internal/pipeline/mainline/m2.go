@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 	"insightify/internal/scan"
 	"insightify/internal/snippet"
 	t "insightify/internal/types"
@@ -19,44 +20,32 @@ import (
 	"insightify/internal/wordidx"
 )
 
-// Preamble is assumed to be defined elsewhere as `prologue`. We rely on it.
-// M2 now focuses on delta-only updates; updated_hypothesis is not re-emitted.
-const promptM2 = prologue + `
-
-You MUST output STRICT JSON that exactly matches the schema below.
-No comments, no trailing commas, no ellipses “…”, no backticks.
-If something is unknown, return null or an empty array/string explicitly.
-Paths must be repository-relative. Do not invent files, symbols, or line ranges.
-
-Schema:
-{
-  "delta": {                                      // Changes vs previous hypothesis (from m1 or prior m2)
-    "added":   ["string"],
-    "removed": ["string"],
-    "modified": [
-      {
-        "field": "string",                        // e.g., "architecture.summary" or "architecture.key_components[2].responsibility"
-        "before": any,                            // Use strings if unsure
-        "after":  any
-      }
-    ]
-  },
-
-  "needs_input": ["string"],                       // Questions for the human
-  "stop_when":  ["string"],                        // Convergence criteria
-  "notes":      ["string"]                         // Misc short notes
-}
-
-Rules & Guidance:
-- No fixed vocabularies: use precise, observed wording.
-- Delta reflects how you would change the current architecture draft. Only include real differences.
-- If any component has low confidence or unknowns, emit actionable items in "needs_input".
-  - Use clear directives such as:
-    - "snippet:path=<file> identifier=<name> reason=<...>"
-    - "wordsearch:term=<token> hint_path=<folder or file> reason=<...>"
-- JSON only. Do not include Markdown, code fences, or prose outside the JSON object.
-
-`
+// M2 focuses on delta-only updates; updated_hypothesis is not re-emitted.
+var m2PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:    "Update the architecture hypothesis by emitting only the delta versus the previous version.",
+	Background: "Phase M2 consumes previous hypotheses plus new evidence and outputs delta-only updates.",
+	OutputFields: []llmtool.PromptField{
+		{Name: "delta", Type: "Delta", Required: true, Description: "Changes vs previous hypothesis (added, removed, modified)."},
+		{Name: "needs_input", Type: "[]string", Required: true, Description: "Questions or requests for more input."},
+		{Name: "stop_when", Type: "[]string", Required: true, Description: "Convergence criteria."},
+		{Name: "notes", Type: "[]string", Required: true, Description: "Short notes or caveats."},
+	},
+	Constraints: []string{
+		"If something is unknown, return null or an empty array/string explicitly.",
+		"Paths must be repository-relative.",
+		"No backticks or ellipses.",
+		"Use precise, observed wording; no fixed vocabularies.",
+		"Delta reflects real differences vs the previous hypothesis only.",
+	},
+	Rules: []string{
+		"If any component has low confidence or unknowns, emit actionable items in needs_input.",
+		"Use directives like 'snippet:path=<file> identifier=<name> reason=<...>' or 'wordsearch:term=<token> hint_path=<folder or file> reason=<...>'.",
+		"If there are no changes, keep delta.added, delta.removed, and delta.modified empty.",
+	},
+	Assumptions:  []string{"Prefer empty arrays to omitted fields when uncertain."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent(), llmtool.PresetCautious())
 
 type M2 struct {
 	LLM             llmclient.LLMClient
@@ -146,7 +135,11 @@ func (p *M2) runOnce(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 		"limit_max_next": in.LimitMaxNext,
 	}
 
-	raw, err := p.LLM.GenerateJSON(ctx, promptM2, input)
+	prompt, err := llmtool.StructuredPromptBuilder(m2PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
+	if err != nil {
+		return ml.M2Out{}, err
+	}
+	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
 		return ml.M2Out{}, err
 	}

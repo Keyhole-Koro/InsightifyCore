@@ -11,6 +11,9 @@ import (
 
 // FormatToolSpecs renders a compact JSON block of tool specs for prompt inclusion.
 func FormatToolSpecs(tools []mcp.ToolSpec) string {
+	if tools == nil {
+		tools = []mcp.ToolSpec{}
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -20,6 +23,9 @@ func FormatToolSpecs(tools []mcp.ToolSpec) string {
 
 // FormatToolResults renders tool results as a JSON block.
 func FormatToolResults(results []ToolResult) string {
+	if results == nil {
+		results = []ToolResult{}
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)

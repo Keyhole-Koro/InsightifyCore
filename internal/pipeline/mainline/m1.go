@@ -8,80 +8,47 @@ import (
 	"strings"
 
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 	"insightify/internal/scan"
 	t "insightify/internal/types"
 	ml "insightify/internal/types/mainline"
 )
 
-const prologue = `You are an experienced software engineer analyzing an unfamiliar codebase.
-
-Purpose of the output:
-- Provide a clear picture of what the system does and how it is structured so a reader can quickly understand the architecture.
-- Explicitly mention external nodes/services (APIs, queues, DBs, third-party SaaS) that the system integrates with.
-
-Approach:
-- Identify relevant code → cite exact files/symbols → avoid guessing; if unknown, state it.
-
-Common Rules & Constraints:
-- Use repository-relative paths exactly as provided; never invent paths or filenames.
-- Prefer code over docs when they disagree; report contradictions explicitly.
-- Be technology-agnostic: do not assume frameworks, stacks, or runtimes unless observed in code or docs. If you infer, mark it as an assumption with low confidence.
-- Cite evidence with {path, lines:[start,end]} using 1-based inclusive line numbers. If lines are unknown or unavailable, set lines to null and explain.
-- Return ONLY valid JSON that matches the requested schema. No markdown, no commentary, no trailing commas.
-- If inputs are incomplete, list what else you need under "needs_input" with exact filenames or glob patterns.
-- When inputs are large, work incrementally: entrypoints → build/manifest → configuration → wiring/adapters → public APIs.
-- Do not leak or reuse knowledge outside of the provided inputs.
-- Keep names and paths case-sensitive.`
-
-const promptM1 = prologue + `
-
-Task:
-From the file index and Markdown text (images/binaries excluded), construct an initial architecture hypothesis. Then propose the next files/patterns to open to confirm or refute that hypothesis.
-
-Output: STRICT JSON with this schema (no extra fields):
-{
-  "architecture_hypothesis": {
-    "purpose": "string",                          // What the system does and the big picture, including external nodes/services
-    "summary": "string",
-    "key_components": [
-      {
-        "name": "string",
-        "kind": "string",
-        "responsibility": "string",
-        "evidence": [{"path":"string","lines":[1,2] | null}]
-      }
-    ],
-    "execution_model": "string",
-    "tech_stack": {
-      "platforms": ["string"],
-      "languages": ["string"],
-      "build_tools": ["string"]
-    },
-    "assumptions": ["string"],
-    "unknowns": ["string"],
-    "confidence": 0.0
-  },
-  "next_files": [
-    {"path":"string","reason":"string","what_to_check":["string"],"priority":1}
-  ],
-  "next_patterns": [
-    {"pattern":"string","reason":"string","what_to_check":["string"],"priority":2}
-  ],
-  "contradictions": [
-    {"claim":"string",
-     "supports":[{"path":"string","lines":[1,2]|null}],
-     "conflicts":[{"path":"string","lines":[1,2]|null}],
-     "note":"string"}
-  ],
-  "needs_input": ["string"],
-  "stop_when": ["string"],
-  "notes": ["string"]
-}
-
-Constraints:
-- Do NOT choose from fixed lists; use free-form tokens based on evidence. Use "unknown" only when genuinely unknown.
-- Propose at most limits.max_next (default 8) across next_files + next_patterns.
-- Evidence must reference provided paths; if you cannot identify lines, set lines to null and explain in notes.`
+var m1PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:    "Produce an initial architecture hypothesis and propose the next files or patterns to confirm it.",
+	Background: "Phase M1 analyzes the file index and Markdown docs (images and binaries excluded) to draft the system architecture.",
+	OutputFields: []llmtool.PromptField{
+		{Name: "architecture_hypothesis", Type: "ArchitectureHypothesis", Required: true, Description: "What the system does and how it is structured, including external nodes/services."},
+		{Name: "next_files", Type: "[]NextFile", Required: true, Description: "Specific files to open next."},
+		{Name: "next_patterns", Type: "[]NextPattern", Required: true, Description: "Search patterns to explore next."},
+		{Name: "contradictions", Type: "[]Contradiction", Required: true, Description: "Claims with supporting and conflicting evidence."},
+		{Name: "needs_input", Type: "[]string", Required: true, Description: "Missing inputs or questions for the human."},
+		{Name: "stop_when", Type: "[]string", Required: true, Description: "Convergence criteria."},
+		{Name: "notes", Type: "[]string", Required: true, Description: "Short notes or caveats."},
+	},
+	Constraints: []string{
+		"Use repository-relative paths exactly as provided; never invent paths or filenames.",
+		"Evidence must use {path, lines:[start,end]} with 1-based inclusive line numbers; if unknown, set lines to null and explain in notes.",
+		"Prefer code over docs when they disagree; report contradictions explicitly.",
+		"Do not assume frameworks, stacks, or runtimes unless observed; if inferred, mark as assumption with low confidence.",
+		"Do not use fixed vocabularies; use free-form tokens based on evidence.",
+		"Propose at most limits.max_next (default 8) across next_files + next_patterns.",
+		"Do not leak or reuse knowledge outside of the provided inputs.",
+		"Keep names and paths case-sensitive.",
+	},
+	Rules: []string{
+		"Identify relevant code, cite exact files/symbols, and avoid guessing; if unknown, state it.",
+		"If inputs are incomplete, list what else you need under needs_input with exact filenames or glob patterns.",
+		"When inputs are large, work incrementally: entrypoints, build/manifest, configuration, wiring/adapters, public APIs.",
+		"Explicitly mention external nodes/services (APIs, queues, DBs, third-party SaaS).",
+	},
+	Assumptions: []string{
+		"If uncertain, add to architecture_hypothesis.assumptions and reduce confidence.",
+		"Unknowns belong in architecture_hypothesis.unknowns.",
+	},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent(), llmtool.PresetCautious())
 
 type M1 struct{ LLM llmclient.LLMClient }
 
@@ -110,7 +77,11 @@ func (p *M1) Run(ctx context.Context, in ml.M1In) (ml.M1Out, error) {
 		"hints":      hints,
 		"limits":     map[string]any{"max_next": limits.MaxNext},
 	}
-	raw, err := p.LLM.GenerateJSON(ctx, promptM1, input)
+	prompt, err := llmtool.StructuredPromptBuilder(m1PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
+	if err != nil {
+		return ml.M1Out{}, err
+	}
+	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
 		return ml.M1Out{}, err
 	}
