@@ -15,17 +15,9 @@ import (
 )
 
 var m1PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
-	Purpose:    "Produce an initial architecture hypothesis and propose the next files or patterns to confirm it.",
-	Background: "Phase M1 analyzes the file index and Markdown docs (images and binaries excluded) to draft the system architecture.",
-	OutputFields: []llmtool.PromptField{
-		{Name: "architecture_hypothesis", Type: "ArchitectureHypothesis", Required: true, Description: "What the system does and how it is structured, including external nodes/services."},
-		{Name: "next_files", Type: "[]NextFile", Required: true, Description: "Specific files to open next."},
-		{Name: "next_patterns", Type: "[]NextPattern", Required: true, Description: "Search patterns to explore next."},
-		{Name: "contradictions", Type: "[]Contradiction", Required: true, Description: "Claims with supporting and conflicting evidence."},
-		{Name: "needs_input", Type: "[]string", Required: true, Description: "Missing inputs or questions for the human."},
-		{Name: "stop_when", Type: "[]string", Required: true, Description: "Convergence criteria."},
-		{Name: "notes", Type: "[]string", Required: true, Description: "Short notes or caveats."},
-	},
+	Purpose:      "Produce an initial architecture hypothesis and propose the next files or patterns to confirm it.",
+	Background:   "Phase M1 analyzes the file index and Markdown docs (images and binaries excluded) to draft the system architecture.",
+	OutputFields: llmtool.MustFieldsFromStruct(ml.M1Out{}),
 	Constraints: []string{
 		"Use repository-relative paths exactly as provided; never invent paths or filenames.",
 		"Evidence must use {path, lines:[start,end]} with 1-based inclusive line numbers; if unknown, set lines to null and explain in notes.",

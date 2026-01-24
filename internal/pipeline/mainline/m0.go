@@ -13,19 +13,9 @@ import (
 )
 
 var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
-	Purpose:    "Classify repository layout from extension counts and a shallow directory scan.",
-	Background: "Phase M0 identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
-	OutputFields: []llmtool.PromptField{
-		{Name: "main_source_roots", Type: "[]string", Required: true, Description: "Primary application code directories."},
-		{Name: "library_roots", Type: "[]string", Required: true, Description: "Shared libs or vendored deps to skip in analysis."},
-		{Name: "config_roots", Type: "[]string", Required: true, Description: "Configuration/infra/ops directories."},
-		{Name: "runtime_config_roots", Type: "[]string", Required: true, Description: "Directories whose files affect runtime behavior."},
-		{Name: "config_files", Type: "[]string", Required: true, Description: "Specific config file paths."},
-		{Name: "runtime_config_files", Type: "[]string", Required: true, Description: "Runtime-impacting file paths."},
-		{Name: "runtime_configs", Type: "[]RuntimeConfig", Required: true, Description: "Runtime config files with {path, ext}."},
-		{Name: "build_roots", Type: "[]string", Required: true, Description: "Build or packaging directories."},
-		{Name: "notes", Type: "[]string", Required: true, Description: "Short rationale or uncertainty notes."},
-	},
+	Purpose:      "Classify repository layout from extension counts and a shallow directory scan.",
+	Background:   "Phase M0 identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
+	OutputFields: llmtool.MustFieldsFromStruct(ml.M0Out{}),
 	Constraints: []string{
 		"Maintain the field order shown in OUTPUT.",
 		"Use absolute (full) paths with forward slashes for both directories and files.",

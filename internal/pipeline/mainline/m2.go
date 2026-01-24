@@ -20,16 +20,18 @@ import (
 	"insightify/internal/wordidx"
 )
 
+type m2PromptOut struct {
+	Delta      ml.Delta `json:"delta" prompt_desc:"Changes vs previous hypothesis (added, removed, modified)."`
+	NeedsInput []string `json:"needs_input" prompt_desc:"Questions or requests for more input."`
+	StopWhen   []string `json:"stop_when" prompt_desc:"Convergence criteria."`
+	Notes      []string `json:"notes" prompt_desc:"Short notes or caveats."`
+}
+
 // M2 focuses on delta-only updates; updated_hypothesis is not re-emitted.
 var m2PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
-	Purpose:    "Update the architecture hypothesis by emitting only the delta versus the previous version.",
-	Background: "Phase M2 consumes previous hypotheses plus new evidence and outputs delta-only updates.",
-	OutputFields: []llmtool.PromptField{
-		{Name: "delta", Type: "Delta", Required: true, Description: "Changes vs previous hypothesis (added, removed, modified)."},
-		{Name: "needs_input", Type: "[]string", Required: true, Description: "Questions or requests for more input."},
-		{Name: "stop_when", Type: "[]string", Required: true, Description: "Convergence criteria."},
-		{Name: "notes", Type: "[]string", Required: true, Description: "Short notes or caveats."},
-	},
+	Purpose:      "Update the architecture hypothesis by emitting only the delta versus the previous version.",
+	Background:   "Phase M2 consumes previous hypotheses plus new evidence and outputs delta-only updates.",
+	OutputFields: llmtool.MustFieldsFromStruct(m2PromptOut{}),
 	Constraints: []string{
 		"If something is unknown, return null or an empty array/string explicitly.",
 		"Paths must be repository-relative.",

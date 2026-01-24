@@ -101,3 +101,24 @@ func TestApplyPresets_PrependConstraintsAndRules(t *testing.T) {
 		t.Fatalf("expected preset rule prepended, got %+v", applied.Rules)
 	}
 }
+
+func TestFieldsFromStruct_BasicTags(t *testing.T) {
+	type example struct {
+		Name  string `json:"name" prompt_desc:"desc"`
+		Count int    `json:"count" prompt:"optional" prompt_type:"int"`
+		Skip  string `json:"skip" prompt:"-"`
+	}
+	fields, err := FieldsFromStruct(example{})
+	if err != nil {
+		t.Fatalf("FieldsFromStruct error: %v", err)
+	}
+	if len(fields) != 2 {
+		t.Fatalf("expected 2 fields, got %d", len(fields))
+	}
+	if fields[0].Name != "name" || fields[0].Description != "desc" || !fields[0].Required {
+		t.Fatalf("unexpected first field: %+v", fields[0])
+	}
+	if fields[1].Name != "count" || fields[1].Required {
+		t.Fatalf("unexpected second field: %+v", fields[1])
+	}
+}

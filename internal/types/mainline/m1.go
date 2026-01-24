@@ -60,13 +60,13 @@ type M1Contradiction struct {
 }
 
 type M1Out struct {
-	ArchitectureHypothesis M1Hypothesis      `json:"architecture_hypothesis"`
-	NextFiles              []M1NextFile      `json:"next_files"`
-	NextPatterns           []M1NextPattern   `json:"next_patterns"`
-	Contradictions         []M1Contradiction `json:"contradictions"`
-	NeedsInput             []string          `json:"needs_input"`
-	StopWhen               []string          `json:"stop_when"`
-	Notes                  []string          `json:"notes"`
+	ArchitectureHypothesis M1Hypothesis      `json:"architecture_hypothesis" prompt_type:"ArchitectureHypothesis" prompt_desc:"What the system does and how it is structured, including external nodes/services."`
+	NextFiles              []M1NextFile      `json:"next_files" prompt_type:"[]NextFile" prompt_desc:"Specific files to open next."`
+	NextPatterns           []M1NextPattern   `json:"next_patterns" prompt_type:"[]NextPattern" prompt_desc:"Search patterns to explore next."`
+	Contradictions         []M1Contradiction `json:"contradictions" prompt_type:"[]Contradiction" prompt_desc:"Claims with supporting and conflicting evidence."`
+	NeedsInput             []string          `json:"needs_input" prompt_desc:"Missing inputs or questions for the human."`
+	StopWhen               []string          `json:"stop_when" prompt_desc:"Convergence criteria."`
+	Notes                  []string          `json:"notes" prompt_desc:"Short notes or caveats."`
 }
 
 // M1In bundles inputs for the M1 milestone to align with M1's single-arg Run.

@@ -98,6 +98,24 @@ spec := llmtool.ApplyPresets(
 )
 ```
 
+## Output fields from struct
+
+You can derive `OutputFields` from a Go struct:
+
+```go
+fields := llmtool.MustFieldsFromStruct(ml.M1Out{})
+spec := llmtool.StructuredPromptSpec{
+  Purpose: "…",
+  OutputFields: fields,
+}
+```
+
+Tags:
+- `prompt_desc:"..."` description
+- `prompt_type:"Type"` override type string
+- `prompt:"optional"` or `prompt:"required"`
+- `prompt:"-"` to skip a field
+
 ## Errors
 
 - `ErrMaxIterations` : reached maxIters

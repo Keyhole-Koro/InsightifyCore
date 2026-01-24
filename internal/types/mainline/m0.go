@@ -10,16 +10,16 @@ type M0In struct {
 
 // M0 identifies likely roots for main code, libraries, and configs.
 type M0Out struct {
-	MainSourceRoots    []string `json:"main_source_roots"`
-	LibraryRoots       []string `json:"library_roots"`
-	ConfigRoots        []string `json:"config_roots"`
-	RuntimeConfigRoots []string `json:"runtime_config_roots,omitempty"`
+	MainSourceRoots    []string `json:"main_source_roots" prompt_desc:"Primary application code directories."`
+	LibraryRoots       []string `json:"library_roots" prompt_desc:"Shared libs or vendored deps to skip in analysis."`
+	ConfigRoots        []string `json:"config_roots" prompt_desc:"Configuration/infra/ops directories."`
+	RuntimeConfigRoots []string `json:"runtime_config_roots,omitempty" prompt_desc:"Directories whose files affect runtime behavior."`
 	// Optional: specific files that represent configuration and runtime-config
-	ConfigFiles        []string        `json:"config_files,omitempty"`
-	RuntimeConfigFiles []string        `json:"runtime_config_files,omitempty"`
-	BuildRoots         []string        `json:"build_roots,omitempty"`
-	Notes              []string        `json:"notes,omitempty"`
-	RuntimeConfigs     []RuntimeConfig `json:"runtime_configs,omitempty"`
+	ConfigFiles        []string        `json:"config_files,omitempty" prompt_desc:"Specific config file paths."`
+	RuntimeConfigFiles []string        `json:"runtime_config_files,omitempty" prompt_desc:"Runtime-impacting file paths."`
+	BuildRoots         []string        `json:"build_roots,omitempty" prompt_desc:"Build or packaging directories."`
+	Notes              []string        `json:"notes,omitempty" prompt_desc:"Short rationale or uncertainty notes."`
+	RuntimeConfigs     []RuntimeConfig `json:"runtime_configs,omitempty" prompt_desc:"Runtime config files with {path, ext}."`
 }
 
 type RuntimeConfig struct {
