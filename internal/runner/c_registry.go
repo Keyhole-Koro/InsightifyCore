@@ -22,13 +22,13 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"language_families"},
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "language-detection"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0prev, err := Artifact[artifact.M0Out](env, "m0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var m0prev artifact.M0Out
+			if err := deps.Artifact("m0", &m0prev); err != nil {
 				return nil, err
 			}
 			in := artifact.C0In{
-				Repo:  env.Repo,
+				Repo:  deps.Repo(),
 				Roots: m0prev,
 			}
 			return in, nil
@@ -50,8 +50,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Salt string
 			}{in.(artifact.C0In), env.ModelSalt})
 		},
-		Downstream: []string{"c1"},
-		Strategy:   versionedStrategy{},
+		Strategy: versionedStrategy{},
 	}
 
 	reg["c1"] = PhaseSpec{
@@ -62,17 +61,17 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Consumes:    []string{"language_families", "layout_roots", "file_index"},
 		Produces:    []string{"raw_dependencies"},
 		Tags:        []string{"codebase", "graph"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c0prev, err := Artifact[artifact.C0Out](env, "c0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var c0prev artifact.C0Out
+			if err := deps.Artifact("c0", &c0prev); err != nil {
 				return nil, err
 			}
-			m0prev, err := Artifact[artifact.M0Out](env, "m0")
-			if err != nil {
+			var m0prev artifact.M0Out
+			if err := deps.Artifact("m0", &m0prev); err != nil {
 				return nil, err
 			}
 			in := artifact.C1In{
-				Repo:     env.Repo,
+				Repo:     deps.Repo(),
 				Families: c0prev.Families,
 				Roots:    m0prev,
 			}
@@ -94,8 +93,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Salt string
 			}{in.(artifact.C1In), env.ModelSalt})
 		},
-		Downstream: []string{"c2"},
-		Strategy:   jsonStrategy{},
+		Strategy: jsonStrategy{},
 	}
 
 	reg["c2"] = PhaseSpec{
@@ -106,13 +104,13 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Consumes:    []string{"raw_dependencies"},
 		Produces:    []string{"dependency_graph"},
 		Tags:        []string{"codebase", "graph"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c1out, err := Artifact[artifact.C1Out](env, "c1")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var c1out artifact.C1Out
+			if err := deps.Artifact("c1", &c1out); err != nil {
 				return nil, err
 			}
 			return artifact.C2In{
-				Repo:         env.Repo,
+				Repo:         deps.Repo(),
 				Dependencies: c1out.PossibleDependencies,
 			}, nil
 		},
@@ -143,18 +141,18 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"llm_task_graph"},
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "chunking"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			graph, err := Artifact[artifact.C2Out](env, "c2")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var graph artifact.C2Out
+			if err := deps.Artifact("c2", &graph); err != nil {
 				return nil, err
 			}
 			capPerChunk := 4096
-			if env.LLM != nil && env.LLM.TokenCapacity() > 0 {
-				capPerChunk = env.LLM.TokenCapacity()
+			if deps.Env().LLM != nil && deps.Env().LLM.TokenCapacity() > 0 {
+				capPerChunk = deps.Env().LLM.TokenCapacity()
 			}
 			return artifact.C3In{
-				Repo:        env.Repo,
-				RepoFS:      env.RepoFS,
+				Repo:        deps.Repo(),
+				RepoFS:      deps.Env().RepoFS,
 				Graph:       graph.Graph,
 				CapPerChunk: capPerChunk,
 			}, nil
@@ -186,14 +184,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"references"},
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "references"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c3out, err := Artifact[artifact.C3Out](env, "c3")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var c3out artifact.C3Out
+			if err := deps.Artifact("c3", &c3out); err != nil {
 				return nil, err
 			}
 			return artifact.C4In{
-				Repo:   env.Repo,
-				RepoFS: env.RepoFS,
+				Repo:   deps.Repo(),
+				RepoFS: deps.Env().RepoFS,
 				Tasks:  c3out,
 			}, nil
 		},

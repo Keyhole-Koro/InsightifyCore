@@ -20,12 +20,12 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"layout_roots"},
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "layout"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			return artifact.M0In{Repo: env.Repo}, nil
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			return artifact.M0In{Repo: deps.Repo()}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m0")
-			p := mlpipe.M0{LLM: env.LLM}
+			p := mlpipe.M0{LLM: env.LLM, Tools: env.MCP}
 			out, err := p.Run(ctx, in.(artifact.M0In))
 			if err != nil {
 				return PhaseOutput{}, err
@@ -38,8 +38,7 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				Salt string
 			}{in.(artifact.M0In), env.ModelSalt})
 		},
-		Downstream: []string{"m1", "m2"},
-		Strategy:   jsonStrategy{},
+		Strategy: jsonStrategy{},
 	}
 
 	reg["m1"] = PhaseSpec{
@@ -51,17 +50,17 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"architecture_hypothesis"},
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "architecture"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0prev, err := Artifact[artifact.M0Out](env, "m0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var m0prev artifact.M0Out
+			if err := deps.Artifact("m0", &m0prev); err != nil {
 				return nil, err
 			}
 			ig := UniqueStrings(baseNames(m0prev.LibraryRoots...)...)
 			return artifact.M1In{
-				Repo:       env.Repo,
+				Repo:       deps.Repo(),
 				IgnoreDirs: ig,
 				Hints:      &artifact.M1Hints{},
-				Limits:     &artifact.M1Limits{MaxNext: env.MaxNext},
+				Limits:     &artifact.M1Limits{MaxNext: deps.Env().MaxNext},
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
@@ -79,33 +78,34 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				Salt string
 			}{in.(artifact.M1In), env.ModelSalt})
 		},
-		Downstream: []string{"m2"},
-		Strategy:   jsonStrategy{},
+		Strategy: jsonStrategy{},
 	}
 
 	reg["m2"] = PhaseSpec{
 		Key:         "m2",
 		File:        "m2.json",
-		Requires:    []string{"m1"},
+		Requires:    []string{"m1", "m0"}, // Explicit m0 dependency added
 		Description: "LLM iterates on architecture with opened snippets/word search, emitting deltas and follow-ups.",
 		Consumes:    []string{"architecture_hypothesis", "opened_files", "word_index"},
 		Produces:    []string{"architecture_delta"},
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "delta"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m1 := MustArtifact[artifact.M1Out](env, "m1")
-
-			m0prev, err := Artifact[artifact.M0Out](env, "m0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var m1 artifact.M1Out
+			if err := deps.Artifact("m1", &m1); err != nil {
+				return nil, err
+			}
+			var m0prev artifact.M0Out
+			if err := deps.Artifact("m0", &m0prev); err != nil {
 				return nil, err
 			}
 
 			return artifact.M2In{
-				Repo:         env.Repo,
-				RepoRoot:     env.RepoRoot,
+				Repo:         deps.Repo(),
+				RepoRoot:     deps.Root(),
 				Roots:        &m0prev,
 				Previous:     m1,
-				LimitMaxNext: env.MaxNext,
+				LimitMaxNext: deps.Env().MaxNext,
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
@@ -123,8 +123,7 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				Salt string
 			}{in.(artifact.M2In), env.ModelSalt})
 		},
-		Downstream: nil,
-		Strategy:   jsonStrategy{},
+		Strategy: jsonStrategy{},
 	}
 
 	return reg

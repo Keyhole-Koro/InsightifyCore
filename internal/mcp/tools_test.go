@@ -55,7 +55,7 @@ func TestScanListTool(t *testing.T) {
 	}
 
 	tool := newScanListTool(Host{RepoRoot: repoRoot, RepoFS: repoFS})
-	in := scanListInput{Roots: []string{"."}, AllowExt: []string{iteritems.txt", ".go"}, MaxDepth: 3}
+	in := scanListInput{Roots: []string{"."}, AllowExt: []string{"iteritems.txt", ".go"}, MaxDepth: 3}
 	raw, _ := json.Marshal(in)
 	outRaw, err := tool.Call(context.Background(), raw)
 	if err != nil {

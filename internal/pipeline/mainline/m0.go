@@ -27,17 +27,21 @@ var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	},
 	Rules: []string{
 		"If unsure, keep lists small and explain uncertainty in notes.",
+		"You may use the 'scan.list' tool to inspect specific subdirectories if the initial scan is insufficient.",
 	},
 	Assumptions:  []string{"Missing categories can be empty arrays."},
 	OutputFormat: "JSON only.",
 	Language:     "English",
 }, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent(), llmtool.PresetCautious())
 
-type M0 struct{ LLM llmclient.LLMClient }
+type M0 struct {
+	LLM   llmclient.LLMClient
+	Tools llmtool.ToolProvider
+}
 
 func (p *M0) Run(ctx context.Context, in artifact.M0In) (artifact.M0Out, error) {
 	if len(in.ExtCounts) == 0 || len(in.DirsDepth1) == 0 {
-		exts, dirs := scanDepth1(in.Repo)
+		exts, dirs := scanRepoLayout(in.Repo)
 		if len(in.ExtCounts) == 0 {
 			in.ExtCounts = exts
 		}
@@ -49,11 +53,15 @@ func (p *M0) Run(ctx context.Context, in artifact.M0In) (artifact.M0Out, error) 
 		"ext_counts":  in.ExtCounts,
 		"dirs_depth1": in.DirsDepth1,
 	}
-	prompt, err := llmtool.StructuredPromptBuilder(m0PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
-	if err != nil {
-		return artifact.M0Out{}, err
+
+	loop := &llmtool.ToolLoop{
+		LLM:      p.LLM,
+		Tools:    p.Tools,
+		MaxIters: 5,
+		Allowed:  []string{"scan.list"},
 	}
-	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
+
+	raw, _, err := loop.Run(ctx, input, llmtool.StructuredPromptBuilder(m0PromptSpec))
 	if err != nil {
 		return artifact.M0Out{}, err
 	}
@@ -64,10 +72,11 @@ func (p *M0) Run(ctx context.Context, in artifact.M0In) (artifact.M0Out, error) 
 	return out, nil
 }
 
-func scanDepth1(repo string) (map[string]int, []string) {
+func scanRepoLayout(repo string) (map[string]int, []string) {
 	extCounts := map[string]int{}
 	var idx []string
-	_ = scan.ScanWithOptions(repo, scan.Options{MaxDepth: 1}, func(f scan.FileVisit) {
+	// Deeper scan to find nested configs/source, but limit per-dir noise.
+	_ = scan.ScanWithOptions(repo, scan.Options{MaxDepth: 5, MaxPerDir: 10}, func(f scan.FileVisit) {
 		if f.IsDir {
 			return
 		}

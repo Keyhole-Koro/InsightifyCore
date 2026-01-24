@@ -15,29 +15,29 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 	reg["x0"] = PhaseSpec{
 		Key:         "x0",
 		File:        "x0.json",
-		Requires:    []string{"m1", "c4"},
+		Requires:    []string{"m1", "c4", "m0"}, // Explicit m0 dependency added for roots
 		Description: "LLM summarizes external systems/infra using architecture (m1) + identifier refs (c4), surfacing evidence gaps.",
 		Consumes:    []string{"architecture_hypothesis", "references", "layout_roots"},
 		Produces:    []string{"external_overview", "evidence_gaps"},
 		UsesLLM:     true,
 		Tags:        []string{"external", "infra"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0, err := Artifact[artifact.M0Out](env, "m0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var m0 artifact.M0Out
+			if err := deps.Artifact("m0", &m0); err != nil {
 				return nil, err
 			}
-			m1, err := Artifact[artifact.M1Out](env, "m1")
-			if err != nil {
+			var m1 artifact.M1Out
+			if err := deps.Artifact("m1", &m1); err != nil {
 				return nil, err
 			}
-			c4, err := Artifact[artifact.C4Out](env, "c4")
-			if err != nil {
+			var c4 artifact.C4Out
+			if err := deps.Artifact("c4", &c4); err != nil {
 				return nil, err
 			}
-			samples := collectInfraSamples(env.RepoFS, env.RepoRoot, m0, 16, 16000)
-			summaries := selectIdentifierSummaries(c4.Files, env.RepoRoot, m0, 40)
+			samples := collectInfraSamples(deps.Env().RepoFS, deps.Repo(), m0, 16, 16000)
+			summaries := selectIdentifierSummaries(c4.Files, deps.Repo(), m0, 40)
 			return artifact.X0In{
-				Repo:                env.Repo,
+				Repo:                deps.Repo(),
 				Roots:               m0,
 				Architecture:        m1,
 				ConfigSamples:       samples,
@@ -72,14 +72,14 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"external_verification"},
 		UsesLLM:     true,
 		Tags:        []string{"external", "infra"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			prev, err := Artifact[artifact.X0Out](env, "x0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var prev artifact.X0Out
+			if err := deps.Artifact("x0", &prev); err != nil {
 				return nil, err
 			}
-			files := collectGapFiles(env.RepoFS, env.RepoRoot, prev.EvidenceGaps, 24, 64000)
+			files := collectGapFiles(deps.Env().RepoFS, deps.Repo(), prev.EvidenceGaps, 24, 64000)
 			return artifact.X1In{
-				Repo:     env.Repo,
+				Repo:     deps.Repo(),
 				Previous: prev,
 				Files:    files,
 			}, nil

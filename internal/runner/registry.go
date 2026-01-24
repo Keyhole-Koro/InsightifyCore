@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,13 +41,32 @@ func (r MapResolver) Get(key string) (PhaseSpec, bool) {
 }
 
 // MergeRegistries flattens multiple phase registries into a single resolver.
+// It also computes downstream dependencies automatically from 'Requires'.
 func MergeRegistries(regs ...map[string]PhaseSpec) SpecResolver {
 	merged := make(map[string]PhaseSpec, 16)
+	downstream := make(map[string][]string)
+
 	for _, reg := range regs {
 		for k, v := range reg {
-			merged[normalizeKey(k)] = v
+			nk := normalizeKey(k)
+			merged[nk] = v
+			for _, req := range v.Requires {
+				nr := normalizeKey(req)
+				downstream[nr] = append(downstream[nr], nk)
+			}
 		}
 	}
+
+	// Update downstream fields in specs
+	for k, v := range merged {
+		if ds, ok := downstream[k]; ok {
+			// Sort for determinism
+			sort.Strings(ds)
+			v.Downstream = ds
+			merged[k] = v
+		}
+	}
+
 	return MapResolver{specs: merged}
 }
 
@@ -65,6 +85,7 @@ type Env struct {
 
 	ModelSalt string
 	ForceFrom string
+	DepsUsage DepsUsageMode
 
 	LLM llmclient.LLMClient
 
@@ -93,12 +114,12 @@ type PhaseSpec struct {
 	Tags        []string
 	Metadata    map[string]string
 
-	Key         string                                           // e.g. "m0"
-	File        string                                           // e.g. "m0.json"
-	BuildInput  func(ctx context.Context, env *Env) (any, error) // produce logical input
+	Key         string                                     // e.g. "m0"
+	File        string                                     // e.g. "m0.json"
+	BuildInput  func(ctx context.Context, deps Deps) (any, error) // produce logical input
 	Run         func(ctx context.Context, in any, env *Env) (PhaseOutput, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
-	Downstream  []string                      // phases to invalidate when forced
+	Downstream  []string                      // automatically computed
 	Requires    []string
 	Strategy    CacheStrategy // how to cache (json, versioned, none)
 }
@@ -286,10 +307,25 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 		}
 	}
 
-	// Build logical input
-	in, err := spec.BuildInput(ctx, env)
+	// Prepare Deps for usage tracking
+	deps := newDeps(env, spec.Key, spec.Requires)
+
+	// Build logical input using Deps
+	in, err := spec.BuildInput(ctx, deps)
 	if err != nil {
 		return zero, err
+	}
+
+	// Verify usage (optional warning for now)
+	if unused := deps.verifyUsage(); len(unused) > 0 {
+		switch env.DepsUsage {
+		case DepsUsageIgnore:
+			// no-op
+		case DepsUsageWarn:
+			log.Printf("WARNING: phase %s declared but did not use: %v", spec.Key, unused)
+		default:
+			return zero, fmt.Errorf("phase %s declared but did not use: %v", spec.Key, unused)
+		}
 	}
 
 	// Compute fingerprint

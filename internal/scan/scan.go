@@ -45,6 +45,9 @@ type Options struct {
 	MaxDepth int
 	// IgnoreDirs is a list of directory basenames to skip entirely (e.g., "node_modules").
 	IgnoreDirs []string
+	// MaxPerDir limits the number of files (non-directories) scanned per directory.
+	// If <= 0, no limit is applied. Directories are not counted against this limit.
+	MaxPerDir int
 
 	// BypassCache forces a full scan, ignoring caches.
 	BypassCache bool
@@ -92,6 +95,9 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 		}
 		// Miss: walk with WalkDir and populate.
 		var items []FileVisit
+		currentDir := ""
+		currentFileCount := 0
+
 		err := filepath.WalkDir(rClean, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil // swallow and continue
@@ -110,6 +116,19 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 				if opts.MaxDepth > 0 && depth >= opts.MaxDepth {
 					return filepath.SkipDir
 				}
+				currentDir = path
+				currentFileCount = 0
+			} else {
+				// File check
+				parent := filepath.Dir(path)
+				if parent != currentDir {
+					currentDir = parent
+					currentFileCount = 0
+				}
+				if opts.MaxPerDir > 0 && currentFileCount >= opts.MaxPerDir {
+					return nil // skip this file
+				}
+				currentFileCount++
 			}
 
 			ext := strings.ToLower(filepath.Ext(rel))
@@ -150,7 +169,7 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 		// BypassCache means: don't use subtree cache at all; do full recursive traversal and overwrite caches.
 		// Run traversal in parallel.
 		pc := newParallelCtx()
-		err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, ig, igKey, cb, opts.BypassCache, pc)
+		err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, opts.MaxPerDir, ig, igKey, cb, opts.BypassCache, pc)
 		pc.wg.Wait()
 		if err == nil {
 			err = pc.getErr()
@@ -160,7 +179,7 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 
 	// Fallback: full re-scan without caching, in parallel
 	pc := newParallelCtx()
-	err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, normalizeIgnores(opts.IgnoreDirs), "", cb, true, pc)
+	err = walkSubtreeCached(rClean, ".", 0, opts.MaxDepth, opts.MaxPerDir, normalizeIgnores(opts.IgnoreDirs), "", cb, true, pc)
 	pc.wg.Wait()
 	if err == nil {
 		err = pc.getErr()
@@ -173,10 +192,10 @@ func ScanWithOptions(root string, opts Options, cb VisitFunc) error {
 var (
 	cacheMu sync.RWMutex
 
-	// Whole-tree cache: key = root|MaxDepth|sorted(ignore)
+	// Whole-tree cache: key = root|MaxDepth|MaxPerDir|sorted(ignore)
 	wholeCache = map[string][]FileVisit{}
 
-	// Subtree cache: key = root|prefix|remainDepth|sorted(ignore)
+	// Subtree cache: key = root|prefix|remainDepth|MaxPerDir|sorted(ignore)
 	// Values store paths relative to the prefix (with "." for the directory itself).
 	subtreeCache = map[string][]FileVisit{}
 )
@@ -186,15 +205,17 @@ func wholeCacheKey(root string, opts Options) string {
 	return strings.Join([]string{
 		filepath.ToSlash(root),
 		strconv.Itoa(opts.MaxDepth),
+		strconv.Itoa(opts.MaxPerDir),
 		strings.Join(ig, ","),
 	}, "|")
 }
 
-func subtreeKey(root, prefix string, remainDepth int, ignoreKey string) string {
+func subtreeKey(root, prefix string, remainDepth int, maxPerDir int, ignoreKey string) string {
 	return strings.Join([]string{
 		filepath.ToSlash(root),
 		filepath.ToSlash(prefix),
 		strconv.Itoa(remainDepth),
+		strconv.Itoa(maxPerDir),
 		ignoreKey,
 	}, "|")
 }
@@ -291,7 +312,7 @@ func (p *parallelCtx) getErr() error {
 	return p.err
 }
 
-func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, ignores []string, ignoreKey string, cb VisitFunc, bypass bool, pc *parallelCtx) error {
+func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, maxPerDir int, ignores []string, ignoreKey string, cb VisitFunc, bypass bool, pc *parallelCtx) error {
 	fs := safeFS()
 	abs := joinAbs(root, relPrefix)
 	isRoot := relPrefix == "." || relPrefix == ""
@@ -320,7 +341,7 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 
 	// Serve from subtree cache if available and not bypassed
 	if !bypass && !isRoot {
-		key := subtreeKey(root, relPrefix, remain, ignoreKey)
+		key := subtreeKey(root, relPrefix, remain, maxPerDir, ignoreKey)
 		if items, ok := getSubtreeCache(key); ok {
 			for _, it := range items {
 				emitWithPrefix(root, relPrefix, it, cb)
@@ -350,6 +371,7 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 		emitWithPrefix(root, relPrefix, dirVisit, cb)
 	}
 
+	fileCount := 0
 	for _, e := range entries {
 		childRel := joinRel(relPrefix, e.Name())
 		childAbs := filepath.Join(abs, e.Name())
@@ -374,16 +396,21 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 				go func(cr string) {
 					defer pc.wg.Done()
 					defer func() { <-pc.sem }()
-					if e := walkSubtreeCached(root, cr, childDepth, maxDepth, ignores, ignoreKey, cb, bypass, pc); e != nil {
+					if e := walkSubtreeCached(root, cr, childDepth, maxDepth, maxPerDir, ignores, ignoreKey, cb, bypass, pc); e != nil {
 						pc.setErr(e)
 					}
 				}(childRel)
 			} else {
-				if err := walkSubtreeCached(root, childRel, childDepth, maxDepth, ignores, ignoreKey, cb, bypass, nil); err != nil {
+				if err := walkSubtreeCached(root, childRel, childDepth, maxDepth, maxPerDir, ignores, ignoreKey, cb, bypass, nil); err != nil {
 					return err
 				}
 			}
 		} else {
+			if maxPerDir > 0 && fileCount >= maxPerDir {
+				continue
+			}
+			fileCount++
+
 			var size int64
 			if fi, e2 := e.Info(); e2 == nil {
 				size = fi.Size()
@@ -405,7 +432,7 @@ func walkSubtreeCached(root string, relPrefix string, depth int, maxDepth int, i
 
 	// Store subtree cache for this directory (except root ".")
 	if !isRoot && !bypass {
-		key := subtreeKey(root, relPrefix, remain, ignoreKey)
+		key := subtreeKey(root, relPrefix, remain, maxPerDir, ignoreKey)
 		putSubtreeCache(key, collected)
 	}
 	return nil

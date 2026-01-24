@@ -34,7 +34,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 	reg["m0"] = PhaseSpec{
 		Key:  "m0",
 		File: "m0.json",
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return nil, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
@@ -50,9 +50,9 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		Key:      "m1",
 		File:     "m1.json",
 		Requires: []string{"m0"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			prev, err := Artifact[testArtifact](env, "m0")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var prev testArtifact
+			if err := deps.Artifact("m0", &prev); err != nil {
 				return nil, err
 			}
 			return testArtifact{Value: prev.Value + "+m1"}, nil
@@ -70,9 +70,9 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]PhaseSpec {
 		Key:      "m2",
 		File:     "m2.json",
 		Requires: []string{"m1"},
-		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			prev, err := Artifact[testArtifact](env, "m1")
-			if err != nil {
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var prev testArtifact
+			if err := deps.Artifact("m1", &prev); err != nil {
 				return nil, err
 			}
 			return testArtifact{Value: prev.Value + "+m2"}, nil
@@ -138,7 +138,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			Key:        "a",
 			File:       "a.json",
 			Requires:   []string{"b"},
-			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
+			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 				return PhaseOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
 			},
@@ -149,7 +149,7 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 			Key:        "b",
 			File:       "b.json",
 			Requires:   []string{"a"},
-			BuildInput: func(ctx context.Context, env *Env) (any, error) { return nil, nil },
+			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 				return PhaseOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
 			},
@@ -162,6 +162,40 @@ func TestExecutePhaseDetectsCycles(t *testing.T) {
 	err := ExecutePhase(ctx, reg["a"], env)
 	if err == nil || !strings.Contains(err.Error(), "cyclic") {
 		t.Fatalf("expected cycle error, got %v", err)
+	}
+}
+
+func TestExecutePhaseFailsOnUnusedRequires(t *testing.T) {
+	env := newTestEnv(t)
+	ctx := context.Background()
+	reg := map[string]PhaseSpec{
+		"a": {
+			Key:        "a",
+			File:       "a.json",
+			Requires:   []string{"b"},
+			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
+			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
+				return PhaseOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
+			},
+			Fingerprint: func(in any, env *Env) string { return "a" },
+			Strategy:    jsonStrategy{},
+		},
+		"b": {
+			Key:        "b",
+			File:       "b.json",
+			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
+			Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
+				return PhaseOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
+			},
+			Fingerprint: func(in any, env *Env) string { return "b" },
+			Strategy:    jsonStrategy{},
+		},
+	}
+	env.Resolver = MergeRegistries(reg)
+
+	err := ExecutePhase(ctx, reg["a"], env)
+	if err == nil || !strings.Contains(err.Error(), "declared but did not use") {
+		t.Fatalf("expected unused requires error, got %v", err)
 	}
 }
 
