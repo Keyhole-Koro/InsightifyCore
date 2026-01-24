@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"insightify/internal/mcp"
+	"insightify/internal/artifact"
 )
 
 type fakeLLM struct {
@@ -26,11 +26,11 @@ func (f *fakeLLM) GenerateJSON(ctx context.Context, prompt string, input any) (j
 }
 
 type fakeTools struct {
-	specs []mcp.ToolSpec
+	specs []artifact.ToolSpec
 	calls []string
 }
 
-func (f *fakeTools) Specs() []mcp.ToolSpec { return f.specs }
+func (f *fakeTools) Specs() []artifact.ToolSpec { return f.specs }
 func (f *fakeTools) Call(ctx context.Context, name string, input json.RawMessage) (json.RawMessage, error) {
 	f.calls = append(f.calls, name)
 	return json.RawMessage(`{"ok":true}`), nil
@@ -43,7 +43,7 @@ func TestToolLoop_ToolThenFinal(t *testing.T) {
 			json.RawMessage(`{"action":"final","final":{"result":"done"}}`),
 		},
 	}
-	tools := &fakeTools{specs: []mcp.ToolSpec{{Name: "scan.list"}}}
+	tools := &fakeTools{specs: []artifact.ToolSpec{{Name: "scan.list"}}}
 	loop := &ToolLoop{LLM: llm, Tools: tools, MaxIters: 3}
 	out, state, err := loop.Run(context.Background(), map[string]any{"x": 1}, DefaultPromptBuilder("base"))
 	if err != nil {
@@ -63,7 +63,7 @@ func TestToolLoop_AllowedList(t *testing.T) {
 			json.RawMessage(`{"action":"tool","tool_name":"fs.read","tool_input":{"path":"x"}}`),
 		},
 	}
-	tools := &fakeTools{specs: []mcp.ToolSpec{{Name: "fs.read"}}}
+	tools := &fakeTools{specs: []artifact.ToolSpec{{Name: "fs.read"}}}
 	loop := &ToolLoop{LLM: llm, Tools: tools, MaxIters: 1, Allowed: []string{"scan.list"}}
 	_, _, err := loop.Run(context.Background(), nil, DefaultPromptBuilder("base"))
 	if err != ErrToolNotAllowed {
@@ -78,7 +78,7 @@ func TestToolLoop_MaxIterations(t *testing.T) {
 			json.RawMessage(`{"action":"tool","tool_name":"scan.list","tool_input":{"roots":["."]}}`),
 		},
 	}
-	tools := &fakeTools{specs: []mcp.ToolSpec{{Name: "scan.list"}}}
+	tools := &fakeTools{specs: []artifact.ToolSpec{{Name: "scan.list"}}}
 	loop := &ToolLoop{LLM: llm, Tools: tools, MaxIters: 1}
 	_, _, err := loop.Run(context.Background(), nil, DefaultPromptBuilder("base"))
 	if err != ErrMaxIterations {

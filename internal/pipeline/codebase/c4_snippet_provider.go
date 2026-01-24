@@ -7,18 +7,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"insightify/internal/artifact"
 	"insightify/internal/snippet"
-	cb "insightify/internal/types/codebase"
 )
 
 // C4SnippetProvider implements snippet.Provider backed by a C4Out value.
 type C4SnippetProvider struct {
-	out      cb.C4Out
+	out      artifact.C4Out
 	repoRoot string
 }
 
 // NewC4SnippetProvider constructs a provider that serves queries from the given C4Out.
-func NewC4SnippetProvider(repoRoot string, out cb.C4Out) *C4SnippetProvider {
+func NewC4SnippetProvider(repoRoot string, out artifact.C4Out) *C4SnippetProvider {
 	return &C4SnippetProvider{out: out, repoRoot: repoRoot}
 }
 
@@ -95,28 +95,28 @@ func (p *C4SnippetProvider) Collect(ctx context.Context, q snippet.Query) ([]sni
 }
 
 type c4Index struct {
-	byPath map[string]cb.IdentifierReport
+	byPath map[string]artifact.IdentifierReport
 }
 
-func buildC4Index(files []cb.IdentifierReport) c4Index {
-	m := make(map[string]cb.IdentifierReport, len(files))
+func buildC4Index(files []artifact.IdentifierReport) c4Index {
+	m := make(map[string]artifact.IdentifierReport, len(files))
 	for _, f := range files {
 		m[f.Path] = f
 	}
 	return c4Index{byPath: m}
 }
 
-func (idx c4Index) lookup(path, name string) (cb.IdentifierReport, cb.IdentifierSignal, bool) {
+func (idx c4Index) lookup(path, name string) (artifact.IdentifierReport, artifact.IdentifierSignal, bool) {
 	rep, ok := idx.byPath[path]
 	if !ok {
-		return cb.IdentifierReport{}, cb.IdentifierSignal{}, false
+		return artifact.IdentifierReport{}, artifact.IdentifierSignal{}, false
 	}
 	for _, sig := range rep.Identifiers {
 		if sig.Name == name {
 			return rep, sig, true
 		}
 	}
-	return cb.IdentifierReport{}, cb.IdentifierSignal{}, false
+	return artifact.IdentifierReport{}, artifact.IdentifierSignal{}, false
 }
 
 func readSnippetFile(repoRoot, relPath string, start, end int) (string, error) {

@@ -11,20 +11,19 @@ import (
 	"regexp"
 	"strings"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
 	"insightify/internal/scan"
 	"insightify/internal/snippet"
-	t "insightify/internal/types"
-	ml "insightify/internal/types/mainline"
 	"insightify/internal/wordidx"
 )
 
 type m2PromptOut struct {
-	Delta      ml.Delta `json:"delta" prompt_desc:"Changes vs previous hypothesis (added, removed, modified)."`
-	NeedsInput []string `json:"needs_input" prompt_desc:"Questions or requests for more input."`
-	StopWhen   []string `json:"stop_when" prompt_desc:"Convergence criteria."`
-	Notes      []string `json:"notes" prompt_desc:"Short notes or caveats."`
+	Delta      artifact.Delta `json:"delta" prompt_desc:"Changes vs previous hypothesis (added, removed, modified)."`
+	NeedsInput []string       `json:"needs_input" prompt_desc:"Questions or requests for more input."`
+	StopWhen   []string       `json:"stop_when" prompt_desc:"Convergence criteria."`
+	Notes      []string       `json:"notes" prompt_desc:"Short notes or caveats."`
 }
 
 // M2 focuses on delta-only updates; updated_hypothesis is not re-emitted.
@@ -44,7 +43,7 @@ var m2PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 		"Use directives like 'snippet:path=<file> identifier=<name> reason=<...>' or 'wordsearch:term=<token> hint_path=<folder or file> reason=<...>'.",
 		"If there are no changes, keep delta.added, delta.removed, and delta.modified empty.",
 	},
-	Assumptions:  []string{"Prefer empty arrays to omitted fields when uncertain."},
+	Assumptions:  []string{"Prefer empty arrays to omitted fields when uncertain."}, 
 	OutputFormat: "JSON only.",
 	Language:     "English",
 }, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent(), llmtool.PresetCautious())
@@ -56,9 +55,9 @@ type M2 struct {
 }
 
 // Run executes M2 with robust JSON handling, including up to 5 iterations to resolve needs_input.
-func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
-	var final ml.M2Out
-	var agg ml.Delta
+func (p *M2) Run(ctx context.Context, in artifact.M2In) (artifact.M2Out, error) {
+	var final artifact.M2Out
+	var agg artifact.Delta
 	seenOpened := make(map[string]bool)
 	for _, of := range in.OpenedFiles {
 		seenOpened[of.Path] = true
@@ -67,7 +66,7 @@ func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 	for i := 0; i < 5; i++ {
 		out, err := p.runOnce(ctx, in)
 		if err != nil {
-			return ml.M2Out{}, err
+			return artifact.M2Out{}, err
 		}
 		final = out
 		agg = mergeDelta(agg, out.Delta)
@@ -93,10 +92,10 @@ func (p *M2) Run(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 }
 
 // runOnce executes a single LLM call with current inputs.
-func (p *M2) runOnce(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
+func (p *M2) runOnce(ctx context.Context, in artifact.M2In) (artifact.M2Out, error) {
 	if len(in.FileIndex) == 0 || len(in.MDDocs) == 0 || len(in.OpenedFiles) == 0 || len(in.Focus) == 0 {
-		var m1 ml.M1Out
-		if prev, ok := in.Previous.(ml.M1Out); ok {
+		var m1 artifact.M1Out
+		if prev, ok := in.Previous.(artifact.M1Out); ok {
 			m1 = prev
 		}
 		var ignore []string
@@ -139,15 +138,15 @@ func (p *M2) runOnce(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 
 	prompt, err := llmtool.StructuredPromptBuilder(m2PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
 	if err != nil {
-		return ml.M2Out{}, err
+		return artifact.M2Out{}, err
 	}
 	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
-		return ml.M2Out{}, err
+		return artifact.M2Out{}, err
 	}
 	fmt.Printf("M2 raw output (%d bytes)\n", len(raw))
 
-	var out ml.M2Out
+	var out artifact.M2Out
 	if err := json.Unmarshal(raw, &out); err == nil {
 		return out, nil
 	}
@@ -155,17 +154,17 @@ func (p *M2) runOnce(ctx context.Context, in ml.M2In) (ml.M2Out, error) {
 	// Normalize known quirks and retry.
 	norm, nerr := normalizeM2JSON(raw)
 	if nerr != nil {
-		return ml.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
+		return artifact.M2Out{}, fmt.Errorf("M2 JSON invalid and normalization failed: %w", nerr)
 	}
 	if err := json.Unmarshal(norm, &out); err != nil {
-		return ml.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
+		return artifact.M2Out{}, fmt.Errorf("M2 JSON invalid after normalization: %w\npayload: %s", err, string(norm))
 	}
 	return out, nil
 }
 
 // fetchInputs processes needs_input directives and returns opened files to feed next iteration.
-func (p *M2) fetchInputs(ctx context.Context, needs []string) []t.OpenedFile {
-	var opened []t.OpenedFile
+func (p *M2) fetchInputs(ctx context.Context, needs []string) []artifact.OpenedFile {
+	var opened []artifact.OpenedFile
 	for _, n := range needs {
 		n = strings.TrimSpace(n)
 		switch {
@@ -182,7 +181,7 @@ func (p *M2) fetchInputs(ctx context.Context, needs []string) []t.OpenedFile {
 				continue
 			}
 			for _, s := range snips {
-				opened = append(opened, t.OpenedFile{
+				opened = append(opened, artifact.OpenedFile{
 					Path:    s.Identifier.Path + "#" + s.Identifier.Name,
 					Content: s.Code,
 				})
@@ -195,7 +194,7 @@ func (p *M2) fetchInputs(ctx context.Context, needs []string) []t.OpenedFile {
 			refs := p.WordIndex.Find(ctx, term)
 			for _, r := range refs {
 				if content, err := readFileContent(r.FilePath); err == nil {
-					opened = append(opened, t.OpenedFile{Path: r.FilePath, Content: content})
+					opened = append(opened, artifact.OpenedFile{Path: r.FilePath, Content: content})
 				}
 			}
 		}
@@ -252,7 +251,7 @@ func readFileContent(path string) (string, error) {
 	return string(data), nil
 }
 
-func mergeDelta(base, add ml.Delta) ml.Delta {
+func mergeDelta(base, add artifact.Delta) artifact.Delta {
 	base.Added = append(base.Added, add.Added...)
 	base.Removed = append(base.Removed, add.Removed...)
 	base.Modified = append(base.Modified, add.Modified...)
@@ -326,9 +325,9 @@ func normalizeM2JSON(raw []byte) ([]byte, error) {
 	return bytes.TrimSpace(buf.Bytes()), nil
 }
 
-func buildOpenedAndFocus(m1 ml.M1Out, repoRoot string, limit int) ([]t.OpenedFile, []t.FocusQuestion) {
-	var opened []t.OpenedFile
-	var focus []t.FocusQuestion
+func buildOpenedAndFocus(m1 artifact.M1Out, repoRoot string, limit int) ([]artifact.OpenedFile, []artifact.FocusQuestion) {
+	var opened []artifact.OpenedFile
+	var focus []artifact.FocusQuestion
 	if limit <= 0 {
 		limit = 8
 	}
@@ -343,12 +342,12 @@ func buildOpenedAndFocus(m1 ml.M1Out, repoRoot string, limit int) ([]t.OpenedFil
 		if err != nil {
 			continue
 		}
-		opened = append(opened, t.OpenedFile{Path: nf.Path, Content: string(b)})
+		opened = append(opened, artifact.OpenedFile{Path: nf.Path, Content: string(b)})
 		if len(nf.WhatToCheck) == 0 {
-			focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: "Review this file for key architecture details"})
+			focus = append(focus, artifact.FocusQuestion{Path: nf.Path, Question: "Review this file for key architecture details"})
 		} else {
 			for _, q := range nf.WhatToCheck {
-				focus = append(focus, t.FocusQuestion{Path: nf.Path, Question: q})
+				focus = append(focus, artifact.FocusQuestion{Path: nf.Path, Question: q})
 			}
 		}
 		picked++
@@ -356,33 +355,33 @@ func buildOpenedAndFocus(m1 ml.M1Out, repoRoot string, limit int) ([]t.OpenedFil
 	return opened, focus
 }
 
-func scanForM2(repo string, ignore []string) ([]t.FileIndexEntry, []t.MDDoc) {
-	var index []t.FileIndexEntry
-	var mdDocs []t.MDDoc
-	stripMD := regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+func scanForM2(repo string, ignore []string) ([]artifact.FileIndexEntry, []artifact.MDDoc) {
+	var index []artifact.FileIndexEntry
+	var mdDocs []artifact.MDDoc
+	stripMD := regexp.MustCompile(`![\[^\]]*\]\([^)]*\)`)
 	stripHTML := regexp.MustCompile(`(?is)<img[^>]*>`)
 	_ = scan.ScanWithOptions(repo, scan.Options{IgnoreDirs: ignore}, func(f scan.FileVisit) {
 		if f.IsDir {
 			return
 		}
-		index = append(index, t.FileIndexEntry{Path: f.Path, Size: f.Size})
+		index = append(index, artifact.FileIndexEntry{Path: f.Path, Size: f.Size})
 		if strings.EqualFold(f.Ext, ".md") {
 			if b, e := scan.CurrentSafeFS().SafeReadFile(f.AbsPath); e == nil {
 				txt := string(b)
 				txt = stripMD.ReplaceAllString(txt, "")
 				txt = stripHTML.ReplaceAllString(txt, "")
-				mdDocs = append(mdDocs, t.MDDoc{Path: f.Path, Text: txt})
+				mdDocs = append(mdDocs, artifact.MDDoc{Path: f.Path, Text: txt})
 			}
 		}
 	})
 	return index, mdDocs
 }
 
-func filterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexEntry {
+func filterIndexByRoots(index []artifact.FileIndexEntry, roots []string) []artifact.FileIndexEntry {
 	if len(roots) == 0 {
 		return index
 	}
-	var out []t.FileIndexEntry
+	var out []artifact.FileIndexEntry
 	for _, it := range index {
 		for _, r := range roots {
 			r = strings.Trim(strings.TrimSpace(r), "/")
@@ -398,11 +397,11 @@ func filterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexE
 	return out
 }
 
-func filterMDDocsByRoots(docs []t.MDDoc, roots []string) []t.MDDoc {
+func filterMDDocsByRoots(docs []artifact.MDDoc, roots []string) []artifact.MDDoc {
 	if len(roots) == 0 {
 		return docs
 	}
-	var out []t.MDDoc
+	var out []artifact.MDDoc
 	for _, d := range docs {
 		for _, r := range roots {
 			r = strings.Trim(strings.TrimSpace(r), "/")

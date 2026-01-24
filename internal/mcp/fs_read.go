@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/safeio"
 )
 
@@ -16,8 +17,8 @@ type fsReadTool struct{ host Host }
 
 func newFSReadTool(h Host) *fsReadTool { return &fsReadTool{host: h} }
 
-func (t *fsReadTool) Spec() ToolSpec {
-	return ToolSpec{
+func (t *fsReadTool) Spec() artifact.ToolSpec {
+	return artifact.ToolSpec{
 		Name:        "fs.read",
 		Description: "Read a file (or a slice) from the repo, with size limits.",
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/mcp"
+	"insightify/internal/artifact"
 )
 
 func TestStructuredPromptBuilder_RendersSections(t *testing.T) {
@@ -33,7 +33,7 @@ func TestStructuredPromptBuilder_RendersSections(t *testing.T) {
 			{Name: "scan.list", Input: json.RawMessage(`{"roots":["."]}`), Output: json.RawMessage(`{"files":["a.go"]}`)},
 		},
 	}
-	tools := []mcp.ToolSpec{{Name: "scan.list"}}
+	tools := []artifact.ToolSpec{{Name: "scan.list"}}
 
 	builder := StructuredPromptBuilder(spec)
 	out, err := builder(context.Background(), state, tools)

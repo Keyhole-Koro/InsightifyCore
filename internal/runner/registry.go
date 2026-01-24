@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
-	t "insightify/internal/types"
 	"insightify/internal/wordidx"
 )
 
@@ -70,8 +70,8 @@ type Env struct {
 
 	WordIndexer wordidx.AggIndex
 
-	Index  []t.FileIndexEntry
-	MDDocs []t.MDDoc
+	Index  []artifact.FileIndexEntry
+	MDDocs []artifact.MDDoc
 
 	StripImgMD   *regexp.Regexp
 	StripImgHTML *regexp.Regexp
@@ -166,11 +166,14 @@ type cacheMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (jsonStrategy) metaPath(spec PhaseSpec, env *Env) string {
-	return filepath.Join(env.OutDir, spec.Key+".meta.json")
+func (s jsonStrategy) dir(spec PhaseSpec, env *Env) string {
+	return filepath.Join(env.OutDir, spec.Key)
 }
-func (jsonStrategy) outPath(spec PhaseSpec, env *Env) string {
-	return filepath.Join(env.OutDir, spec.File)
+func (s jsonStrategy) metaPath(spec PhaseSpec, env *Env) string {
+	return filepath.Join(s.dir(spec, env), "meta.json")
+}
+func (s jsonStrategy) outPath(spec PhaseSpec, env *Env) string {
+	return filepath.Join(s.dir(spec, env), "output.json")
 }
 
 func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool) {
@@ -197,6 +200,8 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inp
 }
 
 func (s jsonStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error {
+	dir := s.dir(spec, env)
+	_ = os.MkdirAll(dir, 0755)
 	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(op, b, 0o644)

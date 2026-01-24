@@ -5,7 +5,7 @@ import (
 	"context"
 	"sort"
 
-	cb "insightify/internal/types/codebase"
+	"insightify/internal/artifact"
 )
 
 type C2 struct{}
@@ -13,11 +13,11 @@ type C2 struct{}
 // Run builds a directed dependency graph from C1 output with normalized nodes.
 // It collapses bidirectional edges (keeping the heavier direction) and ensures
 // the resulting graph is acyclic so later stages do not repeat that work.
-func (C2) Run(ctx context.Context, in cb.C2In) (cb.C2Out, error) {
+func (C2) Run(ctx context.Context, in artifact.C2In) (artifact.C2Out, error) {
 	_ = ctx
 
-	pathToRef := make(map[string]cb.FileRef)
-	register := func(ref cb.FileRef) {
+	pathToRef := make(map[string]artifact.FileRef)
+	register := func(ref artifact.FileRef) {
 		if ref.Path == "" {
 			return
 		}
@@ -42,10 +42,10 @@ func (C2) Run(ctx context.Context, in cb.C2In) (cb.C2Out, error) {
 	sort.Strings(paths)
 
 	idByPath := make(map[string]int, len(paths))
-	nodes := make([]cb.DependencyNode, len(paths))
+	nodes := make([]artifact.DependencyNode, len(paths))
 	for i, p := range paths {
 		idByPath[p] = i
-		nodes[i] = cb.DependencyNode{
+		nodes[i] = artifact.DependencyNode{
 			ID:   i,
 			File: pathToRef[p],
 		}
@@ -104,9 +104,9 @@ func (C2) Run(ctx context.Context, in cb.C2In) (cb.C2Out, error) {
 		sort.Ints(adjacency[i])
 	}
 
-	return cb.C2Out{
+	return artifact.C2Out{
 		Repo: in.Repo,
-		Graph: cb.DependencyGraph{
+		Graph: artifact.DependencyGraph{
 			Nodes:     nodes,
 			Adjacency: adjacency,
 		},

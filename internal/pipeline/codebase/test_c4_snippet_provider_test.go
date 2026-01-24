@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"insightify/internal/artifact"
 	"insightify/internal/snippet"
-	cb "insightify/internal/types/codebase"
 )
 
 // helper to create a temp repo file with given content
@@ -27,15 +27,15 @@ func TestC4SnippetProviderCollectBFSWithTokens(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "a.ts", "line1\nfoo();\nbar();\n")
 
-	c4 := cb.C4Out{
-		Files: []cb.IdentifierReport{
+	c4 := artifact.C4Out{
+		Files: []artifact.IdentifierReport{
 			{
 				Path: "a.ts",
-				Identifiers: []cb.IdentifierSignal{
+				Identifiers: []artifact.IdentifierSignal{
 					{
 						Name:  "foo",
 						Lines: [2]int{2, 2},
-						Requires: []cb.IdentifierRequirement{
+						Requires: []artifact.IdentifierRequirement{
 							{Path: "a.ts", Identifier: "bar"},
 						},
 					},
@@ -69,12 +69,12 @@ func TestC4SnippetProviderRespectsMaxTokens(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "a.ts", "line1\nfoo();\nbar();\n")
 
-	c4 := cb.C4Out{
-		Files: []cb.IdentifierReport{
+	c4 := artifact.C4Out{
+		Files: []artifact.IdentifierReport{
 			{
 				Path: "a.ts",
-				Identifiers: []cb.IdentifierSignal{
-					{Name: "foo", Lines: [2]int{2, 2}, Requires: []cb.IdentifierRequirement{{Path: "a.ts", Identifier: "bar"}}},
+				Identifiers: []artifact.IdentifierSignal{
+					{Name: "foo", Lines: [2]int{2, 2}, Requires: []artifact.IdentifierRequirement{{Path: "a.ts", Identifier: "bar"}}},
 					{Name: "bar", Lines: [2]int{3, 3}},
 				},
 			},
@@ -103,11 +103,11 @@ func TestC4SnippetProviderMissingLineSpanIsSkipped(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "a.ts", "line1\nfoo();\n")
 
-	c4 := cb.C4Out{
-		Files: []cb.IdentifierReport{
+	c4 := artifact.C4Out{
+		Files: []artifact.IdentifierReport{
 			{
 				Path:        "a.ts",
-				Identifiers: []cb.IdentifierSignal{{Name: "foo", Lines: [2]int{0, 0}}},
+				Identifiers: []artifact.IdentifierSignal{{Name: "foo", Lines: [2]int{0, 0}}},
 			},
 		},
 	}

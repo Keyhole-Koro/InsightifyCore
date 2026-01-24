@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/safeio"
-	t "insightify/internal/types"
 )
 
 // Common helpers (hash, json, files).
@@ -136,11 +136,11 @@ func UniqueStrings(in ...string) []string {
 	return out
 }
 
-func FilterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexEntry {
+func FilterIndexByRoots(index []artifact.FileIndexEntry, roots []string) []artifact.FileIndexEntry {
 	if len(roots) == 0 {
 		return index
 	}
-	var out []t.FileIndexEntry
+	var out []artifact.FileIndexEntry
 	for _, it := range index {
 		for _, r := range roots {
 			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")
@@ -156,11 +156,11 @@ func FilterIndexByRoots(index []t.FileIndexEntry, roots []string) []t.FileIndexE
 	return out
 }
 
-func FilterMDDocsByRoots(docs []t.MDDoc, roots []string) []t.MDDoc {
+func FilterMDDocsByRoots(docs []artifact.MDDoc, roots []string) []artifact.MDDoc {
 	if len(roots) == 0 {
 		return docs
 	}
-	var out []t.MDDoc
+	var out []artifact.MDDoc
 	for _, d := range docs {
 		for _, r := range roots {
 			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")

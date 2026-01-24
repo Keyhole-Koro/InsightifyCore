@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
-	ex "insightify/internal/types/external"
 )
 
 const promptX1 = `You are **Stage X1 (external follow-up)** of a repository analysis pipeline.
@@ -48,9 +48,9 @@ type X1 struct {
 	LLM llmclient.LLMClient
 }
 
-func (p *X1) Run(ctx context.Context, in ex.X1In) (ex.X1Out, error) {
+func (p *X1) Run(ctx context.Context, in artifact.X1In) (artifact.X1Out, error) {
 	if p == nil || p.LLM == nil {
-		return ex.X1Out{}, fmt.Errorf("x1: llm client is nil")
+		return artifact.X1Out{}, fmt.Errorf("x1: llm client is nil")
 	}
 	const maxEvidence = 24
 	if len(in.Files) > maxEvidence {
@@ -64,11 +64,11 @@ func (p *X1) Run(ctx context.Context, in ex.X1In) (ex.X1Out, error) {
 	}
 	raw, err := p.LLM.GenerateJSON(ctx, promptX1, payload)
 	if err != nil {
-		return ex.X1Out{}, err
+		return artifact.X1Out{}, err
 	}
-	var out ex.X1Out
+	var out artifact.X1Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return ex.X1Out{}, fmt.Errorf("X1 JSON invalid: %w\nraw: %s", err, string(raw))
+		return artifact.X1Out{}, fmt.Errorf("X1 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	out.ExternalOverview = applyExternalDelta(in.Previous, out.Delta)
 	return out, nil
@@ -79,7 +79,7 @@ type pathToken struct {
 	Index *int
 }
 
-func applyExternalDelta(prev ex.X0Out, delta ex.X1Delta) ex.ExternalOverview {
+func applyExternalDelta(prev artifact.X0Out, delta artifact.X1Delta) artifact.ExternalOverview {
 	root := structToJSONMap(prev)
 	for _, mod := range delta.Modified {
 		if mod.Field == "" {
@@ -105,8 +105,8 @@ func structToJSONMap(v any) map[string]any {
 	return out
 }
 
-func extractExternalOverview(root map[string]any) ex.ExternalOverview {
-	var eo ex.ExternalOverview
+func extractExternalOverview(root map[string]any) artifact.ExternalOverview {
+	var eo artifact.ExternalOverview
 	raw, ok := root["external_overview"]
 	if !ok {
 		return eo
@@ -138,21 +138,21 @@ func setJSONValue(root map[string]any, field string, value any) error {
 				if !exists || !ok {
 					arr = make([]any, 0, *tok.Index+1)
 				}
-				targetIdx := *tok.Index
-				for len(arr) <= targetIdx {
-					arr = append(arr, nil)
-				}
-				if last {
-					arr[targetIdx] = value
-					node[tok.Key] = arr
-					return nil
-				}
-				if arr[targetIdx] == nil {
-					arr[targetIdx] = map[string]any{}
-				}
-				current = arr[targetIdx]
+			targetIdx := *tok.Index
+			for len(arr) <= targetIdx {
+				arr = append(arr, nil)
+			}
+			if last {
+				arr[targetIdx] = value
 				node[tok.Key] = arr
-				continue
+				return nil
+			}
+			if arr[targetIdx] == nil {
+				arr[targetIdx] = map[string]any{}
+			}
+			current = arr[targetIdx]
+			node[tok.Key] = arr
+			continue
 			}
 			if !exists {
 				if last {

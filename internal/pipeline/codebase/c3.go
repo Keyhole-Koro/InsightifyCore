@@ -4,15 +4,15 @@ import (
 	"context"
 	"path/filepath"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
-	cb "insightify/internal/types/codebase"
 )
 
 type C3 struct {
 	LLM llmclient.LLMClient
 }
 
-func (p C3) Run(ctx context.Context, in cb.C3In) (cb.C3Out, error) {
+func (p C3) Run(ctx context.Context, in artifact.C3In) (artifact.C3Out, error) {
 	_ = ctx
 	graph := in.Graph
 	fs := in.RepoFS
@@ -36,9 +36,9 @@ func (p C3) Run(ctx context.Context, in cb.C3In) (cb.C3Out, error) {
 		weights[i] = count
 	}
 
-	taskNodes := make([]cb.C3Node, len(graph.Nodes))
+	taskNodes := make([]artifact.C3Node, len(graph.Nodes))
 	for i, node := range graph.Nodes {
-		taskNodes[i] = cb.C3Node{
+		taskNodes[i] = artifact.C3Node{
 			ID:       node.ID,
 			Path:     node.File.Path,
 			File:     node.File,
@@ -52,7 +52,7 @@ func (p C3) Run(ctx context.Context, in cb.C3In) (cb.C3Out, error) {
 		adj[i] = append([]int(nil), graph.Adjacency[i]...)
 	}
 
-	return cb.C3Out{
+	return artifact.C3Out{
 		Repo:        in.Repo,
 		CapPerChunk: in.CapPerChunk,
 		Nodes:       taskNodes,

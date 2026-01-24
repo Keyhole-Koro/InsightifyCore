@@ -3,9 +3,9 @@ package runner
 import (
 	"context"
 
+	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	mlpipe "insightify/internal/pipeline/mainline"
-	ml "insightify/internal/types/mainline"
 )
 
 // BuildRegistryMainline defines m0/m1/m2 in one place.
@@ -21,12 +21,12 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "layout"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			return ml.M0In{Repo: env.Repo}, nil
+			return artifact.M0In{Repo: env.Repo}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m0")
 			p := mlpipe.M0{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(ml.M0In))
+			out, err := p.Run(ctx, in.(artifact.M0In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -34,9 +34,9 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   ml.M0In
+				In   artifact.M0In
 				Salt string
-			}{in.(ml.M0In), env.ModelSalt})
+			}{in.(artifact.M0In), env.ModelSalt})
 		},
 		Downstream: []string{"m1", "m2"},
 		Strategy:   jsonStrategy{},
@@ -52,22 +52,22 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "architecture"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0prev, err := Artifact[ml.M0Out](env, "m0")
+			m0prev, err := Artifact[artifact.M0Out](env, "m0")
 			if err != nil {
 				return nil, err
 			}
 			ig := UniqueStrings(baseNames(m0prev.LibraryRoots...)...)
-			return ml.M1In{
+			return artifact.M1In{
 				Repo:       env.Repo,
 				IgnoreDirs: ig,
-				Hints:      &ml.M1Hints{},
-				Limits:     &ml.M1Limits{MaxNext: env.MaxNext},
+				Hints:      &artifact.M1Hints{},
+				Limits:     &artifact.M1Limits{MaxNext: env.MaxNext},
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m1")
 			p := mlpipe.M1{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(ml.M1In))
+			out, err := p.Run(ctx, in.(artifact.M1In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -75,9 +75,9 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   ml.M1In
+				In   artifact.M1In
 				Salt string
-			}{in.(ml.M1In), env.ModelSalt})
+			}{in.(artifact.M1In), env.ModelSalt})
 		},
 		Downstream: []string{"m2"},
 		Strategy:   jsonStrategy{},
@@ -93,14 +93,14 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"mainline", "delta"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m1 := MustArtifact[ml.M1Out](env, "m1")
+			m1 := MustArtifact[artifact.M1Out](env, "m1")
 
-			m0prev, err := Artifact[ml.M0Out](env, "m0")
+			m0prev, err := Artifact[artifact.M0Out](env, "m0")
 			if err != nil {
 				return nil, err
 			}
 
-			return ml.M2In{
+			return artifact.M2In{
 				Repo:         env.Repo,
 				RepoRoot:     env.RepoRoot,
 				Roots:        &m0prev,
@@ -111,7 +111,7 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "m2")
 			p := mlpipe.M2{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(ml.M2In))
+			out, err := p.Run(ctx, in.(artifact.M2In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -119,9 +119,9 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   ml.M2In
+				In   artifact.M2In
 				Salt string
-			}{in.(ml.M2In), env.ModelSalt})
+			}{in.(artifact.M2In), env.ModelSalt})
 		},
 		Downstream: nil,
 		Strategy:   jsonStrategy{},

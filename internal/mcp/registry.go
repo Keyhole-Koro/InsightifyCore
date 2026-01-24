@@ -5,19 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+
+	"insightify/internal/artifact"
 )
 
-// ToolSpec documents a tool's contract (name + schemas).
-type ToolSpec struct {
-	Name         string          `json:"name"`
-	Description  string          `json:"description,omitempty"`
-	InputSchema  json.RawMessage `json:"input_schema,omitempty"`
-	OutputSchema json.RawMessage `json:"output_schema,omitempty"`
-}
+// artifact.ToolSpec documents a tool's contract (name + schemas).
 
 // Tool is a minimal in-process MCP-style tool.
 type Tool interface {
-	Spec() ToolSpec
+	Spec() artifact.ToolSpec
 	Call(ctx context.Context, input json.RawMessage) (json.RawMessage, error)
 }
 
@@ -68,13 +64,13 @@ func (r *Registry) Call(ctx context.Context, name string, input json.RawMessage)
 }
 
 // Specs returns the current tool specs.
-func (r *Registry) Specs() []ToolSpec {
+func (r *Registry) Specs() []artifact.ToolSpec {
 	if r == nil {
 		return nil
 	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	out := make([]ToolSpec, 0, len(r.tools))
+	out := make([]artifact.ToolSpec, 0, len(r.tools))
 	for _, t := range r.tools {
 		out = append(out, t.Spec())
 	}

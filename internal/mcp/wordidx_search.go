@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/wordidx"
 )
 
@@ -15,8 +16,8 @@ type wordIdxSearchTool struct{ host Host }
 
 func newWordIdxSearchTool(h Host) *wordIdxSearchTool { return &wordIdxSearchTool{host: h} }
 
-func (t *wordIdxSearchTool) Spec() ToolSpec {
-	return ToolSpec{
+func (t *wordIdxSearchTool) Spec() artifact.ToolSpec {
+	return artifact.ToolSpec{
 		Name:        "wordidx.search",
 		Description: "Search for exact word occurrences under repo roots using the word index.",
 	}

@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
 	"insightify/internal/scan"
-	ml "insightify/internal/types/mainline"
 )
 
 var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Classify repository layout from extension counts and a shallow directory scan.",
 	Background:   "Phase M0 identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
-	OutputFields: llmtool.MustFieldsFromStruct(ml.M0Out{}),
+	OutputFields: llmtool.MustFieldsFromStruct(artifact.M0Out{}),
 	Constraints: []string{
 		"Maintain the field order shown in OUTPUT.",
 		"Use absolute (full) paths with forward slashes for both directories and files.",
@@ -35,7 +35,7 @@ var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 
 type M0 struct{ LLM llmclient.LLMClient }
 
-func (p *M0) Run(ctx context.Context, in ml.M0In) (ml.M0Out, error) {
+func (p *M0) Run(ctx context.Context, in artifact.M0In) (artifact.M0Out, error) {
 	if len(in.ExtCounts) == 0 || len(in.DirsDepth1) == 0 {
 		exts, dirs := scanDepth1(in.Repo)
 		if len(in.ExtCounts) == 0 {
@@ -51,15 +51,15 @@ func (p *M0) Run(ctx context.Context, in ml.M0In) (ml.M0Out, error) {
 	}
 	prompt, err := llmtool.StructuredPromptBuilder(m0PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
 	if err != nil {
-		return ml.M0Out{}, err
+		return artifact.M0Out{}, err
 	}
 	raw, err := p.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
-		return ml.M0Out{}, err
+		return artifact.M0Out{}, err
 	}
-	var out ml.M0Out
+	var out artifact.M0Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return ml.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
+		return artifact.M0Out{}, fmt.Errorf("M0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	return out, nil
 }

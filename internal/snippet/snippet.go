@@ -3,7 +3,7 @@ package snippet
 import (
 	"context"
 
-	cb "insightify/internal/types/codebase"
+	"insightify/internal/artifact"
 )
 
 // Identifier points to a symbol by path+name.
@@ -22,8 +22,8 @@ type Query struct {
 // RelatedSnippet carries the code slice and related metadata.
 type RelatedSnippet struct {
 	Identifier Identifier
-	Report     cb.IdentifierReport
-	Signal     cb.IdentifierSignal
+	Report     artifact.IdentifierReport
+	Signal     artifact.IdentifierSignal
 	Code       string
 	Tokens     int
 	Provider   string // e.g. "c4"

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"insightify/internal/snippet"
+	"insightify/internal/artifact"
 	"insightify/internal/pipeline/codebase"
-	cb "insightify/internal/types/codebase"
+	"insightify/internal/snippet"
 )
 
 // --------------------- snippet.collect ---------------------
@@ -17,8 +17,8 @@ type snippetCollectTool struct{ host Host }
 
 func newSnippetCollectTool(h Host) *snippetCollectTool { return &snippetCollectTool{host: h} }
 
-func (t *snippetCollectTool) Spec() ToolSpec {
-	return ToolSpec{
+func (t *snippetCollectTool) Spec() artifact.ToolSpec {
+	return artifact.ToolSpec{
 		Name:        "snippet.collect",
 		Description: "Collect related code snippets for identifiers (uses existing codebase artifacts).",
 	}
@@ -74,18 +74,18 @@ func (t *snippetCollectTool) Call(ctx context.Context, input json.RawMessage) (j
 	return json.Marshal(out)
 }
 
-func loadC4Out(h Host) (cb.C4Out, error) {
+func loadC4Out(h Host) (artifact.C4Out, error) {
 	fs := h.ArtifactFS
 	if fs == nil {
-		return cb.C4Out{}, fmt.Errorf("snippet.collect: artifact fs not configured")
+		return artifact.C4Out{}, fmt.Errorf("snippet.collect: artifact fs not configured")
 	}
 	b, err := fs.SafeReadFile(filepath.Join(".", "c4.json"))
 	if err != nil {
-		return cb.C4Out{}, fmt.Errorf("snippet.collect: read c4.json: %w", err)
+		return artifact.C4Out{}, fmt.Errorf("snippet.collect: read c4.json: %w", err)
 	}
-	var out cb.C4Out
+	var out artifact.C4Out
 	if err := json.Unmarshal(b, &out); err != nil {
-		return cb.C4Out{}, fmt.Errorf("snippet.collect: decode c4.json: %w", err)
+		return artifact.C4Out{}, fmt.Errorf("snippet.collect: decode c4.json: %w", err)
 	}
 	return out, nil
 }

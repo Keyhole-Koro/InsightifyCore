@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
+	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/safeio"
 	"insightify/internal/scheduler"
-	cb "insightify/internal/types/codebase"
 )
 
 const promptC4 = `You extract identifiers and their implementation spans for each provided file.
@@ -24,7 +24,7 @@ Input JSON:
     {
       "path": "<relative file path>",
       "language": "<language or extension>",
-      "content": "<full file text>"
+      "content": "<full file content>"
     }
   ]
 }
@@ -74,22 +74,22 @@ type C4 struct {
 	LLM llmclient.LLMClient
 }
 
-func (p C4) Run(ctx context.Context, in cb.C4In) (cb.C4Out, error) {
+func (p C4) Run(ctx context.Context, in artifact.C4In) (artifact.C4Out, error) {
 	if p.LLM == nil {
-		return cb.C4Out{}, fmt.Errorf("c4: llm client is nil")
+		return artifact.C4Out{}, fmt.Errorf("c4: llm client is nil")
 	}
 	fs := in.RepoFS
 
 	nodes := in.Tasks.Nodes
 	for i := range nodes {
 		if nodes[i].File.Path == "" && nodes[i].Path != "" {
-			nodes[i].File = cb.NewFileRef(nodes[i].Path)
+			nodes[i].File = artifact.NewFileRef(nodes[i].Path)
 		}
 		if nodes[i].Path == "" {
 			nodes[i].Path = nodes[i].File.Path
 		}
 	}
-	results := make([]cb.IdentifierReport, len(nodes))
+	results := make([]artifact.IdentifierReport, len(nodes))
 	for i, n := range nodes {
 		if n.Path != "" {
 			results[i].Path = n.Path
@@ -175,20 +175,20 @@ func (p C4) Run(ctx context.Context, in cb.C4In) (cb.C4Out, error) {
 		Run:         scheduler.ChunkRunner(runChunk),
 	}
 	if err := scheduler.ScheduleHeavierStart(ctx, params); err != nil {
-		return cb.C4Out{}, err
+		return artifact.C4Out{}, err
 	}
 
 	for id, ns := range notes {
 		results[id].Notes = append(results[id].Notes, ns...)
 	}
 
-	return cb.C4Out{
+	return artifact.C4Out{
 		Repo:  in.Repo,
 		Files: results,
 	}, nil
 }
 
-func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, nodes []cb.C3Node, ids []int) (map[int][]cb.IdentifierSignal, map[int]error, error) {
+func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, nodes []artifact.C3Node, ids []int) (map[int][]artifact.IdentifierSignal, map[int]error, error) {
 	type filePayload struct {
 		Path     string `json:"path"`
 		Language string `json:"language"`
@@ -247,8 +247,8 @@ func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, no
 
 	var parsed struct {
 		Files []struct {
-			Path        string                `json:"path"`
-			Identifiers []cb.IdentifierSignal `json:"identifiers"`
+			Path        string                      `json:"path"`
+			Identifiers []artifact.IdentifierSignal `json:"identifiers"`
 		} `json:"files"`
 	}
 
@@ -256,13 +256,13 @@ func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, no
 		return nil, perNodeErr, err
 	}
 
-	reports := make(map[int][]cb.IdentifierSignal)
+	reports := make(map[int][]artifact.IdentifierSignal)
 	for _, file := range parsed.Files {
 		idsForPath := pathToIDs[file.Path]
 		if len(idsForPath) == 0 {
 			continue
 		}
-		sigs := make([]cb.IdentifierSignal, len(file.Identifiers))
+		sigs := make([]artifact.IdentifierSignal, len(file.Identifiers))
 		copy(sigs, file.Identifiers)
 		for i := range sigs {
 			if sigs[i].Scope.Level == "" {
@@ -270,7 +270,7 @@ func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, no
 			}
 		}
 		for _, id := range idsForPath {
-			reports[id] = append([]cb.IdentifierSignal(nil), sigs...)
+			reports[id] = append([]artifact.IdentifierSignal(nil), sigs...)
 		}
 	}
 

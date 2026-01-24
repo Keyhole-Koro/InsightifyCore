@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"insightify/internal/mcp"
+	"insightify/internal/artifact"
 )
 
 // PromptField describes a single output field in a simple schema.
@@ -39,7 +39,7 @@ type StructuredPromptSpec struct {
 
 // StructuredPromptBuilder renders a structured prompt including tool specs and MCP results.
 func StructuredPromptBuilder(spec StructuredPromptSpec) PromptBuilder {
-	return func(_ context.Context, state *ToolState, tools []mcp.ToolSpec) (string, error) {
+	return func(_ context.Context, state *ToolState, tools []artifact.ToolSpec) (string, error) {
 		if strings.TrimSpace(spec.Purpose) == "" {
 			return "", fmt.Errorf("llmtool: purpose is empty")
 		}

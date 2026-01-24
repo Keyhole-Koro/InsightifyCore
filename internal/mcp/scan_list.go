@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/scan"
 )
 
@@ -15,8 +16,8 @@ type scanListTool struct{ host Host }
 
 func newScanListTool(h Host) *scanListTool { return &scanListTool{host: h} }
 
-func (t *scanListTool) Spec() ToolSpec {
-	return ToolSpec{
+func (t *scanListTool) Spec() artifact.ToolSpec {
+	return artifact.ToolSpec{
 		Name:        "scan.list",
 		Description: "List files under repo roots with optional depth and extension filters.",
 	}

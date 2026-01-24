@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/snippet"
+	"insightify/internal/artifact"
 	"insightify/internal/safeio"
 	"insightify/internal/scan"
-	cb "insightify/internal/types/codebase"
+	"insightify/internal/snippet"
 )
 
 func setupRepo(t *testing.T) (repoRoot string, repoFS *safeio.SafeFS, artifactFS *safeio.SafeFS) {
@@ -55,7 +55,7 @@ func TestScanListTool(t *testing.T) {
 	}
 
 	tool := newScanListTool(Host{RepoRoot: repoRoot, RepoFS: repoFS})
-	in := scanListInput{Roots: []string{"."}, AllowExt: []string{".txt", ".go"}, MaxDepth: 3}
+	in := scanListInput{Roots: []string{"."}, AllowExt: []string{iteritems.txt", ".go"}, MaxDepth: 3}
 	raw, _ := json.Marshal(in)
 	outRaw, err := tool.Call(context.Background(), raw)
 	if err != nil {
@@ -140,12 +140,12 @@ func TestSnippetCollectTool(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repoRoot, "main.go"), []byte(code), 0o644); err != nil {
 		t.Fatalf("write main.go: %v", err)
 	}
-	c4 := cb.C4Out{
+	c4 := artifact.C4Out{
 		Repo: repoRoot,
-		Files: []cb.IdentifierReport{
+		Files: []artifact.IdentifierReport{
 			{
 				Path: "main.go",
-				Identifiers: []cb.IdentifierSignal{
+				Identifiers: []artifact.IdentifierSignal{
 					{
 						Name:  "Foo",
 						Lines: [2]int{1, 1},

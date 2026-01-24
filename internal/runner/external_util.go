@@ -7,14 +7,11 @@ import (
 	"sort"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/safeio"
-	t "insightify/internal/types"
-	cb "insightify/internal/types/codebase"
-	ex "insightify/internal/types/external"
-	ml "insightify/internal/types/mainline"
 )
 
-func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots ml.M0Out, maxFiles, maxBytes int) []t.OpenedFile {
+func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.M0Out, maxFiles, maxBytes int) []artifact.OpenedFile {
 	if fs == nil || maxFiles <= 0 {
 		return nil
 	}
@@ -37,7 +34,7 @@ func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots ml.M0Out, max
 		candidates = candidates[:maxFiles]
 	}
 
-	var samples []t.OpenedFile
+	var samples []artifact.OpenedFile
 	for _, path := range candidates {
 		of, err := readFileSample(fs, repoRoot, path, maxBytes)
 		if err != nil {
@@ -84,13 +81,13 @@ func gatherInfraDir(fs *safeio.SafeFS, dir string, depth, limit int, dest *[]str
 	}
 }
 
-func readFileSample(fs *safeio.SafeFS, repoRoot, path string, maxBytes int) (t.OpenedFile, error) {
+func readFileSample(fs *safeio.SafeFS, repoRoot, path string, maxBytes int) (artifact.OpenedFile, error) {
 	if fs == nil {
-		return t.OpenedFile{}, fmt.Errorf("repo filesystem is nil")
+		return artifact.OpenedFile{}, fmt.Errorf("repo filesystem is nil")
 	}
 	f, err := fs.SafeOpen(toFSPath(path))
 	if err != nil {
-		return t.OpenedFile{}, err
+		return artifact.OpenedFile{}, err
 	}
 	defer f.Close()
 	var reader io.Reader = f
@@ -99,26 +96,26 @@ func readFileSample(fs *safeio.SafeFS, repoRoot, path string, maxBytes int) (t.O
 	}
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		return t.OpenedFile{}, err
+		return artifact.OpenedFile{}, err
 	}
 	rel := normalizeRepoPath(repoRoot, f.Name(), path)
-	return t.OpenedFile{Path: rel, Content: string(data)}, nil
+	return artifact.OpenedFile{Path: rel, Content: string(data)}, nil
 }
 
-func selectIdentifierSummaries(reports []cb.IdentifierReport, repoRoot string, roots ml.M0Out, max int) []ex.IdentifierSummary {
+func selectIdentifierSummaries(reports []artifact.IdentifierReport, repoRoot string, roots artifact.M0Out, max int) []artifact.IdentifierSummary {
 	if max <= 0 {
 		return nil
 	}
 	var (
 		targetPrefixes = buildPrefixSet(repoRoot, append(append([]string{}, roots.ConfigRoots...), roots.RuntimeConfigRoots...), roots.BuildRoots)
-		priority       []ex.IdentifierSummary
-		fallback       []ex.IdentifierSummary
+		priority       []artifact.IdentifierSummary
+		fallback       []artifact.IdentifierSummary
 	)
 	for _, rep := range reports {
 		path := filepath.ToSlash(rep.Path)
 		inInfra := hasAnyPrefix(path, targetPrefixes)
 		for _, sig := range rep.Identifiers {
-			snap := ex.IdentifierSummary{
+			snap := artifact.IdentifierSummary{
 				Path:     path,
 				Name:     sig.Name,
 				Role:     sig.Role,
@@ -157,12 +154,12 @@ func selectIdentifierSummaries(reports []cb.IdentifierReport, repoRoot string, r
 	return priority
 }
 
-func collectGapFiles(fs *safeio.SafeFS, repoRoot string, gaps []ex.EvidenceGap, maxFiles, maxBytes int) []t.OpenedFile {
+func collectGapFiles(fs *safeio.SafeFS, repoRoot string, gaps []artifact.EvidenceGap, maxFiles, maxBytes int) []artifact.OpenedFile {
 	if fs == nil || maxFiles <= 0 {
 		return nil
 	}
 	seen := make(map[string]struct{})
-	var samples []t.OpenedFile
+	var samples []artifact.OpenedFile
 	for _, gap := range gaps {
 		for _, suggestion := range gap.Suggested {
 			if !isFileLikeSuggestion(suggestion.Kind) {
@@ -201,7 +198,7 @@ func isFileLikeSuggestion(kind string) bool {
 	}
 }
 
-func usesExternalRequirement(reqs []cb.IdentifierRequirement) bool {
+func usesExternalRequirement(reqs []artifact.IdentifierRequirement) bool {
 	for _, r := range reqs {
 		if strings.ToLower(r.Origin) != "" && strings.ToLower(r.Origin) != "user" {
 			return true

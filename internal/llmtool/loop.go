@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/llmClient"
-	"insightify/internal/mcp"
 )
 
 var (
@@ -20,12 +20,12 @@ var (
 
 // ToolProvider abstracts tool registry calls.
 type ToolProvider interface {
-	Specs() []mcp.ToolSpec
+	Specs() []artifact.ToolSpec
 	Call(ctx context.Context, name string, input json.RawMessage) (json.RawMessage, error)
 }
 
 // PromptBuilder builds the LLM prompt given tool specs and current tool state.
-type PromptBuilder func(ctx context.Context, state *ToolState, tools []mcp.ToolSpec) (string, error)
+type PromptBuilder func(ctx context.Context, state *ToolState, tools []artifact.ToolSpec) (string, error)
 
 // ToolLoop runs tool-call iterations until a final response is returned.
 type ToolLoop struct {

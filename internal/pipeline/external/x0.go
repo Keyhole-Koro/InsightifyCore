@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
-	t "insightify/internal/types"
-	ex "insightify/internal/types/external"
 )
 
 const promptX0 = `You are **Stage X0 (external)** of a repository analysis pipeline.
@@ -98,9 +97,9 @@ type X0 struct {
 }
 
 // Run executes Stage X0 with defensive guards around the LLM call.
-func (p *X0) Run(ctx context.Context, in ex.X0In) (ex.X0Out, error) {
+func (p *X0) Run(ctx context.Context, in artifact.X0In) (artifact.X0Out, error) {
 	if p == nil || p.LLM == nil {
-		return ex.X0Out{}, fmt.Errorf("x0: llm client is nil")
+		return artifact.X0Out{}, fmt.Errorf("x0: llm client is nil")
 	}
 	if in.ConfidenceThreshold <= 0 {
 		in.ConfidenceThreshold = 0.65
@@ -125,23 +124,23 @@ func (p *X0) Run(ctx context.Context, in ex.X0In) (ex.X0Out, error) {
 	}
 	raw, err := p.LLM.GenerateJSON(ctx, promptX0, payload)
 	if err != nil {
-		return ex.X0Out{}, err
+		return artifact.X0Out{}, err
 	}
-	var out ex.X0Out
+	var out artifact.X0Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return ex.X0Out{}, fmt.Errorf("X0 JSON invalid: %w\nraw: %s", err, string(raw))
+		return artifact.X0Out{}, fmt.Errorf("X0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	return out, nil
 }
 
-func cloneOpenedFiles(in []t.OpenedFile) []t.OpenedFile {
-	out := make([]t.OpenedFile, len(in))
+func cloneOpenedFiles(in []artifact.OpenedFile) []artifact.OpenedFile {
+	out := make([]artifact.OpenedFile, len(in))
 	copy(out, in)
 	return out
 }
 
-func cloneIdentifierSummaries(in []ex.IdentifierSummary) []ex.IdentifierSummary {
-	out := make([]ex.IdentifierSummary, len(in))
+func cloneIdentifierSummaries(in []artifact.IdentifierSummary) []artifact.IdentifierSummary {
+	out := make([]artifact.IdentifierSummary, len(in))
 	copy(out, in)
 	return out
 }

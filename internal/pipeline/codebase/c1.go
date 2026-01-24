@@ -8,9 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"insightify/internal/artifact"
 	"insightify/internal/safeio"
 	"insightify/internal/scan"
-	cb "insightify/internal/types/codebase"
+
 	"insightify/internal/wordidx"
 )
 
@@ -31,29 +32,29 @@ type FileDeps struct {
 type C1 struct{}
 
 // Run executes the C1 pipeline for dependency extraction.
-func (C1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
+func (C1) Run(ctx context.Context, in artifact.C1In) (artifact.C1Out, error) {
 	log.Printf("C1: starting scan in repo %s", in.Repo)
 
-	var out []cb.Dependencies
+	var out []artifact.Dependencies
 	for _, fam := range in.Families {
-		dep, err := Dependencies(ctx, in.Repo, in.Roots.MainSourceRoots, fam)
+		dep, err := ScanDependencies(ctx, in.Repo, in.Roots.MainSourceRoots, fam)
 		if err != nil {
-			return cb.C1Out{}, err
+			return artifact.C1Out{}, err
 		}
 		log.Printf("C1: found %d dependencies for family %s (%s)", len(dep.Files), fam.Family, fam.Key)
 		out = append(out, dep)
 	}
-	return cb.C1Out{PossibleDependencies: out}, nil
+	return artifact.C1Out{PossibleDependencies: out}, nil
 }
 
-// Dependencies scans once for a given (repo, roots, exts) and returns a single cb.Dependencies.
-func Dependencies(ctx context.Context, repo string, roots []string, family cb.FamilySpec) (cb.Dependencies, error) {
+// Dependencies scans once for a given (repo, roots, exts) and returns a single Dependencies.
+func ScanDependencies(ctx context.Context, repo string, roots []string, family artifact.FamilySpec) (artifact.Dependencies, error) {
 	fs := scan.CurrentSafeFS()
 	if fs == nil {
 		fs = safeio.Default()
 	}
 	if fs == nil {
-		return cb.Dependencies{}, fmt.Errorf("c1: safe filesystem not configured")
+		return artifact.Dependencies{}, fmt.Errorf("c1: safe filesystem not configured")
 	}
 	base := fs.Root()
 
@@ -83,14 +84,14 @@ func Dependencies(ctx context.Context, repo string, roots []string, family cb.Fa
 		Start(ctx)
 
 	if err := agg.Wait(ctx); err != nil {
-		return cb.Dependencies{}, err
+		return artifact.Dependencies{}, err
 	}
 
 	// Build the filename index for O(1) lookups
 	filenameIndex := buildFilenameIndex(ctx, agg)
 
 	// Infer dependencies
-	var srcDeps []cb.SourceDependency
+	var srcDeps []artifact.SourceDependency
 	for _, fi := range agg.Files(ctx) {
 		from := repoRelative(base, fi.Path)
 		counts := make(map[string]int)
@@ -109,12 +110,12 @@ func Dependencies(ctx context.Context, repo string, roots []string, family cb.Fa
 		}
 
 		reqs := keysSorted(counts)
-		reqRefs := make([]cb.FileRef, 0, len(reqs))
+		reqRefs := make([]artifact.FileRef, 0, len(reqs))
 		for _, req := range reqs {
-			reqRefs = append(reqRefs, cb.NewFileRef(req))
+			reqRefs = append(reqRefs, artifact.NewFileRef(req))
 		}
-		srcDeps = append(srcDeps, cb.SourceDependency{
-			File:     cb.NewFileRef(from),
+		srcDeps = append(srcDeps, artifact.SourceDependency{
+			File:     artifact.NewFileRef(from),
 			Language: "",
 			Requires: reqRefs,
 		})
@@ -124,7 +125,7 @@ func Dependencies(ctx context.Context, repo string, roots []string, family cb.Fa
 	sort.Slice(srcDeps, func(i, j int) bool { return srcDeps[i].File.Path < srcDeps[j].File.Path })
 
 	log.Printf("C1: scanned %d files in repo %s", len(srcDeps), repo)
-	return cb.Dependencies{
+	return artifact.Dependencies{
 		Repo:    repo,
 		Roots:   roots,
 		Exts:    family.Spec.Exts,

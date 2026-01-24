@@ -8,11 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/scan"
-	"insightify/internal/types"
-	cb "insightify/internal/types/codebase"
-	mainline "insightify/internal/types/mainline"
 )
 
 // C0 prompt — imports/includes only, plus normalization hints for later post-processing.
@@ -89,12 +87,12 @@ For each family key "<familyKey>":
 
 type C0 struct{ LLM llmclient.LLMClient }
 
-func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
+func (x *C0) Run(ctx context.Context, in artifact.C0In) (artifact.C0Out, error) {
 	// Populate ext counts if missing so runner BuildInput can stay lightweight.
 	if len(in.ExtCounts) == 0 {
 		exts, err := computeExtCounts(ctx, in.Repo, in.Roots)
 		if err != nil {
-			return cb.C0Out{}, err
+			return artifact.C0Out{}, err
 		}
 		in.ExtCounts = exts
 	}
@@ -102,12 +100,12 @@ func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
 	// add the content of runtime config files to the input later
 	raw, err := x.LLM.GenerateJSON(ctx, promptC0, in)
 	if err != nil {
-		return cb.C0Out{}, err
+		return artifact.C0Out{}, err
 	}
 
-	var out cb.C0Out
+	var out artifact.C0Out
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return cb.C0Out{}, fmt.Errorf("C0 JSON invalid: %w\nraw: %s", err, string(raw))
+		return artifact.C0Out{}, fmt.Errorf("C0 JSON invalid: %w\nraw: %s", err, string(raw))
 	}
 	out.Families = out.Families[:0]
 	for family, specKeys := range out.FamilyKeys {
@@ -118,7 +116,7 @@ func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
 			if !ok {
 				continue
 			}
-			out.Families = append(out.Families, cb.FamilySpec{
+			out.Families = append(out.Families, artifact.FamilySpec{
 				Family: family,
 				Key:    key,
 				Spec:   spec,
@@ -134,7 +132,7 @@ func (x *C0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
 	return out, nil
 }
 
-func computeExtCounts(ctx context.Context, repo string, roots mainline.M0Out) ([]types.ExtCount, error) {
+func computeExtCounts(ctx context.Context, repo string, roots artifact.M0Out) ([]artifact.ExtCount, error) {
 	_ = ctx
 	ignore := make(map[string]struct{})
 	for _, r := range roots.LibraryRoots {
@@ -169,9 +167,9 @@ func computeExtCounts(ctx context.Context, repo string, roots mainline.M0Out) ([
 		return nil, err
 	}
 
-	extCounts := make([]types.ExtCount, 0, len(extCountMap))
+	extCounts := make([]artifact.ExtCount, 0, len(extCountMap))
 	for ext, cnt := range extCountMap {
-		extCounts = append(extCounts, types.ExtCount{Ext: ext, Count: cnt})
+		extCounts = append(extCounts, artifact.ExtCount{Ext: ext, Count: cnt})
 	}
 	sort.Slice(extCounts, func(i, j int) bool {
 		if extCounts[i].Count == extCounts[j].Count {

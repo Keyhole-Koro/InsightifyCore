@@ -3,11 +3,9 @@ package runner
 import (
 	"context"
 
+	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	extpipe "insightify/internal/pipeline/external"
-	cb "insightify/internal/types/codebase"
-	ex "insightify/internal/types/external"
-	ml "insightify/internal/types/mainline"
 )
 
 // BuildRegistryExternal wires the external (x*) pipeline stages.
@@ -24,21 +22,21 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0, err := Artifact[ml.M0Out](env, "m0")
+			m0, err := Artifact[artifact.M0Out](env, "m0")
 			if err != nil {
 				return nil, err
 			}
-			m1, err := Artifact[ml.M1Out](env, "m1")
+			m1, err := Artifact[artifact.M1Out](env, "m1")
 			if err != nil {
 				return nil, err
 			}
-			c4, err := Artifact[cb.C4Out](env, "c4")
+			c4, err := Artifact[artifact.C4Out](env, "c4")
 			if err != nil {
 				return nil, err
 			}
 			samples := collectInfraSamples(env.RepoFS, env.RepoRoot, m0, 16, 16000)
 			summaries := selectIdentifierSummaries(c4.Files, env.RepoRoot, m0, 40)
-			return ex.X0In{
+			return artifact.X0In{
 				Repo:                env.Repo,
 				Roots:               m0,
 				Architecture:        m1,
@@ -50,7 +48,7 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "x0")
 			p := extpipe.X0{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(ex.X0In))
+			out, err := p.Run(ctx, in.(artifact.X0In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -58,9 +56,9 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   ex.X0In
+				In   artifact.X0In
 				Salt string
-			}{in.(ex.X0In), env.ModelSalt})
+			}{in.(artifact.X0In), env.ModelSalt})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -75,12 +73,12 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			prev, err := Artifact[ex.X0Out](env, "x0")
+			prev, err := Artifact[artifact.X0Out](env, "x0")
 			if err != nil {
 				return nil, err
 			}
 			files := collectGapFiles(env.RepoFS, env.RepoRoot, prev.EvidenceGaps, 24, 64000)
-			return ex.X1In{
+			return artifact.X1In{
 				Repo:     env.Repo,
 				Previous: prev,
 				Files:    files,
@@ -89,7 +87,7 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "x1")
 			p := extpipe.X1{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(ex.X1In))
+			out, err := p.Run(ctx, in.(artifact.X1In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -97,9 +95,9 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   ex.X1In
+				In   artifact.X1In
 				Salt string
-			}{in.(ex.X1In), env.ModelSalt})
+			}{in.(artifact.X1In), env.ModelSalt})
 		},
 		Strategy: jsonStrategy{},
 	}

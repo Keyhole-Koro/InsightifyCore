@@ -3,12 +3,10 @@ package runner
 import (
 	"context"
 
+	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	codepipe "insightify/internal/pipeline/codebase"
-
-	cb "insightify/internal/types/codebase"
-	ml "insightify/internal/types/mainline"
 )
 
 // BuildRegistryCodebase defines c0/c1 using the same registry/strategy system.
@@ -25,11 +23,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "language-detection"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			m0prev, err := Artifact[ml.M0Out](env, "m0")
+			m0prev, err := Artifact[artifact.M0Out](env, "m0")
 			if err != nil {
 				return nil, err
 			}
-			in := cb.C0In{
+			in := artifact.C0In{
 				Repo:  env.Repo,
 				Roots: m0prev,
 			}
@@ -39,7 +37,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c0")
 			x := pipelineC0{LLM: env.LLM}
-			out, err := x.Run(ctx, in.(cb.C0In))
+			out, err := x.Run(ctx, in.(artifact.C0In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -48,9 +46,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Fingerprint: func(in any, env *Env) string {
 			// Even though versioned, keep a meta fingerprint for traceability.
 			return JSONFingerprint(struct {
-				In   cb.C0In
+				In   artifact.C0In
 				Salt string
-			}{in.(cb.C0In), env.ModelSalt})
+			}{in.(artifact.C0In), env.ModelSalt})
 		},
 		Downstream: []string{"c1"},
 		Strategy:   versionedStrategy{},
@@ -65,15 +63,15 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"raw_dependencies"},
 		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c0prev, err := Artifact[cb.C0Out](env, "c0")
+			c0prev, err := Artifact[artifact.C0Out](env, "c0")
 			if err != nil {
 				return nil, err
 			}
-			m0prev, err := Artifact[ml.M0Out](env, "m0")
+			m0prev, err := Artifact[artifact.M0Out](env, "m0")
 			if err != nil {
 				return nil, err
 			}
-			in := cb.C1In{
+			in := artifact.C1In{
 				Repo:     env.Repo,
 				Families: c0prev.Families,
 				Roots:    m0prev,
@@ -84,7 +82,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c1")
 			x := pipelineC1{}
-			out, err := x.Run(ctx, in.(cb.C1In))
+			out, err := x.Run(ctx, in.(artifact.C1In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -92,9 +90,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   cb.C1In
+				In   artifact.C1In
 				Salt string
-			}{in.(cb.C1In), env.ModelSalt})
+			}{in.(artifact.C1In), env.ModelSalt})
 		},
 		Downstream: []string{"c2"},
 		Strategy:   jsonStrategy{},
@@ -109,11 +107,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Produces:    []string{"dependency_graph"},
 		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c1out, err := Artifact[cb.C1Out](env, "c1")
+			c1out, err := Artifact[artifact.C1Out](env, "c1")
 			if err != nil {
 				return nil, err
 			}
-			return cb.C2In{
+			return artifact.C2In{
 				Repo:         env.Repo,
 				Dependencies: c1out.PossibleDependencies,
 			}, nil
@@ -121,7 +119,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c2")
 			var c2 codepipe.C2
-			out, err := c2.Run(ctx, in.(cb.C2In))
+			out, err := c2.Run(ctx, in.(artifact.C2In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -129,9 +127,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   cb.C2In
+				In   artifact.C2In
 				Salt string
-			}{in.(cb.C2In), env.ModelSalt})
+			}{in.(artifact.C2In), env.ModelSalt})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -146,7 +144,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "chunking"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			graph, err := Artifact[cb.C2Out](env, "c2")
+			graph, err := Artifact[artifact.C2Out](env, "c2")
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +152,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			if env.LLM != nil && env.LLM.TokenCapacity() > 0 {
 				capPerChunk = env.LLM.TokenCapacity()
 			}
-			return cb.C3In{
+			return artifact.C3In{
 				Repo:        env.Repo,
 				RepoFS:      env.RepoFS,
 				Graph:       graph.Graph,
@@ -164,7 +162,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c3")
 			x := pipelineC3{LLM: env.LLM}
-			out, err := x.Run(ctx, in.(cb.C3In))
+			out, err := x.Run(ctx, in.(artifact.C3In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -172,9 +170,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   cb.C3In
+				In   artifact.C3In
 				Salt string
-			}{in.(cb.C3In), env.ModelSalt})
+			}{in.(artifact.C3In), env.ModelSalt})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -189,11 +187,11 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		UsesLLM:     true,
 		Tags:        []string{"codebase", "references"},
 		BuildInput: func(ctx context.Context, env *Env) (any, error) {
-			c3out, err := Artifact[cb.C3Out](env, "c3")
+			c3out, err := Artifact[artifact.C3Out](env, "c3")
 			if err != nil {
 				return nil, err
 			}
-			return cb.C4In{
+			return artifact.C4In{
 				Repo:   env.Repo,
 				RepoFS: env.RepoFS,
 				Tasks:  c3out,
@@ -202,7 +200,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
 			ctx = llm.WithPhase(ctx, "c4")
 			x := pipelineC4{LLM: env.LLM}
-			out, err := x.Run(ctx, in.(cb.C4In))
+			out, err := x.Run(ctx, in.(artifact.C4In))
 			if err != nil {
 				return PhaseOutput{}, err
 			}
@@ -210,9 +208,9 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
-				In   cb.C4In
+				In   artifact.C4In
 				Salt string
-			}{in.(cb.C4In), env.ModelSalt})
+			}{in.(artifact.C4In), env.ModelSalt})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -227,23 +225,23 @@ type pipelineC2 struct{}
 type pipelineC3 struct{ LLM llmclient.LLMClient }
 type pipelineC4 struct{ LLM llmclient.LLMClient }
 
-func (p pipelineC0) Run(ctx context.Context, in cb.C0In) (cb.C0Out, error) {
+func (p pipelineC0) Run(ctx context.Context, in artifact.C0In) (artifact.C0Out, error) {
 	real := codepipe.C0{LLM: p.LLM}
 	return real.Run(ctx, in)
 }
-func (pipelineC1) Run(ctx context.Context, in cb.C1In) (cb.C1Out, error) {
+func (pipelineC1) Run(ctx context.Context, in artifact.C1In) (artifact.C1Out, error) {
 	real := codepipe.C1{}
 	return real.Run(ctx, in)
 }
-func (pipelineC2) Run(ctx context.Context, in cb.C2In) (cb.C2Out, error) {
+func (pipelineC2) Run(ctx context.Context, in artifact.C2In) (artifact.C2Out, error) {
 	real := codepipe.C2{}
 	return real.Run(ctx, in)
 }
-func (p pipelineC3) Run(ctx context.Context, in cb.C3In) (cb.C3Out, error) {
+func (p pipelineC3) Run(ctx context.Context, in artifact.C3In) (artifact.C3Out, error) {
 	real := codepipe.C3{LLM: p.LLM}
 	return real.Run(ctx, in)
 }
-func (p pipelineC4) Run(ctx context.Context, in cb.C4In) (cb.C4Out, error) {
+func (p pipelineC4) Run(ctx context.Context, in artifact.C4In) (artifact.C4Out, error) {
 	real := codepipe.C4{LLM: p.LLM}
 	return real.Run(ctx, in)
 }

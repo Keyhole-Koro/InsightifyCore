@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"insightify/internal/mcp"
+	"insightify/internal/artifact"
 )
 
 // FormatToolSpecs renders a compact JSON block of tool specs for prompt inclusion.
-func FormatToolSpecs(tools []mcp.ToolSpec) string {
+func FormatToolSpecs(tools []artifact.ToolSpec) string {
 	if tools == nil {
-		tools = []mcp.ToolSpec{}
+		tools = []artifact.ToolSpec{}
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
@@ -36,7 +36,7 @@ func FormatToolResults(results []ToolResult) string {
 // DefaultPromptBuilder is a simple prompt builder for tool loop usage.
 // It appends tool specs and previous tool results as JSON blocks.
 func DefaultPromptBuilder(base string) PromptBuilder {
-	return func(_ context.Context, state *ToolState, tools []mcp.ToolSpec) (string, error) {
+	return func(_ context.Context, state *ToolState, tools []artifact.ToolSpec) (string, error) {
 		if base == "" {
 			return "", fmt.Errorf("llmtool: base prompt is empty")
 		}
