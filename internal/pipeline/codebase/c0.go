@@ -10,80 +10,32 @@ import (
 
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 	"insightify/internal/scan"
 )
 
 // C0 prompt — imports/includes only, plus normalization hints for later post-processing.
-// This phase does NOT receive source snippets; it must produce RE2 patterns to detect module strings,
-// and also provide language-agnostic guidance ("normalize_hints") describing how X1 should derive
-// fields like folder_path[], file_name, file_ext, scope/package/subpath, alias, and kind.
-// Specs must return both the original extension (with leading dot) and a lowercase canonical_ext value.
-const promptC0 = `
-You are **Stage C0** of a static-analysis pipeline.
-
-## Role
-Given a report of file-extension counts ("ext_counts") and root directories for source and optional runtime configs ("roots"), emit **one spec per language family** present in "ext_counts" (e.g., "js", "py", "go").
-
-## What to produce
-- A single JSON object (no comments) with exactly the fields below.
-- "familyKeys": maps each family key to a list of **spec keys** that belong to that family (e.g., { "js": ["js","ts","jsx","tsx"] }).
-- "specs": one entry per language family found in "ext_counts".
-
-## Grouping rules
-- Group related extensions into a **single** spec when they are the same language family (e.g., JavaScript/TypeScript → ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx").
-- Only include extensions that are actually present in "ext_counts".
-- Every extension listed in "spec.ext" is an **interchangeable** candidate for resolution (priority is handled later; do not add priority fields here).
-
-## Per-spec fields
-For each family key "<familyKey>":
-- "ext": array of dot-prefixed extensions **as observed** in "ext_counts" (e.g., [".js", ".ts"]).
-- "language": array of objects that link a language name and its extensions:
-  - Each item: { "name": "<language name>", "ext": ["<dot-prefixed extensions for that language>"] }.
-  - Use only extensions that appear in this family/spec.
-- "rules.keywords": up to ~8 short tokens that detect import/include-like references.
-- "rules.path_split": up to ~6 simple tokens that help split around module paths.
-- "normalize_hints.alias": zero or more {"original","normalized"} pairs for later resolution (e.g., from "tsconfig.json" paths or "package.json#imports"). If none, use [].
-
-## Inputs you may rely on
-- "ext_counts": map of extension → count.
-- "roots": directories that may contain runtime configs (e.g., "tsconfig.json", "package.json").
-  - If such configs imply aliases or import maps, surface them in "normalize_hints.alias". Otherwise, use [].
-
-## Output shape (return **exactly** this shape; do not add fields)
-{
-  "familyKeys": {
-    "<familyKey>": ["js","ts","jsx","tsx"]
-  },
-  "specs": {
-    "<familyKey>": {
-      "ext": ["<dot-prefixed extensions>"],
-      "language": [
-        { "name": "<language name>", "ext": "<dot-prefixed extensions>" },
-      ],
-      "rules": {
-        "keywords": ["..."],
-        "path_split": ["..."],
-        "comment_line_pattern": ["..."], // e.g. ["^\\s*//.*$", "^\\s*#.*$"]
-        "comment_block_pattern": ["..."] // e.g. ["/\\*[\\s\\S]*?\\*/", "<!--[\\s\\S]*?-->"]
-      },
-      "normalize_hints": {
-        "alias": [
-          { "original": "<alias>", "normalized": "<normalized_name>" }
-        ]
-      }
-    }
-  }
-}
-
-## Constraints
-- Emit specs **only** for families that appear in "ext_counts".
-- Use the real family key (e.g., "js", "py", "go") — no placeholders.
-- Keep lists concise ("keywords" ≤ ~8, "path_split" ≤ ~6).
-- Echo extensions exactly as seen (with leading dot).
-- Produce **valid JSON**. No comments. No regex patterns. No fields other than those listed.
-- If unknown, use empty arrays instead of inventing values.
-
-`
+var c0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:      "Emit one spec per language family present in extension counts for dependency analysis.",
+	Background:   "Stage C0 analyzes file extension counts to detect language families and generate heuristic rules for import extraction.",
+	OutputFields: llmtool.MustFieldsFromStruct(artifact.C0Out{}),
+	Constraints: []string{
+		"Emit specs **only** for families that appear in 'ext_counts'.",
+		"Use the real family key (e.g., 'js', 'py', 'go') — no placeholders.",
+		"Keep lists concise ('keywords' ≤ ~8, 'path_split' ≤ ~6).",
+		"Echo extensions exactly as seen (with leading dot).",
+		"Produce **valid JSON**. No comments. No regex patterns. No fields other than those listed.",
+		"If unknown, use empty arrays instead of inventing values.",
+	},
+	Rules: []string{
+		"Group related extensions into a **single** spec when they are the same language family (e.g., JavaScript/TypeScript -> .js, .mjs, .cjs, .jsx, .ts, .tsx).",
+		"Only include extensions that are actually present in 'ext_counts'.",
+		"Every extension listed in 'spec.ext' is an **interchangeable** candidate for resolution.",
+	},
+	Assumptions:  []string{"Missing families should be ignored."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
 
 type C0 struct{ LLM llmclient.LLMClient }
 
@@ -98,7 +50,17 @@ func (x *C0) Run(ctx context.Context, in artifact.C0In) (artifact.C0Out, error) 
 	}
 
 	// add the content of runtime config files to the input later
-	raw, err := x.LLM.GenerateJSON(ctx, promptC0, in)
+	input := map[string]any{
+		"ext_counts": in.ExtCounts,
+		"roots":      in.Roots, // Pass roots context for hints
+	}
+
+	prompt, err := llmtool.StructuredPromptBuilder(c0PromptSpec)(ctx, &llmtool.ToolState{Input: input}, nil)
+	if err != nil {
+		return artifact.C0Out{}, err
+	}
+
+	raw, err := x.LLM.GenerateJSON(ctx, prompt, input)
 	if err != nil {
 		return artifact.C0Out{}, err
 	}

@@ -8,40 +8,35 @@ import (
 
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 )
 
-const promptX1 = `You are **Stage X1 (external follow-up)** of a repository analysis pipeline.
-
-Inputs:
-- previous_result: Stage X0 JSON (external_overview + evidence_gaps)
-- file_evidence: list of {path, content} snippets gathered for the open gaps
-- notes: optional operator notes
-
-Goal:
-- Interpret the new evidence to refine or correct the external architecture hypothesis (purpose, components, integrations, configs, infra).
-- Report only the *deltas* vs. previous_result using the schema below.
-- Flag unresolved questions under needs_input with concrete follow-up actions (e.g., "file:template.yaml reason=check IAM policies").
-
-Output STRICT JSON (no extra fields, no comments):
-{
-  "delta": {
-    "added":   ["string"],
-    "removed": ["string"],
-    "modified": [
-      { "field": "string", "before": any, "after": any }
-    ]
-  },
-  "needs_input": ["string"],
-  "stop_when":  ["string"],
-  "notes":      ["string"]
+type x1PromptOut struct {
+	Delta      artifact.X1Delta `json:"delta" prompt_desc:"Changes vs previous hypothesis (added, removed, modified)."`
+	NeedsInput []string         `json:"needs_input" prompt_desc:"Questions or requests for more input."`
+	StopWhen   []string         `json:"stop_when" prompt_desc:"Convergence criteria."`
+	Notes      []string         `json:"notes" prompt_desc:"Short notes or caveats."`
 }
 
-Guidance:
-- Use field paths referencing previous_result (e.g., "external_overview.external_systems[1].interaction").
-- "before"/"after" snapshots should stay concise (strings or short JSON). Cite evidence using {path, lines:[start,end]|null}.
-- Keep delta.added/removed for high-level statements (e.g., "Added AWS EventBridge trigger").
-- If everything is resolved, return empty arrays for needs_input and stop_when with notes describing confidence.
-`
+var x1PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:      "Refine the external architecture hypothesis based on new evidence.",
+	Background:   "Stage X1 interprets new evidence to refine or correct the external architecture hypothesis (purpose, components, integrations, configs, infra).",
+	OutputFields: llmtool.MustFieldsFromStruct(x1PromptOut{}),
+	Constraints: []string{
+		"Report only the *deltas* vs. previous_result.",
+		"Use field paths referencing previous_result (e.g., 'external_overview.external_systems[1].interaction').",
+		"'before'/'after' snapshots should stay concise (strings or short JSON). Cite evidence using {path, lines:[start,end]|null}.",
+		"Keep delta.added/removed for high-level statements (e.g., 'Added AWS EventBridge trigger').",
+		"If everything is resolved, return empty arrays for needs_input and stop_when with notes describing confidence.",
+	},
+	Rules: []string{
+		"Interpret the new evidence to refine or correct the external architecture hypothesis.",
+		"Flag unresolved questions under needs_input with concrete follow-up actions (e.g., 'file:template.yaml reason=check IAM policies').",
+	},
+	Assumptions:  []string{"Assume previous hypothesis is the baseline."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
 
 // X1 consumes additional evidence to close open questions from X0.
 type X1 struct {
@@ -62,7 +57,13 @@ func (p *X1) Run(ctx context.Context, in artifact.X1In) (artifact.X1Out, error) 
 		"file_evidence":   in.Files,
 		"notes":           in.Notes,
 	}
-	raw, err := p.LLM.GenerateJSON(ctx, promptX1, payload)
+
+	prompt, err := llmtool.StructuredPromptBuilder(x1PromptSpec)(ctx, &llmtool.ToolState{Input: payload}, nil)
+	if err != nil {
+		return artifact.X1Out{}, err
+	}
+
+	raw, err := p.LLM.GenerateJSON(ctx, prompt, payload)
 	if err != nil {
 		return artifact.X1Out{}, err
 	}
@@ -153,45 +154,45 @@ func setJSONValue(root map[string]any, field string, value any) error {
 			current = arr[targetIdx]
 			node[tok.Key] = arr
 			continue
-			}
-			if !exists {
-				if last {
-					node[tok.Key] = value
-					return nil
-				}
-				next = map[string]any{}
-				node[tok.Key] = next
-			}
+		}
+		if !exists {
 			if last {
 				node[tok.Key] = value
 				return nil
 			}
-			if child, ok := next.(map[string]any); ok {
-				current = child
-			} else {
-				child = map[string]any{}
-				node[tok.Key] = child
-				current = child
-			}
-		case []any:
-			if tok.Index == nil {
-				return fmt.Errorf("array segment missing index for %s", tok.Key)
-			}
-			targetIdx := *tok.Index
-			arr := node
-			for len(arr) <= targetIdx {
-				arr = append(arr, nil)
-			}
-			if last {
-				arr[targetIdx] = value
-				current = arr
-				continue
-			}
-			if arr[targetIdx] == nil {
-				arr[targetIdx] = map[string]any{}
-			}
-			current = arr[targetIdx]
-		default:
+			next = map[string]any{}
+			node[tok.Key] = next
+		}
+		if last {
+			node[tok.Key] = value
+			return nil
+		}
+		if child, ok := next.(map[string]any); ok {
+			current = child
+		} else {
+			child = map[string]any{}
+			node[tok.Key] = child
+			current = child
+		}
+	case []any:
+		if tok.Index == nil {
+			return fmt.Errorf("array segment missing index for %s", tok.Key)
+		}
+		targetIdx := *tok.Index
+		arr := node
+		for len(arr) <= targetIdx {
+			arr = append(arr, nil)
+		}
+		if last {
+			arr[targetIdx] = value
+			current = arr
+			continue
+		}
+		if arr[targetIdx] == nil {
+			arr[targetIdx] = map[string]any{}
+		}
+		current = arr[targetIdx]
+	default:
 			return fmt.Errorf("invalid type in path")
 		}
 	}

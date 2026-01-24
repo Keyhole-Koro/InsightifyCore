@@ -11,64 +11,40 @@ import (
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
+	"insightify/internal/llmtool"
 	"insightify/internal/safeio"
 	"insightify/internal/scheduler"
 )
 
-const promptC4 = `You extract identifiers and their implementation spans for each provided file.
-
-Input JSON:
-{
-  "repo": "<repository name>",
-  "files": [
-    {
-      "path": "<relative file path>",
-      "language": "<language or extension>",
-      "content": "<full file content>"
-    }
-  ]
+type c4Output struct {
+	Files []struct {
+		Path        string                      `json:"path"`
+		Identifiers []artifact.IdentifierSignal `json:"identifiers"`
+	} `json:"files"`
 }
 
-Output STRICT JSON:
-{
-  "files": [
-    {
-      "path": "<relative file path>",
-      "identifiers": [
-        {
-          "name": "string",
-          "role": "string",                 // function, class, handler, etc.
-          "summary": "string",              // natural language description of what it does
-          "lines": [start, end],            // 1-based inclusive line numbers
-          "requires": [                     // identifiers this implementation depends on
-            {
-              "path": "string",             // file path of the dependency
-              "identifier": "string",       // name of the dependency
-              "origin": "user|library|runtime|vendor|stdlib|framework" // classify source (user code, third-party, runtime/builtin, vendored, stdlib, framework)
-            }
-          ],
-          "scope": {
-            "level": "local|file|module|package|repository",
-            "access": "string",             // describe visibility (e.g., exported, private)
-            "notes": "string"               // optional guidance
-          }
-        }
-      ]
-    }
-  ]
-}
-
-Rules:
-- Describe only concrete identifiers defined in each file.
-- For each identifier, add a natural language summary of what the identifier does.
-- Summary detail scales with span length: if the implementation spans many lines (e.g., >20), provide a concise but richer summary to compress the logic; for very short spans (e.g., <=5), summary may be empty.
-- If no summary is provided, omit notes as well.
-- For each identifier, list the identifiers it requires/uses in "requires" with both path and identifier name when known.
-- For each identifier, list the identifiers it requires/uses in "requires" with both path and identifier name when known, and classify each as user|library|runtime|vendor|stdlib|framework in "origin".
-- Return every input file once; if no identifiers exist, return an empty list.
-- Start <= end; omit duplicates.
-- Use "lines": null when unknown.
-- Scope.level must be one of local|file|module|package|repository.`
+var c4PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:      "Extract identifiers and their implementation spans for each provided file.",
+	Background:   "Stage C4 analyzes code snippets to identify defined symbols and their dependencies.",
+	OutputFields: llmtool.MustFieldsFromStruct(c4Output{}),
+	Constraints: []string{
+		"Describe only concrete identifiers defined in each file.",
+		"Return every input file once; if no identifiers exist, return an empty list.",
+		"Start <= end; omit duplicates.",
+		"Use 'lines': null when unknown.",
+		"Scope.level must be one of local|file|module|package|repository.",
+	},
+	Rules: []string{
+		"For each identifier, add a natural language summary of what the identifier does.",
+		"Summary detail scales with span length: >20 lines -> richer summary, <=5 lines -> concise or empty.",
+		"If no summary is provided, omit notes as well.",
+		"For each identifier, list the identifiers it requires/uses in 'requires' with both path and identifier name when known.",
+		"Classify each requirement as user|library|runtime|vendor|stdlib|framework in 'origin'.",
+	},
+	Assumptions:  []string{"Files provided are source code."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
 
 type C4 struct {
 	LLM llmclient.LLMClient
@@ -185,7 +161,8 @@ func (p C4) Run(ctx context.Context, in artifact.C4In) (artifact.C4Out, error) {
 	return artifact.C4Out{
 		Repo:  in.Repo,
 		Files: results,
-	}, nil
+	},
+		nil
 }
 
 func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, nodes []artifact.C3Node, ids []int) (map[int][]artifact.IdentifierSignal, map[int]error, error) {
@@ -234,24 +211,24 @@ func (p C4) processChunk(ctx context.Context, repo string, fs *safeio.SafeFS, no
 		return nil, perNodeErr, nil
 	}
 
+	// Build prompt using llmtool
+	prompt, err := llmtool.StructuredPromptBuilder(c4PromptSpec)(ctx, &llmtool.ToolState{Input: payload}, nil)
+	if err != nil {
+		return nil, perNodeErr, err
+	}
+
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, perNodeErr, fmt.Errorf("encode payload: %w", err)
 	}
 	fmt.Printf("c4 chunk: files=%d tokens=%d\n", len(payload.Files), llmclient.CountTokens(string(payloadBytes)))
 
-	raw, err := p.LLM.GenerateJSON(llm.WithPhase(ctx, "c4"), promptC4, payload)
+	raw, err := p.LLM.GenerateJSON(llm.WithPhase(ctx, "c4"), prompt, payload)
 	if err != nil {
 		return nil, perNodeErr, err
 	}
 
-	var parsed struct {
-		Files []struct {
-			Path        string                      `json:"path"`
-			Identifiers []artifact.IdentifierSignal `json:"identifiers"`
-		} `json:"files"`
-	}
-
+	var parsed c4Output
 	if err := json.Unmarshal(raw, &parsed); err != nil {
 		return nil, perNodeErr, err
 	}
