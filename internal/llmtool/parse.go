@@ -19,6 +19,15 @@ func ParseAction(raw json.RawMessage) (ActionEnvelope, error) {
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return ActionEnvelope{}, err
 	}
+	// Heuristic: if no explicit action/tool/final fields are found,
+	// assume the entire raw JSON is the final output.
+	if env.Action == "" && env.ToolName == "" && len(env.Final) == 0 {
+		// Verify it's not just an empty JSON object "{}" if that matters,
+		// but usually treating it as final is the safest fallback for "direct output" models.
+		env.Action = "final"
+		env.Final = raw
+	}
+
 	if env.Action == "" {
 		switch {
 		case len(env.Final) > 0:

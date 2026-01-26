@@ -71,11 +71,14 @@ type groqChatResp struct {
 // GenerateJSON assembles a single user message from prompt + input and requests JSON output.
 func (g *GroqClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	in, _ := json.MarshalIndent(input, "", "  ")
-	full := prompt + "\n\n[INPUT JSON]\n" + string(in)
+	userContent := "[INPUT JSON]\n" + string(in)
 
 	reqBody := groqChatReq{
-		Model:          g.model,
-		Messages:       []groqMessage{{Role: "user", Content: full}},
+		Model: g.model,
+		Messages: []groqMessage{
+			{Role: "system", Content: prompt},
+			{Role: "user", Content: userContent},
+		},
 		Temperature:    0,
 		ResponseFormat: map[string]string{"type": "json_object"},
 	}
@@ -100,7 +103,12 @@ func (g *GroqClient) GenerateJSON(ctx context.Context, prompt string, input any)
 		if len(body) > max {
 			body = body[:max]
 		}
-		return nil, fmt.Errorf("groq: unexpected status %s: %s", resp.Status, string(body))
+		err := fmt.Errorf("groq: unexpected status %s: %s", resp.Status, string(body))
+		// Check for context length exceeded (permanent error)
+		if resp.StatusCode == 400 && strings.Contains(string(body), `"code":"context_length_exceeded"`) {
+			return nil, NewPermanentError(err)
+		}
+		return nil, err
 	}
 	var out groqChatResp
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

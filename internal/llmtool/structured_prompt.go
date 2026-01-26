@@ -3,7 +3,6 @@ package llmtool
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -46,15 +45,10 @@ func StructuredPromptBuilder(spec StructuredPromptSpec) PromptBuilder {
 		if len(spec.OutputFields) == 0 {
 			return "", fmt.Errorf("llmtool: output fields are empty")
 		}
-		inputJSON, err := formatAnyJSON(state.Input)
-		if err != nil {
-			return "", fmt.Errorf("llmtool: encode input: %w", err)
-		}
 
 		var buf bytes.Buffer
 		writeSection(&buf, "PURPOSE", spec.Purpose)
 		writeSection(&buf, "BACKGROUND", spec.Background)
-		writeSection(&buf, "INPUT", inputJSON)
 		writeSection(&buf, "OUTPUT", formatFields(spec.OutputFields))
 		writeSection(&buf, "CONSTRAINTS", formatList(spec.Constraints))
 		writeSection(&buf, "RULES", formatList(spec.Rules))
@@ -69,17 +63,6 @@ func StructuredPromptBuilder(spec StructuredPromptSpec) PromptBuilder {
 
 		return strings.TrimSpace(buf.String()) + "\n", nil
 	}
-}
-
-func formatAnyJSON(v any) (string, error) {
-	if v == nil {
-		return "null", nil
-	}
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
 
 func formatFields(fields []PromptField) string {

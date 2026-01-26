@@ -36,6 +36,9 @@ func main() {
 	tokenCap := flag.Int("token_cap", 0, "max total tokens per scheduler chunk (default depends on provider)")
 	flag.Parse()
 
+	// Load .env before resolving paths so REPOS_ROOT can be picked up from file
+	_ = godotenv.Load()
+
 	repoName, repoPath, repoFS, err := resolveRepoPaths(*repo)
 	if err != nil {
 		log.Fatal(err)
@@ -62,7 +65,6 @@ func main() {
 	}
 
 	// ----- LLM setup -----
-	_ = godotenv.Load()
 	// Defer provider-specific API key checks until after flags are parsed
 	apiKey := ""
 	ctx := context.Background()

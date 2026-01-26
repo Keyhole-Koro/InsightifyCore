@@ -3,13 +3,10 @@ package llmclient
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	genai "google.golang.org/genai"
 )
-
-var ErrInvalidJSON = errors.New("llm: invalid JSON from model")
 
 // GeminiClient is a thin wrapper around the official genai client.
 // It only focuses on the API call itself. Cross-cutting concerns

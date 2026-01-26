@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
-
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
 	"insightify/internal/scan"
+	"insightify/internal/utils"
+	"path/filepath"
 )
 
 var m0PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
@@ -40,18 +40,19 @@ type M0 struct {
 }
 
 func (p *M0) Run(ctx context.Context, in artifact.M0In) (artifact.M0Out, error) {
-	if len(in.ExtCounts) == 0 || len(in.DirsDepth1) == 0 {
+	if len(in.ExtCounts) == 0 || len(in.Dirs) == 0 {
 		exts, dirs := scanRepoLayout(in.Repo)
 		if len(in.ExtCounts) == 0 {
 			in.ExtCounts = exts
 		}
-		if len(in.DirsDepth1) == 0 {
-			in.DirsDepth1 = dirs
+		if len(in.Dirs) == 0 {
+			in.Dirs = dirs
 		}
 	}
+
 	input := map[string]any{
-		"ext_counts":  in.ExtCounts,
-		"dirs_depth1": in.DirsDepth1,
+		"ext_counts": in.ExtCounts,
+		"dir_tree":   utils.PathsToTree(in.Dirs),
 	}
 
 	loop := &llmtool.ToolLoop{

@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"strconv"
@@ -252,6 +253,11 @@ func (r *retrying) GenerateJSON(ctx context.Context, prompt string, input any) (
 		resp, err := r.next.GenerateJSON(ctx, prompt, input)
 		if err == nil {
 			return resp, nil
+		}
+		// If it's a permanent error, do not retry.
+		var pErr *llmclient.PermanentError
+		if errors.As(err, &pErr) {
+			return nil, err
 		}
 		last = err
 		// Stop immediately if the context is canceled.
