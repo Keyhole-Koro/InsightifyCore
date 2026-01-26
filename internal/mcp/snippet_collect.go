@@ -49,11 +49,11 @@ func (t *snippetCollectTool) Call(ctx context.Context, input json.RawMessage) (j
 	if len(in.Seeds) == 0 {
 		return nil, fmt.Errorf("snippet.collect: seeds required")
 	}
-	c4, err := loadC4Out(t.host)
+	codeSymbols, err := loadCodeSymbolsOut(t.host)
 	if err != nil {
 		return nil, err
 	}
-	provider := codebase.NewC4SnippetProvider(t.host.RepoRoot, c4)
+	provider := codebase.NewCodeSymbolsSnippetProvider(t.host.RepoRoot, codeSymbols)
 	outSnips, err := provider.Collect(ctx, snippet.Query{
 		Seeds:     in.Seeds,
 		MaxTokens: in.MaxTokens,
@@ -74,18 +74,18 @@ func (t *snippetCollectTool) Call(ctx context.Context, input json.RawMessage) (j
 	return json.Marshal(out)
 }
 
-func loadC4Out(h Host) (artifact.C4Out, error) {
+func loadCodeSymbolsOut(h Host) (artifact.CodeSymbolsOut, error) {
 	fs := h.ArtifactFS
 	if fs == nil {
-		return artifact.C4Out{}, fmt.Errorf("snippet.collect: artifact fs not configured")
+		return artifact.CodeSymbolsOut{}, fmt.Errorf("snippet.collect: artifact fs not configured")
 	}
-	b, err := fs.SafeReadFile(filepath.Join(".", "c4.json"))
+	b, err := fs.SafeReadFile(filepath.Join(".", "code_symbols.json"))
 	if err != nil {
-		return artifact.C4Out{}, fmt.Errorf("snippet.collect: read c4.json: %w", err)
+		return artifact.CodeSymbolsOut{}, fmt.Errorf("snippet.collect: read code_symbols.json: %w", err)
 	}
-	var out artifact.C4Out
+	var out artifact.CodeSymbolsOut
 	if err := json.Unmarshal(b, &out); err != nil {
-		return artifact.C4Out{}, fmt.Errorf("snippet.collect: decode c4.json: %w", err)
+		return artifact.CodeSymbolsOut{}, fmt.Errorf("snippet.collect: decode code_symbols.json: %w", err)
 	}
 	return out, nil
 }

@@ -140,7 +140,7 @@ func TestSnippetCollectTool(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repoRoot, "main.go"), []byte(code), 0o644); err != nil {
 		t.Fatalf("write main.go: %v", err)
 	}
-	c4 := artifact.C4Out{
+	c4 := artifact.CodeTasksOut{
 		Repo: repoRoot,
 		Files: []artifact.IdentifierReport{
 			{

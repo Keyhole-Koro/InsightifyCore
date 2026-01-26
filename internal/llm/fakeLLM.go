@@ -30,14 +30,14 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	phase := PhaseFrom(ctx)
 	var obj any
 	switch phase {
-	case "m0":
+	case "code_roots":
 		obj = map[string]any{
 			"main_source_roots":    []string{"src", "internal"},
 			"library_roots":        []string{"third_party", "vendor"},
 			"config_roots":         []string{".github", "scripts"},
 			"config_files":         []string{".env.example"},
 			"runtime_config_files": []string{},
-			"notes":                []string{"fake m0 output"},
+			"notes":                []string{"fake c0 output"},
 		}
 		return wrapFinal(obj), nil
 	case "m1":

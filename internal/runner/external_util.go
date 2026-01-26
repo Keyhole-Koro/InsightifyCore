@@ -12,7 +12,7 @@ import (
 	"insightify/internal/utils"
 )
 
-func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.M0Out, maxFiles, maxBytes int) []artifact.OpenedFile {
+func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.CodeRootsOut, maxFiles, maxBytes int) []artifact.OpenedFile {
 	if fs == nil || maxFiles <= 0 {
 		return nil
 	}
@@ -103,7 +103,7 @@ func readFileSample(fs *safeio.SafeFS, repoRoot, path string, maxBytes int) (art
 	return artifact.OpenedFile{Path: rel, Content: string(data)}, nil
 }
 
-func selectIdentifierSummaries(reports []artifact.IdentifierReport, repoRoot string, roots artifact.M0Out, max int) []artifact.IdentifierSummary {
+func selectIdentifierSummaries(reports []artifact.IdentifierReport, repoRoot string, roots artifact.CodeRootsOut, max int) []artifact.IdentifierSummary {
 	if max <= 0 {
 		return nil
 	}
