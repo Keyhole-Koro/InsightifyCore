@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"insightify/internal/artifact"
@@ -18,11 +17,6 @@ import (
 type m1DeltaOut struct {
 	Delta delta.Delta `json:"delta" prompt_desc:"Changes vs previous hypothesis (added, removed, modified)."`
 }
-
-var (
-	reStripMD   = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
-	reStripHTML = regexp.MustCompile(`(?is)<img[^>]*>`)
-)
 
 var m1PromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Update the architecture hypothesis by emitting only the delta versus the previous version.",
@@ -94,7 +88,7 @@ func (p *M1) Run(ctx context.Context, in artifact.M1In) (artifact.M1Out, error) 
 	for i, d := range in.MDDocs {
 		promptDocs[i] = artifact.MDDoc{
 			Path: d.Path,
-			Text: eliminateNoise(d.Text),
+			Text: utils.MarkDownClean(d.Text),
 		}
 	}
 
@@ -169,12 +163,6 @@ func applyM1Delta(state artifact.M1Out, d delta.Delta) (artifact.M1Out, error) {
 		return artifact.M1Out{}, err
 	}
 	return out, nil
-}
-
-func eliminateNoise(txt string) string {
-	txt = reStripMD.ReplaceAllString(txt, "")
-	txt = reStripHTML.ReplaceAllString(txt, "")
-	return txt
 }
 
 func isEmptyDelta(d delta.Delta) bool {
