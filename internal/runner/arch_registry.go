@@ -5,7 +5,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
-	mlpipe "insightify/internal/pipeline/mainline"
+	mlpipe "insightify/internal/pipeline/architecture"
 )
 
 // BuildRegistryMainline defines arch_design.

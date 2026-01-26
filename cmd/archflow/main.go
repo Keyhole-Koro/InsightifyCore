@@ -34,7 +34,13 @@ func main() {
 	cache := flag.Bool("cache", false, "use cached artifacts (default: off)")
 	maxNext := flag.Int("max_next", 8, "max follow-up evidence requests")
 	tokenCap := flag.Int("token_cap", 0, "max total tokens per scheduler chunk (default depends on provider)")
+	viz := flag.Bool("viz", false, "print phase dependency graph (mermaid) and exit")
 	flag.Parse()
+
+	if *viz {
+		fmt.Println(runner.GenerateMermaidGraph())
+		return
+	}
 
 	// Load .env before resolving paths so REPOS_ROOT can be picked up from file
 	_ = godotenv.Load()
@@ -138,10 +144,10 @@ func main() {
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
-	mainline := runner.BuildRegistryMainline(env) // m1
-	codebase := runner.BuildRegistryCodebase(env) // c0..c5
-	external := runner.BuildRegistryExternal(env) // x0..x1
-	env.Resolver = runner.MergeRegistries(mainline, codebase, external)
+	architecture := runner.BuildRegistryArchitecture(env) // m1
+	codebase := runner.BuildRegistryCodebase(env)         // c0..c5
+	external := runner.BuildRegistryExternal(env)         // x0..x1
+	env.Resolver = runner.MergeRegistries(architecture, codebase, external)
 
 	// ----- Execute requested phase -----
 	spec, ok := env.Resolver.Get(key)

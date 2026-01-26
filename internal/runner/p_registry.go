@@ -10,7 +10,7 @@ import (
 func BuildPhaseDescriptors() []plan.PhaseDescriptor {
 	env := &Env{}
 	regs := []map[string]PhaseSpec{
-		BuildRegistryMainline(env),
+		BuildRegistryArchitecture(env),
 		BuildRegistryCodebase(env),
 		BuildRegistryExternal(env),
 	}
