@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"insightify/internal/artifact"
 	"insightify/internal/safeio"
 )
 
@@ -115,86 +114,4 @@ func ensureFS(fs *safeio.SafeFS) *safeio.SafeFS {
 	}
 	log.Fatal("safe filesystem is not configured")
 	return nil
-}
-
-// Utility transforms used in several phases.
-
-func UniqueStrings(in ...string) []string {
-	seen := map[string]struct{}{}
-	out := make([]string, 0, len(in))
-	for _, s := range in {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			continue
-		}
-		if _, ok := seen[s]; ok {
-			continue
-		}
-		seen[s] = struct{}{}
-		out = append(out, s)
-	}
-	return out
-}
-
-func FilterIndexByRoots(index []artifact.FileIndexEntry, roots []string) []artifact.FileIndexEntry {
-	if len(roots) == 0 {
-		return index
-	}
-	var out []artifact.FileIndexEntry
-	for _, it := range index {
-		for _, r := range roots {
-			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")
-			if r == "" {
-				continue
-			}
-			if strings.HasPrefix(strings.ToLower(it.Path), strings.ToLower(r+"/")) || strings.EqualFold(it.Path, r) {
-				out = append(out, it)
-				break
-			}
-		}
-	}
-	return out
-}
-
-func FilterMDDocsByRoots(docs []artifact.MDDoc, roots []string) []artifact.MDDoc {
-	if len(roots) == 0 {
-		return docs
-	}
-	var out []artifact.MDDoc
-	for _, d := range docs {
-		for _, r := range roots {
-			r = strings.TrimSuffix(strings.TrimPrefix(r, "/"), "/")
-			if r == "" {
-				continue
-			}
-			if strings.HasPrefix(strings.ToLower(d.Path), strings.ToLower(r+"/")) || strings.EqualFold(d.Path, r) {
-				out = append(out, d)
-				break
-			}
-		}
-	}
-	return out
-}
-
-func Min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// baseNames returns the final path segment for each provided path.
-// Inputs may be repo-relative or absolute; empty segments are ignored.
-func baseNames(paths ...string) []string {
-	out := make([]string, 0, len(paths))
-	for _, p := range paths {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		if b := filepath.Base(filepath.ToSlash(p)); b != "" {
-			out = append(out, b)
-		}
-	}
-	return out
 }

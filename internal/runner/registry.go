@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/proto"
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
 	"insightify/internal/wordidx"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // SpecResolver resolves phase keys to specs, enabling cross-registry lookup.
@@ -106,16 +107,10 @@ type PhaseOutput struct {
 
 // PhaseSpec declares "what" a phase needs, not "how" the app calls it.
 type PhaseSpec struct {
-	// Human/LLM-facing metadata about the phase.
-	Description string
-	Consumes    []string
-	Produces    []string
-	UsesLLM     bool
-	Tags        []string
-	Metadata    map[string]string
+	Description string // ログやエラーメッセージ用の最小限の説明
 
-	Key         string                                     // e.g. "m0"
-	File        string                                     // e.g. "m0.json"
+	Key         string                                            // e.g. "m0"
+	File        string                                            // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, deps Deps) (any, error) // produce logical input
 	Run         func(ctx context.Context, in any, env *Env) (PhaseOutput, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
@@ -126,35 +121,11 @@ type PhaseSpec struct {
 
 // Descriptor converts a PhaseSpec into a plan.PhaseDescriptor with defensive copies.
 func (spec PhaseSpec) Descriptor() plan.PhaseDescriptor {
-	copySlice := func(in []string) []string {
-		if len(in) == 0 {
-			return nil
-		}
-		out := make([]string, len(in))
-		copy(out, in)
-		return out
-	}
-	copyMap := func(in map[string]string) map[string]string {
-		if len(in) == 0 {
-			return nil
-		}
-		out := make(map[string]string, len(in))
-		for k, v := range in {
-			out[k] = v
-		}
-		return out
-	}
-
 	return plan.PhaseDescriptor{
 		Key:        spec.Key,
 		Summary:    spec.Description,
-		Consumes:   copySlice(spec.Consumes),
-		Produces:   copySlice(spec.Produces),
-		Requires:   copySlice(spec.Requires),
-		Downstream: copySlice(spec.Downstream),
-		UsesLLM:    spec.UsesLLM,
-		Tags:       copySlice(spec.Tags),
-		Metadata:   copyMap(spec.Metadata),
+		Requires:   append([]string(nil), spec.Requires...),
+		Downstream: append([]string(nil), spec.Downstream...),
 	}
 }
 

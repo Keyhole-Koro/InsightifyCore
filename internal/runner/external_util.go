@@ -9,6 +9,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/safeio"
+	"insightify/internal/utils"
 )
 
 func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.M0Out, maxFiles, maxBytes int) []artifact.OpenedFile {
@@ -22,7 +23,7 @@ func collectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.M0Ou
 	}
 	rootDirs := append(append([]string{}, roots.ConfigRoots...), roots.RuntimeConfigRoots...)
 	rootDirs = append(rootDirs, roots.BuildRoots...)
-	for _, dir := range UniqueStrings(rootDirs...) {
+	for _, dir := range utils.UniqueStrings(rootDirs...) {
 		gatherInfraDir(fs, dir, 0, maxFiles*4, &candidates, seen)
 		if len(candidates) >= maxFiles*4 {
 			break
@@ -222,8 +223,7 @@ func buildPrefixSet(repoRoot string, groups ...[]string) []string {
 			prefixes = append(prefixes, norm, norm+"/")
 		}
 	}
-	sort.Strings(prefixes)
-	return UniqueStrings(prefixes...)
+	return utils.UniqueStrings(prefixes...)
 }
 
 func hasAnyPrefix(path string, prefixes []string) bool {

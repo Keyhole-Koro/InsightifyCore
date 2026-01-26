@@ -177,3 +177,45 @@ func TestSnippetCollectTool(t *testing.T) {
 		t.Fatalf("expected snippet to contain Foo, got %q", out.Snippets[0].Code)
 	}
 }
+
+func TestDeltaDiffTool(t *testing.T) {
+	tool := newDeltaDiffTool()
+	before := map[string]any{
+		"architecture_hypothesis": map[string]any{
+			"purpose": "old",
+			"key_components": []any{
+				map[string]any{"name": "API"},
+			},
+		},
+	}
+	after := map[string]any{
+		"architecture_hypothesis": map[string]any{
+			"purpose": "new",
+			"key_components": []any{
+				map[string]any{"name": "API"},
+				map[string]any{"name": "Worker"},
+			},
+		},
+		"notes": []any{"extra"},
+	}
+	in := deltaDiffInput{}
+	if b, err := json.Marshal(before); err == nil {
+		in.Before = b
+	}
+	if b, err := json.Marshal(after); err == nil {
+		in.After = b
+	}
+	raw, _ := json.Marshal(in)
+	outRaw, err := tool.Call(context.Background(), raw)
+	if err != nil {
+		t.Fatalf("delta.diff call: %v", err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(outRaw, &out); err != nil {
+		t.Fatalf("delta.diff decode: %v", err)
+	}
+	mods, ok := out["modified"].([]any)
+	if !ok || len(mods) == 0 {
+		t.Fatalf("expected modified entries, got %+v", out["modified"])
+	}
+}

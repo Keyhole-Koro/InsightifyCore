@@ -18,10 +18,6 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		File:        "c0.json", // latest pointer; versioned writes also occur
 		Requires:    []string{"m0"},
 		Description: "LLM infers language families/import heuristics from extension counts and roots.",
-		Consumes:    []string{"layout_roots", "ext_counts"},
-		Produces:    []string{"language_families"},
-		UsesLLM:     true,
-		Tags:        []string{"codebase", "language-detection"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var m0prev artifact.M0Out
 			if err := deps.Artifact("m0", &m0prev); err != nil {
@@ -58,9 +54,6 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		File:        "c1.json",
 		Requires:    []string{"c0", "m0"},
 		Description: "Word-index dependency sweep across source roots to collect possible file-level dependencies.",
-		Consumes:    []string{"language_families", "layout_roots", "file_index"},
-		Produces:    []string{"raw_dependencies"},
-		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c0prev artifact.C0Out
 			if err := deps.Artifact("c0", &c0prev); err != nil {
@@ -101,9 +94,6 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		File:        "c2.json",
 		Requires:    []string{"c1"},
 		Description: "Normalize dependency hits into a DAG and drop weaker bidirectional edges.",
-		Consumes:    []string{"raw_dependencies"},
-		Produces:    []string{"dependency_graph"},
-		Tags:        []string{"codebase", "graph"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c1out artifact.C1Out
 			if err := deps.Artifact("c1", &c1out); err != nil {
@@ -137,10 +127,6 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		File:        "c3.json",
 		Requires:    []string{"c2"},
 		Description: "Chunk graph nodes into LLM-sized tasks with token estimates per file.",
-		Consumes:    []string{"dependency_graph"},
-		Produces:    []string{"llm_task_graph"},
-		UsesLLM:     true,
-		Tags:        []string{"codebase", "chunking"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var graph artifact.C2Out
 			if err := deps.Artifact("c2", &graph); err != nil {
@@ -180,10 +166,6 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		File:        "c4.json",
 		Requires:    []string{"c3"},
 		Description: "LLM traverses tasks to build identifier reference maps (outgoing/incoming).",
-		Consumes:    []string{"llm_task_graph"},
-		Produces:    []string{"references"},
-		UsesLLM:     true,
-		Tags:        []string{"codebase", "references"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c3out artifact.C3Out
 			if err := deps.Artifact("c3", &c3out); err != nil {

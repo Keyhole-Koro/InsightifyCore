@@ -17,10 +17,6 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		File:        "x0.json",
 		Requires:    []string{"m1", "c4", "m0"}, // Explicit m0 dependency added for roots
 		Description: "LLM summarizes external systems/infra using architecture (m1) + identifier refs (c4), surfacing evidence gaps.",
-		Consumes:    []string{"architecture_hypothesis", "references", "layout_roots"},
-		Produces:    []string{"external_overview", "evidence_gaps"},
-		UsesLLM:     true,
-		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var m0 artifact.M0Out
 			if err := deps.Artifact("m0", &m0); err != nil {
@@ -68,10 +64,6 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		File:        "x1.json",
 		Requires:    []string{"x0"},
 		Description: "LLM drills into evidence gaps from x0 by opening targeted files/snippets.",
-		Consumes:    []string{"external_overview", "evidence_gaps"},
-		Produces:    []string{"external_verification"},
-		UsesLLM:     true,
-		Tags:        []string{"external", "infra"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev artifact.X0Out
 			if err := deps.Artifact("x0", &prev); err != nil {

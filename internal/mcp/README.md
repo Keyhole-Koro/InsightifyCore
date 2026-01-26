@@ -33,6 +33,7 @@ out, err := reg.Call(ctx, "scan.list", inputJSON)
 - `fs.read`         : read repo files
 - `wordidx.search`  : search via word index
 - `snippet.collect` : collect related snippets from C4 artifact
+- `delta.diff`      : compute JSON delta between before/after
 
 ## Tool contract
 

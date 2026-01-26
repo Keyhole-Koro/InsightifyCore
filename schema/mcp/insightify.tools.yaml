@@ -126,3 +126,37 @@ tools:
       properties:
         path: { type: string }
         content: { type: string }
+
+  - name: delta.diff
+    description: Compute a JSON delta between two values (before/after).
+    input_schema:
+      type: object
+      required: [before, after]
+      properties:
+        before:
+          description: JSON value before the change.
+        after:
+          description: JSON value after the change.
+        max_changes:
+          type: integer
+          description: Maximum number of modified entries to return.
+          default: 200
+    output_schema:
+      type: object
+      properties:
+        added:
+          type: array
+          items:
+            type: string
+        removed:
+          type: array
+          items:
+            type: string
+        modified:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              before: {}
+              after: {}

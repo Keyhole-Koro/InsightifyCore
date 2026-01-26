@@ -70,7 +70,7 @@ func (s *apiServer) RunPipeline(ctx context.Context, req *connect.Request[pipeli
 
 	phaseKeys := req.Msg.GetPhaseKeys()
 	if len(phaseKeys) == 0 {
-		phaseKeys = []string{"m0", "m1", "m2"}
+		phaseKeys = []string{"m0", "m1"}
 	}
 
 	for _, key := range phaseKeys {

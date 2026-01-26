@@ -39,29 +39,32 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 			"runtime_config_files": []string{},
 			"notes":                []string{"fake m0 output"},
 		}
+		return wrapFinal(obj), nil
 	case "m1":
 		obj = map[string]any{
-			"architecture_hypothesis": map[string]any{
-				"purpose":         "fake purpose",
-				"summary":         "fake summary",
-				"key_components":  []any{},
-				"execution_model": "fake",
-				"tech_stack": map[string]any{
-					"platforms":   []string{},
-					"languages":   []string{"Go"},
-					"build_tools": []string{"go"},
+			"delta": map[string]any{
+				"added":   []string{},
+				"removed": []string{},
+				"modified": []any{
+					map[string]any{
+						"field":  "architecture_hypothesis.summary",
+						"before": nil,
+						"after":  "fake summary",
+					},
+					map[string]any{
+						"field":  "architecture_hypothesis.purpose",
+						"before": nil,
+						"after":  "fake purpose",
+					},
+					map[string]any{
+						"field":  "architecture_hypothesis.tech_stack.languages",
+						"before": nil,
+						"after":  []string{"Go"},
+					},
 				},
-				"assumptions": []string{},
-				"unknowns":    []string{},
-				"confidence":  0.5,
 			},
-			"next_files":     []any{},
-			"next_patterns":  []any{},
-			"contradictions": []any{},
-			"needs_input":    []string{},
-			"stop_when":      []string{},
-			"notes":          []string{"fake m1 output"},
 		}
+		return wrapFinal(obj), nil
 	case "m2":
 		obj = map[string]any{
 			"updated_hypothesis": map[string]any{
@@ -82,8 +85,6 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 			"question_status": []any{},
 			"delta":           map[string]any{"added": []string{}, "removed": []string{}, "modified": []any{}},
 			"contradictions":  []any{},
-			"next_files":      []any{},
-			"next_patterns":   []any{},
 			"needs_input":     []string{},
 			"stop_when":       []string{},
 			"notes":           []string{"fake m2 output"},
@@ -133,4 +134,13 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	}
 	b, _ := json.Marshal(obj)
 	return json.RawMessage(b), nil
+}
+
+func wrapFinal(obj any) json.RawMessage {
+	payload := map[string]any{
+		"action": "final",
+		"final":  obj,
+	}
+	b, _ := json.Marshal(payload)
+	return json.RawMessage(b)
 }

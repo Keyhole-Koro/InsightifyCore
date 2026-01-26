@@ -23,6 +23,7 @@ func RegisterDefaultTools(r *Registry, h Host) {
 	r.Register(newFSReadTool(h))
 	r.Register(newWordIdxSearchTool(h))
 	r.Register(newSnippetCollectTool(h))
+	r.Register(newDeltaDiffTool())
 }
 
 func resolveRepoPath(repoRoot, rel string) string {

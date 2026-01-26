@@ -29,10 +29,10 @@ func main() {
 	provider := flag.String("provider", "gemini", "LLM provider (gemini|groq)")
 	model := flag.String("model", "gemini-2.5-pro", "LLM model id (provider-specific)")
 	fake := flag.Bool("fake", false, "use a fake LLM (no network)")
-	phase := flag.String("phase", "m0", "phase to run (m0|m1|m2|c0|c1|c2|c3|c4|x0|x1)")
-	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|m2|c0|c1|c2)")
+	phase := flag.String("phase", "m0", "phase to run (m0|m1|c0|c1|c2|c3|c4|x0|x1)")
+	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., m0|m1|c0|c1|c2)")
 	cache := flag.Bool("cache", false, "use cached artifacts (default: off)")
-	maxNext := flag.Int("max_next", 8, "max next_files to open/propose")
+	maxNext := flag.Int("max_next", 8, "max follow-up evidence requests")
 	tokenCap := flag.Int("token_cap", 0, "max total tokens per scheduler chunk (default depends on provider)")
 	flag.Parse()
 
@@ -136,7 +136,7 @@ func main() {
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
-	mainline := runner.BuildRegistryMainline(env) // m0/m1/m2
+	mainline := runner.BuildRegistryMainline(env) // m0/m1
 	codebase := runner.BuildRegistryCodebase(env) // c0..c4
 	external := runner.BuildRegistryExternal(env) // x0..x1
 	env.Resolver = runner.MergeRegistries(mainline, codebase, external)
@@ -144,7 +144,7 @@ func main() {
 	// ----- Execute requested phase -----
 	spec, ok := env.Resolver.Get(key)
 	if !ok {
-		log.Fatalf("unknown --phase: %s (use m0|m1|m2|c0|c1|c2|c3|c4|x0|x1)", *phase)
+		log.Fatalf("unknown --phase: %s (use m0|m1|c0|c1|c2|c3|c4|x0|x1)", *phase)
 	}
 	if err := runner.ExecutePhase(ctx, spec, env); err != nil {
 		log.Fatal(err)
