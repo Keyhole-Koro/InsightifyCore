@@ -40,7 +40,7 @@ const (
 
 // GatewayServiceClient is a client for the pipeline.v1.GatewayService service.
 type GatewayServiceClient interface {
-	RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest]) (*connect.ServerStreamForClient[v1.GatewayEvent], error)
+	RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest]) (*connect.ServerStreamForClient[v1.RunPipelineResponse], error)
 }
 
 // NewGatewayServiceClient constructs a client for the pipeline.v1.GatewayService service. By
@@ -54,7 +54,7 @@ func NewGatewayServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	gatewayServiceMethods := v1.File_pipeline_v1_gateway_proto.Services().ByName("GatewayService").Methods()
 	return &gatewayServiceClient{
-		runPipeline: connect.NewClient[v1.RunPipelineRequest, v1.GatewayEvent](
+		runPipeline: connect.NewClient[v1.RunPipelineRequest, v1.RunPipelineResponse](
 			httpClient,
 			baseURL+GatewayServiceRunPipelineProcedure,
 			connect.WithSchema(gatewayServiceMethods.ByName("RunPipeline")),
@@ -65,17 +65,17 @@ func NewGatewayServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // gatewayServiceClient implements GatewayServiceClient.
 type gatewayServiceClient struct {
-	runPipeline *connect.Client[v1.RunPipelineRequest, v1.GatewayEvent]
+	runPipeline *connect.Client[v1.RunPipelineRequest, v1.RunPipelineResponse]
 }
 
 // RunPipeline calls pipeline.v1.GatewayService.RunPipeline.
-func (c *gatewayServiceClient) RunPipeline(ctx context.Context, req *connect.Request[v1.RunPipelineRequest]) (*connect.ServerStreamForClient[v1.GatewayEvent], error) {
+func (c *gatewayServiceClient) RunPipeline(ctx context.Context, req *connect.Request[v1.RunPipelineRequest]) (*connect.ServerStreamForClient[v1.RunPipelineResponse], error) {
 	return c.runPipeline.CallServerStream(ctx, req)
 }
 
 // GatewayServiceHandler is an implementation of the pipeline.v1.GatewayService service.
 type GatewayServiceHandler interface {
-	RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest], *connect.ServerStream[v1.GatewayEvent]) error
+	RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest], *connect.ServerStream[v1.RunPipelineResponse]) error
 }
 
 // NewGatewayServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -104,6 +104,6 @@ func NewGatewayServiceHandler(svc GatewayServiceHandler, opts ...connect.Handler
 // UnimplementedGatewayServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGatewayServiceHandler struct{}
 
-func (UnimplementedGatewayServiceHandler) RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest], *connect.ServerStream[v1.GatewayEvent]) error {
+func (UnimplementedGatewayServiceHandler) RunPipeline(context.Context, *connect.Request[v1.RunPipelineRequest], *connect.ServerStream[v1.RunPipelineResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("pipeline.v1.GatewayService.RunPipeline is not implemented"))
 }

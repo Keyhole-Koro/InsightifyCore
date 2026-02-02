@@ -23,10 +23,8 @@ const (
 
 type RunPipelineRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RepoPath      string                 `protobuf:"bytes,1,opt,name=repo_path,json=repoPath,proto3" json:"repo_path,omitempty"`          // Absolute or working-dir-relative path to repo root.
-	OutDir        string                 `protobuf:"bytes,2,opt,name=out_dir,json=outDir,proto3" json:"out_dir,omitempty"`                // Optional artifacts directory (default: <repo>/.insightify).
-	PhaseKeys     []string               `protobuf:"bytes,3,rep,name=phase_keys,json=phaseKeys,proto3" json:"phase_keys,omitempty"`       // e.g. ["m0","m1","m2"]; default: mainline m0..m2.
-	UseFakeLlm    bool                   `protobuf:"varint,4,opt,name=use_fake_llm,json=useFakeLlm,proto3" json:"use_fake_llm,omitempty"` // Force fake LLM (defaults to true if unset).
+	RepoName      string                 `protobuf:"bytes,1,opt,name=repo_name,json=repoName,proto3" json:"repo_name,omitempty"`
+	PhaseKeys     []string               `protobuf:"bytes,3,rep,name=phase_keys,json=phaseKeys,proto3" json:"phase_keys,omitempty"` // e.g. ["m0","m1","m2"]
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,16 +59,9 @@ func (*RunPipelineRequest) Descriptor() ([]byte, []int) {
 	return file_pipeline_v1_gateway_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RunPipelineRequest) GetRepoPath() string {
+func (x *RunPipelineRequest) GetRepoName() string {
 	if x != nil {
-		return x.RepoPath
-	}
-	return ""
-}
-
-func (x *RunPipelineRequest) GetOutDir() string {
-	if x != nil {
-		return x.OutDir
+		return x.RepoName
 	}
 	return ""
 }
@@ -82,38 +73,31 @@ func (x *RunPipelineRequest) GetPhaseKeys() []string {
 	return nil
 }
 
-func (x *RunPipelineRequest) GetUseFakeLlm() bool {
-	if x != nil {
-		return x.UseFakeLlm
-	}
-	return false
-}
-
-type GatewayEvent struct {
+type RunPipelineResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Event:
 	//
-	//	*GatewayEvent_Progress
-	//	*GatewayEvent_Result
-	Event         isGatewayEvent_Event `protobuf_oneof:"event"`
+	//	*RunPipelineResponse_Progress
+	//	*RunPipelineResponse_ClientView
+	Event         isRunPipelineResponse_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GatewayEvent) Reset() {
-	*x = GatewayEvent{}
+func (x *RunPipelineResponse) Reset() {
+	*x = RunPipelineResponse{}
 	mi := &file_pipeline_v1_gateway_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GatewayEvent) String() string {
+func (x *RunPipelineResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GatewayEvent) ProtoMessage() {}
+func (*RunPipelineResponse) ProtoMessage() {}
 
-func (x *GatewayEvent) ProtoReflect() protoreflect.Message {
+func (x *RunPipelineResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pipeline_v1_gateway_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -125,70 +109,68 @@ func (x *GatewayEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GatewayEvent.ProtoReflect.Descriptor instead.
-func (*GatewayEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunPipelineResponse.ProtoReflect.Descriptor instead.
+func (*RunPipelineResponse) Descriptor() ([]byte, []int) {
 	return file_pipeline_v1_gateway_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GatewayEvent) GetEvent() isGatewayEvent_Event {
+func (x *RunPipelineResponse) GetEvent() isRunPipelineResponse_Event {
 	if x != nil {
 		return x.Event
 	}
 	return nil
 }
 
-func (x *GatewayEvent) GetProgress() *ProgressEvent {
+func (x *RunPipelineResponse) GetProgress() *ProgressEvent {
 	if x != nil {
-		if x, ok := x.Event.(*GatewayEvent_Progress); ok {
+		if x, ok := x.Event.(*RunPipelineResponse_Progress); ok {
 			return x.Progress
 		}
 	}
 	return nil
 }
 
-func (x *GatewayEvent) GetResult() *PhaseResult {
+func (x *RunPipelineResponse) GetClientView() *ClientView {
 	if x != nil {
-		if x, ok := x.Event.(*GatewayEvent_Result); ok {
-			return x.Result
+		if x, ok := x.Event.(*RunPipelineResponse_ClientView); ok {
+			return x.ClientView
 		}
 	}
 	return nil
 }
 
-type isGatewayEvent_Event interface {
-	isGatewayEvent_Event()
+type isRunPipelineResponse_Event interface {
+	isRunPipelineResponse_Event()
 }
 
-type GatewayEvent_Progress struct {
+type RunPipelineResponse_Progress struct {
 	Progress *ProgressEvent `protobuf:"bytes,1,opt,name=progress,proto3,oneof"`
 }
 
-type GatewayEvent_Result struct {
-	Result *PhaseResult `protobuf:"bytes,2,opt,name=result,proto3,oneof"`
+type RunPipelineResponse_ClientView struct {
+	ClientView *ClientView `protobuf:"bytes,2,opt,name=client_view,json=clientView,proto3,oneof"`
 }
 
-func (*GatewayEvent_Progress) isGatewayEvent_Event() {}
+func (*RunPipelineResponse_Progress) isRunPipelineResponse_Event() {}
 
-func (*GatewayEvent_Result) isGatewayEvent_Event() {}
+func (*RunPipelineResponse_ClientView) isRunPipelineResponse_Event() {}
 
 var File_pipeline_v1_gateway_proto protoreflect.FileDescriptor
 
 const file_pipeline_v1_gateway_proto_rawDesc = "" +
 	"\n" +
-	"\x19pipeline/v1/gateway.proto\x12\vpipeline.v1\x1a\x1epipeline/v1/phase_result.proto\x1a\x1apipeline/v1/progress.proto\"\x8b\x01\n" +
+	"\x19pipeline/v1/gateway.proto\x12\vpipeline.v1\x1a\x1dpipeline/v1/client_view.proto\x1a\x1apipeline/v1/progress.proto\"P\n" +
 	"\x12RunPipelineRequest\x12\x1b\n" +
-	"\trepo_path\x18\x01 \x01(\tR\brepoPath\x12\x17\n" +
-	"\aout_dir\x18\x02 \x01(\tR\x06outDir\x12\x1d\n" +
+	"\trepo_name\x18\x01 \x01(\tR\brepoName\x12\x1d\n" +
 	"\n" +
-	"phase_keys\x18\x03 \x03(\tR\tphaseKeys\x12 \n" +
-	"\fuse_fake_llm\x18\x04 \x01(\bR\n" +
-	"useFakeLlm\"\x85\x01\n" +
-	"\fGatewayEvent\x128\n" +
-	"\bprogress\x18\x01 \x01(\v2\x1a.pipeline.v1.ProgressEventH\x00R\bprogress\x122\n" +
-	"\x06result\x18\x02 \x01(\v2\x18.pipeline.v1.PhaseResultH\x00R\x06resultB\a\n" +
-	"\x05event2]\n" +
-	"\x0eGatewayService\x12K\n" +
-	"\vRunPipeline\x12\x1f.pipeline.v1.RunPipelineRequest\x1a\x19.pipeline.v1.GatewayEvent0\x01B\x96\x01\n" +
+	"phase_keys\x18\x03 \x03(\tR\tphaseKeys\"\x94\x01\n" +
+	"\x13RunPipelineResponse\x128\n" +
+	"\bprogress\x18\x01 \x01(\v2\x1a.pipeline.v1.ProgressEventH\x00R\bprogress\x12:\n" +
+	"\vclient_view\x18\x02 \x01(\v2\x17.pipeline.v1.ClientViewH\x00R\n" +
+	"clientViewB\a\n" +
+	"\x05event2d\n" +
+	"\x0eGatewayService\x12R\n" +
+	"\vRunPipeline\x12\x1f.pipeline.v1.RunPipelineRequest\x1a .pipeline.v1.RunPipelineResponse0\x01B\x96\x01\n" +
 	"\x0fcom.pipeline.v1B\fGatewayProtoP\x01Z(insightify/gen/go/pipeline/v1;pipelinev1\xa2\x02\x03PXX\xaa\x02\vPipeline.V1\xca\x02\vPipeline\\V1\xe2\x02\x17Pipeline\\V1\\GPBMetadata\xea\x02\fPipeline::V1b\x06proto3"
 
 var (
@@ -205,16 +187,16 @@ func file_pipeline_v1_gateway_proto_rawDescGZIP() []byte {
 
 var file_pipeline_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_pipeline_v1_gateway_proto_goTypes = []any{
-	(*RunPipelineRequest)(nil), // 0: pipeline.v1.RunPipelineRequest
-	(*GatewayEvent)(nil),       // 1: pipeline.v1.GatewayEvent
-	(*ProgressEvent)(nil),      // 2: pipeline.v1.ProgressEvent
-	(*PhaseResult)(nil),        // 3: pipeline.v1.PhaseResult
+	(*RunPipelineRequest)(nil),  // 0: pipeline.v1.RunPipelineRequest
+	(*RunPipelineResponse)(nil), // 1: pipeline.v1.RunPipelineResponse
+	(*ProgressEvent)(nil),       // 2: pipeline.v1.ProgressEvent
+	(*ClientView)(nil),          // 3: pipeline.v1.ClientView
 }
 var file_pipeline_v1_gateway_proto_depIdxs = []int32{
-	2, // 0: pipeline.v1.GatewayEvent.progress:type_name -> pipeline.v1.ProgressEvent
-	3, // 1: pipeline.v1.GatewayEvent.result:type_name -> pipeline.v1.PhaseResult
+	2, // 0: pipeline.v1.RunPipelineResponse.progress:type_name -> pipeline.v1.ProgressEvent
+	3, // 1: pipeline.v1.RunPipelineResponse.client_view:type_name -> pipeline.v1.ClientView
 	0, // 2: pipeline.v1.GatewayService.RunPipeline:input_type -> pipeline.v1.RunPipelineRequest
-	1, // 3: pipeline.v1.GatewayService.RunPipeline:output_type -> pipeline.v1.GatewayEvent
+	1, // 3: pipeline.v1.GatewayService.RunPipeline:output_type -> pipeline.v1.RunPipelineResponse
 	3, // [3:4] is the sub-list for method output_type
 	2, // [2:3] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -227,11 +209,11 @@ func file_pipeline_v1_gateway_proto_init() {
 	if File_pipeline_v1_gateway_proto != nil {
 		return
 	}
-	file_pipeline_v1_phase_result_proto_init()
+	file_pipeline_v1_client_view_proto_init()
 	file_pipeline_v1_progress_proto_init()
 	file_pipeline_v1_gateway_proto_msgTypes[1].OneofWrappers = []any{
-		(*GatewayEvent_Progress)(nil),
-		(*GatewayEvent_Result)(nil),
+		(*RunPipelineResponse_Progress)(nil),
+		(*RunPipelineResponse_ClientView)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -33,34 +33,15 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// PipelineServiceDeclareGraphSpecProcedure is the fully-qualified name of the PipelineService's
-	// DeclareGraphSpec RPC.
-	PipelineServiceDeclareGraphSpecProcedure = "/insightify.v1.PipelineService/DeclareGraphSpec"
-	// PipelineServicePlanPipelineProcedure is the fully-qualified name of the PipelineService's
-	// PlanPipeline RPC.
-	PipelineServicePlanPipelineProcedure = "/insightify.v1.PipelineService/PlanPipeline"
 	// PipelineServiceStartRunProcedure is the fully-qualified name of the PipelineService's StartRun
 	// RPC.
 	PipelineServiceStartRunProcedure = "/insightify.v1.PipelineService/StartRun"
-	// PipelineServiceGetRunProcedure is the fully-qualified name of the PipelineService's GetRun RPC.
-	PipelineServiceGetRunProcedure = "/insightify.v1.PipelineService/GetRun"
-	// PipelineServiceWatchRunProcedure is the fully-qualified name of the PipelineService's WatchRun
-	// RPC.
-	PipelineServiceWatchRunProcedure = "/insightify.v1.PipelineService/WatchRun"
 )
 
 // PipelineServiceClient is a client for the insightify.v1.PipelineService service.
 type PipelineServiceClient interface {
-	// Register or validate a GraphSpec that will be planned.
-	DeclareGraphSpec(context.Context, *connect.Request[v1.DeclareGraphSpecRequest]) (*connect.Response[v1.DeclareGraphSpecResponse], error)
-	// Build a DAG plan from a spec (LLM-assisted) using the phase registry.
-	PlanPipeline(context.Context, *connect.Request[v1.PlanPipelineRequest]) (*connect.Response[v1.PlanPipelineResponse], error)
 	// Start executing a plan.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
-	// Snapshot state for a run.
-	GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.Run], error)
-	// Streaming progress for a run (fan out to UI).
-	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.RunEvent], error)
 }
 
 // NewPipelineServiceClient constructs a client for the insightify.v1.PipelineService service. By
@@ -74,34 +55,10 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	pipelineServiceMethods := v1.File_insightify_v1_pipeline_proto.Services().ByName("PipelineService").Methods()
 	return &pipelineServiceClient{
-		declareGraphSpec: connect.NewClient[v1.DeclareGraphSpecRequest, v1.DeclareGraphSpecResponse](
-			httpClient,
-			baseURL+PipelineServiceDeclareGraphSpecProcedure,
-			connect.WithSchema(pipelineServiceMethods.ByName("DeclareGraphSpec")),
-			connect.WithClientOptions(opts...),
-		),
-		planPipeline: connect.NewClient[v1.PlanPipelineRequest, v1.PlanPipelineResponse](
-			httpClient,
-			baseURL+PipelineServicePlanPipelineProcedure,
-			connect.WithSchema(pipelineServiceMethods.ByName("PlanPipeline")),
-			connect.WithClientOptions(opts...),
-		),
 		startRun: connect.NewClient[v1.StartRunRequest, v1.StartRunResponse](
 			httpClient,
 			baseURL+PipelineServiceStartRunProcedure,
 			connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
-			connect.WithClientOptions(opts...),
-		),
-		getRun: connect.NewClient[v1.GetRunRequest, v1.Run](
-			httpClient,
-			baseURL+PipelineServiceGetRunProcedure,
-			connect.WithSchema(pipelineServiceMethods.ByName("GetRun")),
-			connect.WithClientOptions(opts...),
-		),
-		watchRun: connect.NewClient[v1.WatchRunRequest, v1.RunEvent](
-			httpClient,
-			baseURL+PipelineServiceWatchRunProcedure,
-			connect.WithSchema(pipelineServiceMethods.ByName("WatchRun")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -109,21 +66,7 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // pipelineServiceClient implements PipelineServiceClient.
 type pipelineServiceClient struct {
-	declareGraphSpec *connect.Client[v1.DeclareGraphSpecRequest, v1.DeclareGraphSpecResponse]
-	planPipeline     *connect.Client[v1.PlanPipelineRequest, v1.PlanPipelineResponse]
-	startRun         *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
-	getRun           *connect.Client[v1.GetRunRequest, v1.Run]
-	watchRun         *connect.Client[v1.WatchRunRequest, v1.RunEvent]
-}
-
-// DeclareGraphSpec calls insightify.v1.PipelineService.DeclareGraphSpec.
-func (c *pipelineServiceClient) DeclareGraphSpec(ctx context.Context, req *connect.Request[v1.DeclareGraphSpecRequest]) (*connect.Response[v1.DeclareGraphSpecResponse], error) {
-	return c.declareGraphSpec.CallUnary(ctx, req)
-}
-
-// PlanPipeline calls insightify.v1.PipelineService.PlanPipeline.
-func (c *pipelineServiceClient) PlanPipeline(ctx context.Context, req *connect.Request[v1.PlanPipelineRequest]) (*connect.Response[v1.PlanPipelineResponse], error) {
-	return c.planPipeline.CallUnary(ctx, req)
+	startRun *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
 }
 
 // StartRun calls insightify.v1.PipelineService.StartRun.
@@ -131,28 +74,10 @@ func (c *pipelineServiceClient) StartRun(ctx context.Context, req *connect.Reque
 	return c.startRun.CallUnary(ctx, req)
 }
 
-// GetRun calls insightify.v1.PipelineService.GetRun.
-func (c *pipelineServiceClient) GetRun(ctx context.Context, req *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.Run], error) {
-	return c.getRun.CallUnary(ctx, req)
-}
-
-// WatchRun calls insightify.v1.PipelineService.WatchRun.
-func (c *pipelineServiceClient) WatchRun(ctx context.Context, req *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.RunEvent], error) {
-	return c.watchRun.CallServerStream(ctx, req)
-}
-
 // PipelineServiceHandler is an implementation of the insightify.v1.PipelineService service.
 type PipelineServiceHandler interface {
-	// Register or validate a GraphSpec that will be planned.
-	DeclareGraphSpec(context.Context, *connect.Request[v1.DeclareGraphSpecRequest]) (*connect.Response[v1.DeclareGraphSpecResponse], error)
-	// Build a DAG plan from a spec (LLM-assisted) using the phase registry.
-	PlanPipeline(context.Context, *connect.Request[v1.PlanPipelineRequest]) (*connect.Response[v1.PlanPipelineResponse], error)
 	// Start executing a plan.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
-	// Snapshot state for a run.
-	GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.Run], error)
-	// Streaming progress for a run (fan out to UI).
-	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.RunEvent]) error
 }
 
 // NewPipelineServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -162,48 +87,16 @@ type PipelineServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	pipelineServiceMethods := v1.File_insightify_v1_pipeline_proto.Services().ByName("PipelineService").Methods()
-	pipelineServiceDeclareGraphSpecHandler := connect.NewUnaryHandler(
-		PipelineServiceDeclareGraphSpecProcedure,
-		svc.DeclareGraphSpec,
-		connect.WithSchema(pipelineServiceMethods.ByName("DeclareGraphSpec")),
-		connect.WithHandlerOptions(opts...),
-	)
-	pipelineServicePlanPipelineHandler := connect.NewUnaryHandler(
-		PipelineServicePlanPipelineProcedure,
-		svc.PlanPipeline,
-		connect.WithSchema(pipelineServiceMethods.ByName("PlanPipeline")),
-		connect.WithHandlerOptions(opts...),
-	)
 	pipelineServiceStartRunHandler := connect.NewUnaryHandler(
 		PipelineServiceStartRunProcedure,
 		svc.StartRun,
 		connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
 		connect.WithHandlerOptions(opts...),
 	)
-	pipelineServiceGetRunHandler := connect.NewUnaryHandler(
-		PipelineServiceGetRunProcedure,
-		svc.GetRun,
-		connect.WithSchema(pipelineServiceMethods.ByName("GetRun")),
-		connect.WithHandlerOptions(opts...),
-	)
-	pipelineServiceWatchRunHandler := connect.NewServerStreamHandler(
-		PipelineServiceWatchRunProcedure,
-		svc.WatchRun,
-		connect.WithSchema(pipelineServiceMethods.ByName("WatchRun")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/insightify.v1.PipelineService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case PipelineServiceDeclareGraphSpecProcedure:
-			pipelineServiceDeclareGraphSpecHandler.ServeHTTP(w, r)
-		case PipelineServicePlanPipelineProcedure:
-			pipelineServicePlanPipelineHandler.ServeHTTP(w, r)
 		case PipelineServiceStartRunProcedure:
 			pipelineServiceStartRunHandler.ServeHTTP(w, r)
-		case PipelineServiceGetRunProcedure:
-			pipelineServiceGetRunHandler.ServeHTTP(w, r)
-		case PipelineServiceWatchRunProcedure:
-			pipelineServiceWatchRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -213,22 +106,6 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 // UnimplementedPipelineServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPipelineServiceHandler struct{}
 
-func (UnimplementedPipelineServiceHandler) DeclareGraphSpec(context.Context, *connect.Request[v1.DeclareGraphSpecRequest]) (*connect.Response[v1.DeclareGraphSpecResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.DeclareGraphSpec is not implemented"))
-}
-
-func (UnimplementedPipelineServiceHandler) PlanPipeline(context.Context, *connect.Request[v1.PlanPipelineRequest]) (*connect.Response[v1.PlanPipelineResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.PlanPipeline is not implemented"))
-}
-
 func (UnimplementedPipelineServiceHandler) StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.StartRun is not implemented"))
-}
-
-func (UnimplementedPipelineServiceHandler) GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.Run], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.GetRun is not implemented"))
-}
-
-func (UnimplementedPipelineServiceHandler) WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.RunEvent]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.WatchRun is not implemented"))
 }

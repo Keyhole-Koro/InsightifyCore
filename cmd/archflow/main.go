@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -126,19 +125,17 @@ func main() {
 
 	// ----- Build environment & registry -----
 	env := &runner.Env{
-		Repo:         repoName,
-		RepoRoot:     repoPath,
-		OutDir:       outAbs,
-		MaxNext:      *maxNext,
-		RepoFS:       repoFS,
-		ArtifactFS:   artifactFS,
-		ModelSalt:    os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
-		ForceFrom:    force,
-		LLM:          llmCli,
-		Index:        nil,
-		MDDocs:       nil,
-		StripImgMD:   regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`),
-		StripImgHTML: regexp.MustCompile(`(?is)<img[^>]*>`),
+		Repo:       repoName,
+		RepoRoot:   repoPath,
+		OutDir:     outAbs,
+		MaxNext:    *maxNext,
+		RepoFS:     repoFS,
+		ArtifactFS: artifactFS,
+		ModelSalt:  os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
+		ForceFrom:  force,
+		LLM:        llmCli,
+		Index:      nil,
+		MDDocs:     nil,
 	}
 	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
 	env.MCP = mcp.NewRegistry()
@@ -147,7 +144,8 @@ func main() {
 	architecture := runner.BuildRegistryArchitecture(env) // m1
 	codebase := runner.BuildRegistryCodebase(env)         // c0..c5
 	external := runner.BuildRegistryExternal(env)         // x0..x1
-	env.Resolver = runner.MergeRegistries(architecture, codebase, external)
+	planReg := runner.BuildRegistryPlanDependencies(env)  // plan_dependencies
+	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg)
 
 	// ----- Execute requested phase -----
 	spec, ok := env.Resolver.Get(key)

@@ -5,6 +5,39 @@ import (
 	"strings"
 )
 
+// PhaseDescriptor is a simplified view of a PhaseSpec for visualization.
+type PhaseDescriptor struct {
+	Key      string
+	Summary  string
+	Requires []string
+}
+
+// BuildPhaseDescriptors aggregates all known phases for visualization.
+func BuildPhaseDescriptors() []PhaseDescriptor {
+	env := &Env{}
+	// Collect all registries
+	regs := []map[string]PhaseSpec{
+		BuildRegistryMainline(env),
+		BuildRegistryArchitecture(env),
+		BuildRegistryCodebase(env),
+		BuildRegistryExternal(env),
+		BuildRegistryPlanDependencies(env),
+	}
+
+	resolver := MergeRegistries(regs...)
+	specs := resolver.List()
+
+	descs := make([]PhaseDescriptor, 0, len(specs))
+	for _, s := range specs {
+		descs = append(descs, PhaseDescriptor{
+			Key:      s.Key,
+			Summary:  s.Description,
+			Requires: s.Requires,
+		})
+	}
+	return descs
+}
+
 // GenerateMermaidGraph returns a Mermaid flowchart string of the pipeline phases.
 func GenerateMermaidGraph() string {
 	descs := BuildPhaseDescriptors()

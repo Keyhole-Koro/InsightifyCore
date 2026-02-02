@@ -15,16 +15,14 @@ import (
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
-	"insightify/internal/pipeline/plan"
 	"insightify/internal/safeio"
 	"insightify/internal/wordidx"
-
-	"google.golang.org/protobuf/proto"
 )
 
 // SpecResolver resolves phase keys to specs, enabling cross-registry lookup.
 type SpecResolver interface {
 	Get(key string) (PhaseSpec, bool)
+	List() []PhaseSpec
 }
 
 // MapResolver is a simple SpecResolver backed by a map keyed by normalized phase keys.
@@ -39,6 +37,16 @@ func (r MapResolver) Get(key string) (PhaseSpec, bool) {
 	}
 	spec, ok := r.specs[normalizeKey(key)]
 	return spec, ok
+}
+
+// List returns all registered phase specs.
+func (r MapResolver) List() []PhaseSpec {
+	specs := make([]PhaseSpec, 0, len(r.specs))
+	for _, s := range r.specs {
+		specs = append(specs, s)
+	}
+	sort.Slice(specs, func(i, j int) bool { return specs[i].Key < specs[j].Key })
+	return specs
 }
 
 // MergeRegistries flattens multiple phase registries into a single resolver.
@@ -94,15 +102,12 @@ type Env struct {
 
 	Index  []artifact.FileIndexEntry
 	MDDocs []artifact.MDDoc
-
-	StripImgMD   *regexp.Regexp
-	StripImgHTML *regexp.Regexp
 }
 
 // PhaseOutput bundles internal RuntimeState with an optional ClientView payload for the client.
 type PhaseOutput struct {
 	RuntimeState any
-	ClientView   proto.Message
+	ClientView   any
 }
 
 // PhaseSpec declares "what" a phase needs, not "how" the app calls it.
@@ -117,25 +122,6 @@ type PhaseSpec struct {
 	Downstream  []string                      // automatically computed
 	Requires    []string
 	Strategy    CacheStrategy // how to cache (json, versioned, none)
-}
-
-// Descriptor converts a PhaseSpec into a plan.PhaseDescriptor with defensive copies.
-func (spec PhaseSpec) Descriptor() plan.PhaseDescriptor {
-	return plan.PhaseDescriptor{
-		Key:        spec.Key,
-		Summary:    spec.Description,
-		Requires:   append([]string(nil), spec.Requires...),
-		Downstream: append([]string(nil), spec.Downstream...),
-	}
-}
-
-// DescribeRegistry flattens a registry to descriptors for LLM planning.
-func DescribeRegistry(reg map[string]PhaseSpec) []plan.PhaseDescriptor {
-	out := make([]plan.PhaseDescriptor, 0, len(reg))
-	for _, spec := range reg {
-		out = append(out, spec.Descriptor())
-	}
-	return out
 }
 
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).

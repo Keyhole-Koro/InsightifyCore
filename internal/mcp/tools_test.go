@@ -8,10 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/artifact"
 	"insightify/internal/safeio"
 	"insightify/internal/scan"
-	"insightify/internal/snippet"
 )
 
 func setupRepo(t *testing.T) (repoRoot string, repoFS *safeio.SafeFS, artifactFS *safeio.SafeFS) {
@@ -131,50 +129,6 @@ func TestWordIdxSearchTool(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected match for a.go, got %+v", out.Matches)
-	}
-}
-
-func TestSnippetCollectTool(t *testing.T) {
-	repoRoot, repoFS, artifactFS := setupRepo(t)
-	code := "Foo := 1\nbar := 2\n"
-	if err := os.WriteFile(filepath.Join(repoRoot, "main.go"), []byte(code), 0o644); err != nil {
-		t.Fatalf("write main.go: %v", err)
-	}
-	c4 := artifact.CodeTasksOut{
-		Repo: repoRoot,
-		Files: []artifact.IdentifierReport{
-			{
-				Path: "main.go",
-				Identifiers: []artifact.IdentifierSignal{
-					{
-						Name:  "Foo",
-						Lines: [2]int{1, 1},
-					},
-				},
-			},
-		},
-	}
-	b, _ := json.Marshal(c4)
-	if err := os.WriteFile(filepath.Join(artifactFS.Root(), "c4.json"), b, 0o644); err != nil {
-		t.Fatalf("write c4.json: %v", err)
-	}
-
-	tool := newSnippetCollectTool(Host{RepoRoot: repoRoot, RepoFS: repoFS, ArtifactFS: artifactFS})
-	in := snippetCollectInput{Seeds: []snippet.Identifier{{Path: "main.go", Name: "Foo"}}, MaxTokens: 0}
-	raw, _ := json.Marshal(in)
-	outRaw, err := tool.Call(context.Background(), raw)
-	if err != nil {
-		t.Fatalf("snippet.collect call: %v", err)
-	}
-	var out snippetCollectOutput
-	if err := json.Unmarshal(outRaw, &out); err != nil {
-		t.Fatalf("snippet.collect decode: %v", err)
-	}
-	if len(out.Snippets) != 1 {
-		t.Fatalf("expected 1 snippet, got %d", len(out.Snippets))
-	}
-	if !strings.Contains(out.Snippets[0].Code, "Foo") {
-		t.Fatalf("expected snippet to contain Foo, got %q", out.Snippets[0].Code)
 	}
 }
 
