@@ -287,7 +287,8 @@ type AggIndex struct {
 	errMu    sync.Mutex
 	firstErr error
 
-	fs *safeio.SafeFS
+	fs   *safeio.SafeFS
+	fsMu sync.Mutex
 }
 
 // NewAgg creates an empty aggregator. Prefer Builder for fluent setup.
@@ -503,6 +504,8 @@ func (a *AggIndex) safeFS() *safeio.SafeFS {
 		}
 		return safeio.Default()
 	}
+	a.fsMu.Lock()
+	defer a.fsMu.Unlock()
 	if a.fs != nil {
 		return a.fs
 	}
