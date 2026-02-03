@@ -125,3 +125,14 @@ func (g *GroqClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	}
 	return raw, nil
 }
+
+func (g *GroqClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	raw, err := g.GenerateJSON(ctx, prompt, input)
+	if err != nil {
+		return nil, err
+	}
+	if onChunk != nil {
+		onChunk(string(raw))
+	}
+	return raw, nil
+}

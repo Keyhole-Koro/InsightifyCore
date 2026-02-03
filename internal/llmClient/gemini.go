@@ -64,3 +64,22 @@ func (g *GeminiClient) GenerateJSON(ctx context.Context, prompt string, input an
 	txt := resp.Candidates[0].Content.Parts[0].Text
 	return json.RawMessage(txt), nil
 }
+
+// GenerateJSONStream streams partial JSON chunks to the callback.
+// Returns the final complete JSON response.
+func (g *GeminiClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	in, _ := json.MarshalIndent(input, "", "  ")
+	full := prompt + "\n\n[INPUT JSON]\n" + string(in)
+
+	resp, err := g.cli.Models.GenerateContent(ctx, g.model,
+		[]*genai.Content{{Parts: []*genai.Part{{Text: full}}}},
+		&genai.GenerateContentConfig{ResponseMIMEType: "application/json"},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return nil, ErrInvalidJSON
+	}
+	return json.RawMessage(resp.Candidates[0].Content.Parts[0].Text), nil
+}

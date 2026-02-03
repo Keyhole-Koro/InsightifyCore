@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"insightify/internal/artifact"
@@ -54,6 +55,13 @@ func (t *scanListTool) Call(ctx context.Context, input json.RawMessage) (json.Ra
 	allow := make(map[string]struct{}, len(in.AllowExt))
 	for _, e := range in.AllowExt {
 		e = strings.ToLower(strings.TrimSpace(e))
+		if e != "" && !strings.HasPrefix(e, ".") {
+			if ext := filepath.Ext(e); ext != "" {
+				e = ext
+			} else {
+				e = "." + e
+			}
+		}
 		if e != "" {
 			allow[e] = struct{}{}
 		}

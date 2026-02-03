@@ -22,6 +22,9 @@ func (f *fakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	f.calls++
 	return json.RawMessage([]byte(`{}`)), nil
 }
+func (f *fakeClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return f.GenerateJSON(ctx, prompt, input)
+}
 
 type countLimiter struct{ calls int }
 

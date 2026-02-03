@@ -21,6 +21,9 @@ func (f *fastClient) TokenCapacity() int          { return 1024 }
 func (f *fastClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	return json.RawMessage([]byte(`{}`)), nil
 }
+func (f *fastClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return f.GenerateJSON(ctx, prompt, input)
+}
 
 // spy records timestamps when requests reach the inner client
 type spy struct{ times []time.Time }
@@ -38,6 +41,10 @@ func (s *spyingClient) TokenCapacity() int { return s.next.TokenCapacity() }
 func (s *spyingClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	s.rec.times = append(s.rec.times, time.Now())
 	return s.next.GenerateJSON(ctx, prompt, input)
+}
+func (s *spyingClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	s.rec.times = append(s.rec.times, time.Now())
+	return s.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 }
 
 func TestRate_RPS_2PerSecond_Burst1_Spacing(t *testing.T) {

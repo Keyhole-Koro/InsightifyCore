@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // DepsUsageMode controls how strictly to enforce declared dependency usage.
@@ -62,36 +61,22 @@ func (d *depsImpl) Artifact(key string, target any) error {
 	}
 	d.accessed[norm] = true
 
-	// Load artifact logic (similar to original Artifact generic function)
-	filename := norm + ".json"
-	if d.env.Resolver != nil {
-		if spec, ok := d.env.Resolver.Get(key); ok && strings.TrimSpace(spec.File) != "" {
-			filename = spec.File
-		}
-	}
 	fs := ensureFS(d.env.ArtifactFS)
-	// assuming artifact paths are in Env.OutDir
-	// Note: We need to use d.env.OutDir but currently runner/util.go imports safeio directly.
-	// We'll reuse the logic from Artifact helper but adapted here to avoid circular imports or copy-paste.
-	// Actually, let's just use the existing Artifact helper logic but injected.
-	// For now, simple read:
-	path := d.env.OutDir + "/" + filename // simplistic join
-	if fs != nil {
-		// Use safeio properly
-		// But wait, Artifact() function in registry.go handles this.
-		// Let's call the env's helper if possible or duplicate the logic safely.
-		// Reusing Artifact[T] generic requires T, but here we have 'any'.
-		// We have to unmarshal into target.
-		b, err := fs.SafeReadFile(path)
-		if err != nil {
-			return fmt.Errorf("read artifact %s: %w", filename, err)
-		}
-		if err := json.Unmarshal(b, target); err != nil {
-			return fmt.Errorf("decode artifact %s: %w", filename, err)
-		}
-		return nil
+	path, label, err := resolveArtifactPath(d.env, key)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("fs not configured")
+	if fs == nil {
+		return fmt.Errorf("fs not configured")
+	}
+	b, err := fs.SafeReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read artifact %s: %w", label, err)
+	}
+	if err := json.Unmarshal(b, target); err != nil {
+		return fmt.Errorf("decode artifact %s: %w", label, err)
+	}
+	return nil
 }
 
 func (d *depsImpl) Repo() string {

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llmClient"
+	llmclient "insightify/internal/llmClient"
 )
 
 var (
@@ -82,6 +82,80 @@ func (l *ToolLoop) Run(ctx context.Context, input any, build PromptBuilder) (jso
 		if err != nil {
 			return nil, state, err
 		}
+		action, err := ParseAction(raw)
+		if err != nil {
+			return nil, state, err
+		}
+		switch action.Action {
+		case "final":
+			return action.Final, state, nil
+		case "tool":
+			if action.ToolName == "" {
+				return nil, state, fmt.Errorf("llmtool: tool_name required")
+			}
+			if len(allowed) > 0 {
+				if _, ok := allowed[action.ToolName]; !ok {
+					return nil, state, ErrToolNotAllowed
+				}
+			}
+			out, err := l.Tools.Call(ctx, action.ToolName, action.ToolInput)
+			tr := ToolResult{
+				Name:   action.ToolName,
+				Input:  action.ToolInput,
+				Output: out,
+			}
+			if err != nil {
+				tr.Error = err.Error()
+			}
+			state.ToolResults = append(state.ToolResults, tr)
+			continue
+		default:
+			return nil, state, ErrUnknownAction
+		}
+	}
+	return nil, state, ErrMaxIterations
+}
+
+// RunWithEmitter executes the tool loop with streaming support.
+func (l *ToolLoop) RunWithEmitter(ctx context.Context, input any, build PromptBuilder, onChunk func(chunk string)) (json.RawMessage, *ToolState, error) {
+	if l == nil || l.LLM == nil || l.Tools == nil {
+		return nil, nil, fmt.Errorf("llmtool: missing LLM or tools")
+	}
+	if build == nil {
+		return nil, nil, fmt.Errorf("llmtool: prompt builder is nil")
+	}
+	max := l.MaxIters
+	if max <= 0 {
+		max = 5
+	}
+	allowed := make(map[string]struct{}, len(l.Allowed))
+	for _, a := range l.Allowed {
+		a = strings.TrimSpace(a)
+		if a != "" {
+			allowed[a] = struct{}{}
+		}
+	}
+
+	state := &ToolState{Input: input}
+	tools := l.Tools.Specs()
+	for i := 0; i < max; i++ {
+		state.Iterations = i + 1
+		prompt, err := build(ctx, state, tools)
+		if err != nil {
+			return nil, state, err
+		}
+
+		// Use streaming if callback provided
+		var raw json.RawMessage
+		if onChunk != nil {
+			raw, err = l.LLM.GenerateJSONStream(ctx, prompt, input, onChunk)
+		} else {
+			raw, err = l.LLM.GenerateJSON(ctx, prompt, input)
+		}
+		if err != nil {
+			return nil, state, err
+		}
+
 		action, err := ParseAction(raw)
 		if err != nil {
 			return nil, state, err

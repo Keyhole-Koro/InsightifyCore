@@ -17,6 +17,9 @@ func (t *tinyClient) TokenCapacity() int          { return 1024 }
 func (t *tinyClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	return json.RawMessage([]byte(`{}`)), nil
 }
+func (t *tinyClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return t.GenerateJSON(ctx, prompt, input)
+}
 
 func TestRateLimit_ThrottlesAt2RPS_Burst1(t *testing.T) {
 	// Build a client limited to ~2 rps and burst 1.

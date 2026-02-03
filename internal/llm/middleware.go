@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"insightify/internal/llmClient"
+	llmclient "insightify/internal/llmClient"
 )
 
 // Middleware decorates an LLMClient to inject cross-cutting concerns
@@ -58,6 +58,17 @@ func (c *rateLimited) GenerateJSON(ctx context.Context, prompt string, input any
 		}
 	}
 	return c.next.GenerateJSON(ctx, prompt, input)
+}
+
+func (c *rateLimited) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	if c.rl != nil {
+		if !TakeCredit(ctx) {
+			if err := c.rl.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return c.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 }
 
 // RateLimitFromEnv reads RPS/BURST from environment variables with the
@@ -169,6 +180,13 @@ func MultiLimitFromEnv(prefixes ...string) Middleware {
 	return MultiLimit(rpm, rpd, tpm)
 }
 
+func max1(v int) int {
+	if v < 1 {
+		return 1
+	}
+	return v
+}
+
 type multiLimited struct {
 	next llmclient.LLMClient
 	rpm  *rpsLimiter
@@ -212,11 +230,31 @@ func (m *multiLimited) GenerateJSON(ctx context.Context, prompt string, input an
 	return m.next.GenerateJSON(ctx, prompt, input)
 }
 
-func max1(n int) int {
-	if n < 1 {
-		return 1
+func (m *multiLimited) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	if m.rpm != nil {
+		if !TakeCredit(ctx) {
+			if err := m.rpm.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
 	}
-	return n
+	if m.rpd != nil {
+		if !TakeCredit(ctx) {
+			if err := m.rpd.Acquire(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if m.tpm != nil {
+		est := m.tpr
+		if est < 1 {
+			est = 1
+		}
+		if err := m.tpm.AcquireN(ctx, est); err != nil {
+			return nil, err
+		}
+	}
+	return m.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 }
 
 // -------- Retry with exponential backoff --------
@@ -271,6 +309,28 @@ func (r *retrying) GenerateJSON(ctx context.Context, prompt string, input any) (
 	return nil, last
 }
 
+func (r *retrying) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	var last error
+	for i := 0; i < r.max; i++ {
+		resp, err := r.next.GenerateJSONStream(ctx, prompt, input, onChunk)
+		if err == nil {
+			return resp, nil
+		}
+		var pErr *llmclient.PermanentError
+		if errors.As(err, &pErr) {
+			return nil, err
+		}
+		last = err
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		time.Sleep(r.base * time.Duration(1<<i))
+	}
+	return nil, last
+}
+
 // -------- Logging & Hooks --------
 
 // WithLogging logs request size and errors. Provide a custom logger or nil
@@ -305,6 +365,16 @@ func (l *logging) GenerateJSON(ctx context.Context, prompt string, input any) (j
 	return raw, err
 }
 
+func (l *logging) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	in, _ := json.MarshalIndent(input, "", "  ")
+	l.log.Printf("LLM stream request (%s): %d bytes", PhaseFrom(ctx), len(prompt)+len(in))
+	raw, err := l.next.GenerateJSONStream(ctx, prompt, input, onChunk)
+	if err != nil {
+		l.log.Printf("LLM stream error (%s): %v", PhaseFrom(ctx), err)
+	}
+	return raw, err
+}
+
 // WithHooks calls HookFrom(ctx).Before/After around GenerateJSON.
 // If no hook is present in the context, it is a no-op.
 func WithHooks() Middleware {
@@ -326,6 +396,17 @@ func (h *hooked) GenerateJSON(ctx context.Context, prompt string, input any) (js
 		hook.Before(ctx, PhaseFrom(ctx), prompt, input)
 	}
 	raw, err := h.next.GenerateJSON(ctx, prompt, input)
+	if hook := HookFrom(ctx); hook != nil {
+		hook.After(ctx, PhaseFrom(ctx), raw, err)
+	}
+	return raw, err
+}
+
+func (h *hooked) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	if hook := HookFrom(ctx); hook != nil {
+		hook.Before(ctx, PhaseFrom(ctx), prompt, input)
+	}
+	raw, err := h.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 	if hook := HookFrom(ctx); hook != nil {
 		hook.After(ctx, PhaseFrom(ctx), raw, err)
 	}

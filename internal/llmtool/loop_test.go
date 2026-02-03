@@ -24,6 +24,9 @@ func (f *fakeLLM) GenerateJSON(ctx context.Context, prompt string, input any) (j
 	f.responses = f.responses[1:]
 	return out, nil
 }
+func (f *fakeLLM) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return f.GenerateJSON(ctx, prompt, input)
+}
 
 type fakeTools struct {
 	specs []artifact.ToolSpec

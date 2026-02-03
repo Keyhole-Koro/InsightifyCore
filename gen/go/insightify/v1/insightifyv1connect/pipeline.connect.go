@@ -36,12 +36,17 @@ const (
 	// PipelineServiceStartRunProcedure is the fully-qualified name of the PipelineService's StartRun
 	// RPC.
 	PipelineServiceStartRunProcedure = "/insightify.v1.PipelineService/StartRun"
+	// PipelineServiceWatchRunProcedure is the fully-qualified name of the PipelineService's WatchRun
+	// RPC.
+	PipelineServiceWatchRunProcedure = "/insightify.v1.PipelineService/WatchRun"
 )
 
 // PipelineServiceClient is a client for the insightify.v1.PipelineService service.
 type PipelineServiceClient interface {
-	// Start executing a plan.
+	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
+	// Streaming progress for a run (fan out to UI).
+	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.RunEvent], error)
 }
 
 // NewPipelineServiceClient constructs a client for the insightify.v1.PipelineService service. By
@@ -61,12 +66,19 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
 			connect.WithClientOptions(opts...),
 		),
+		watchRun: connect.NewClient[v1.WatchRunRequest, v1.RunEvent](
+			httpClient,
+			baseURL+PipelineServiceWatchRunProcedure,
+			connect.WithSchema(pipelineServiceMethods.ByName("WatchRun")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // pipelineServiceClient implements PipelineServiceClient.
 type pipelineServiceClient struct {
 	startRun *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
+	watchRun *connect.Client[v1.WatchRunRequest, v1.RunEvent]
 }
 
 // StartRun calls insightify.v1.PipelineService.StartRun.
@@ -74,10 +86,17 @@ func (c *pipelineServiceClient) StartRun(ctx context.Context, req *connect.Reque
 	return c.startRun.CallUnary(ctx, req)
 }
 
+// WatchRun calls insightify.v1.PipelineService.WatchRun.
+func (c *pipelineServiceClient) WatchRun(ctx context.Context, req *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.RunEvent], error) {
+	return c.watchRun.CallServerStream(ctx, req)
+}
+
 // PipelineServiceHandler is an implementation of the insightify.v1.PipelineService service.
 type PipelineServiceHandler interface {
-	// Start executing a plan.
+	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
+	// Streaming progress for a run (fan out to UI).
+	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.RunEvent]) error
 }
 
 // NewPipelineServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -93,10 +112,18 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 		connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pipelineServiceWatchRunHandler := connect.NewServerStreamHandler(
+		PipelineServiceWatchRunProcedure,
+		svc.WatchRun,
+		connect.WithSchema(pipelineServiceMethods.ByName("WatchRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/insightify.v1.PipelineService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PipelineServiceStartRunProcedure:
 			pipelineServiceStartRunHandler.ServeHTTP(w, r)
+		case PipelineServiceWatchRunProcedure:
+			pipelineServiceWatchRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -108,4 +135,8 @@ type UnimplementedPipelineServiceHandler struct{}
 
 func (UnimplementedPipelineServiceHandler) StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.StartRun is not implemented"))
+}
+
+func (UnimplementedPipelineServiceHandler) WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.RunEvent]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.WatchRun is not implemented"))
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"encoding/json"
 	"strings"
 
 	"insightify/internal/artifact"
@@ -49,6 +50,11 @@ func StructuredPromptBuilder(spec StructuredPromptSpec) PromptBuilder {
 		var buf bytes.Buffer
 		writeSection(&buf, "PURPOSE", spec.Purpose)
 		writeSection(&buf, "BACKGROUND", spec.Background)
+		if state != nil {
+			if b, err := json.MarshalIndent(state.Input, "", "  "); err == nil {
+				writeSection(&buf, "INPUT", string(b))
+			}
+		}
 		writeSection(&buf, "OUTPUT", formatFields(spec.OutputFields))
 		writeSection(&buf, "CONSTRAINTS", formatList(spec.Constraints))
 		writeSection(&buf, "RULES", formatList(spec.Rules))

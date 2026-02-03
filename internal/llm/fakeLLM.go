@@ -136,6 +136,10 @@ func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	return json.RawMessage(b), nil
 }
 
+func (f *FakeClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return f.GenerateJSON(ctx, prompt, input)
+}
+
 func wrapFinal(obj any) json.RawMessage {
 	payload := map[string]any{
 		"action": "final",

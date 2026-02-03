@@ -52,21 +52,18 @@ func Artifact[T any](env *Env, key string) (T, error) {
 	if norm == "" {
 		return zero, fmt.Errorf("runner: empty phase key")
 	}
-	filename := norm + ".json"
-	if env.Resolver != nil {
-		if spec, ok := env.Resolver.Get(key); ok && strings.TrimSpace(spec.File) != "" {
-			filename = spec.File
-		}
-	}
 	fs := ensureFS(env.ArtifactFS)
-	path := filepath.Join(env.OutDir, filename)
+	path, label, err := resolveArtifactPath(env, key)
+	if err != nil {
+		return zero, err
+	}
 	b, err := fs.SafeReadFile(path)
 	if err != nil {
-		return zero, fmt.Errorf("runner: read artifact %s: %w", filename, err)
+		return zero, fmt.Errorf("runner: read artifact %s: %w", label, err)
 	}
 	var out T
 	if err := json.Unmarshal(b, &out); err != nil {
-		return zero, fmt.Errorf("runner: decode artifact %s: %w", filename, err)
+		return zero, fmt.Errorf("runner: decode artifact %s: %w", label, err)
 	}
 	return out, nil
 }
@@ -114,4 +111,51 @@ func ensureFS(fs *safeio.SafeFS) *safeio.SafeFS {
 	}
 	log.Fatal("safe filesystem is not configured")
 	return nil
+}
+
+func resolveArtifactPath(env *Env, key string) (string, string, error) {
+	if env == nil {
+		return "", "", fmt.Errorf("runner: env is nil")
+	}
+	norm := normalizeKey(key)
+	if norm == "" {
+		return "", "", fmt.Errorf("runner: empty phase key")
+	}
+	filename := norm + ".json"
+	var spec PhaseSpec
+	var hasSpec bool
+	if env.Resolver != nil {
+		if s, ok := env.Resolver.Get(key); ok {
+			spec = s
+			hasSpec = true
+			if strings.TrimSpace(spec.File) != "" {
+				filename = spec.File
+			}
+		}
+	}
+	fs := ensureFS(env.ArtifactFS)
+
+	primary := filepath.Join(env.OutDir, filename)
+	if hasSpec {
+		switch spec.Strategy.(type) {
+		case jsonStrategy:
+			primary = filepath.Join(env.OutDir, spec.Key, "output.json")
+		case versionedStrategy:
+			if strings.TrimSpace(spec.File) != "" {
+				primary = filepath.Join(env.OutDir, spec.File)
+			}
+		default:
+			if strings.TrimSpace(spec.File) != "" {
+				primary = filepath.Join(env.OutDir, spec.File)
+			}
+		}
+	}
+	if FileExists(fs, primary) {
+		return primary, filepath.Base(primary), nil
+	}
+	legacy := filepath.Join(env.OutDir, filename)
+	if primary != legacy && FileExists(fs, legacy) {
+		return legacy, filename, nil
+	}
+	return primary, filepath.Base(primary), nil
 }
