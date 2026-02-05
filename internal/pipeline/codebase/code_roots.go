@@ -14,7 +14,7 @@ import (
 
 var codeRootsPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Classify repository layout from extension counts and a shallow directory scan.",
-	Background:   "Phase CodeRoots identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
+	Background:   "Worker CodeRoots identifies primary source roots, config locations, and runtime-impacting files to guide later analysis.",
 	OutputFields: llmtool.MustFieldsFromStruct(artifact.CodeRootsOut{}),
 	Constraints: []string{
 		"Maintain the field order shown in OUTPUT.",

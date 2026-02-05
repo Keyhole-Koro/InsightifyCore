@@ -12,23 +12,23 @@ import (
 
 // BuildRegistryCodebase defines code_roots-code_symbols.
 // code_roots uses versionedStrategy; c1 uses jsonStrategy; etc.
-func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
-	reg := map[string]PhaseSpec{}
-	reg["code_roots"] = PhaseSpec{
+func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
+	reg := map[string]WorkerSpec{}
+	reg["code_roots"] = WorkerSpec{
 		Key:         "code_roots",
 		File:        "c0.json",
 		Description: "Scan repo layout and ask LLM to classify main source roots, library/vendor roots, and config hotspots.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return artifact.CodeRootsIn{Repo: deps.Repo()}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_roots")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_roots")
 			x := pipelineCodeRoots{LLM: env.LLM, Tools: env.MCP}
 			out, err := x.Run(ctx, in.(artifact.CodeRootsIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -39,7 +39,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Strategy: versionedStrategy{},
 	}
 
-	reg["code_specs"] = PhaseSpec{
+	reg["code_specs"] = WorkerSpec{
 		Key:         "code_specs",
 		File:        "c1.json", // latest pointer; versioned writes also occur
 		Requires:    []string{"code_roots"},
@@ -56,14 +56,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_specs")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_specs")
 			x := pipelineCodeSpecs{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(artifact.CodeSpecsIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			// Even though versioned, keep a meta fingerprint for traceability.
@@ -75,7 +75,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Strategy: versionedStrategy{},
 	}
 
-	reg["code_imports"] = PhaseSpec{
+	reg["code_imports"] = WorkerSpec{
 		Key:         "code_imports",
 		File:        "c2.json",
 		Requires:    []string{"code_specs", "code_roots"},
@@ -97,14 +97,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_imports")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_imports")
 			x := pipelineCodeImports{}
 			out, err := x.Run(ctx, in.(artifact.CodeImportsIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -115,7 +115,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	reg["code_graph"] = PhaseSpec{
+	reg["code_graph"] = WorkerSpec{
 		Key:         "code_graph",
 		File:        "c3.json",
 		Requires:    []string{"code_imports"},
@@ -130,14 +130,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Dependencies: codeImportsOut.PossibleDependencies,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_graph")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_graph")
 			var c3 codepipe.CodeGraph
 			out, err := c3.Run(ctx, in.(artifact.CodeGraphIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -148,7 +148,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	reg["code_tasks"] = PhaseSpec{
+	reg["code_tasks"] = WorkerSpec{
 		Key:         "code_tasks",
 		File:        "c4.json",
 		Requires:    []string{"code_graph"},
@@ -169,14 +169,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				CapPerChunk: capPerChunk,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_tasks")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_tasks")
 			x := pipelineCodeTasks{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(artifact.CodeTasksIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -187,7 +187,7 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	reg["code_symbols"] = PhaseSpec{
+	reg["code_symbols"] = WorkerSpec{
 		Key:         "code_symbols",
 		File:        "c5.json",
 		Requires:    []string{"code_tasks"},
@@ -203,14 +203,14 @@ func BuildRegistryCodebase(env *Env) map[string]PhaseSpec {
 				Tasks:  codeTasksOut,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "code_symbols")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "code_symbols")
 			x := pipelineCodeSymbols{LLM: env.LLM}
 			out, err := x.Run(ctx, in.(artifact.CodeSymbolsIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -259,4 +259,3 @@ func (p pipelineCodeSymbols) Run(ctx context.Context, in artifact.CodeSymbolsIn)
 	real := codepipe.CodeSymbols{LLM: p.LLM}
 	return real.Run(ctx, in)
 }
-

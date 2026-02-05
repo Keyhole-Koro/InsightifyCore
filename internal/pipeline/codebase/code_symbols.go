@@ -25,7 +25,7 @@ type codeSymbolsOutput struct {
 
 var codeSymbolsPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Extract identifiers and their implementation spans for each provided file.",
-	Background:   "Stage CodeSymbols analyzes code snippets to identify defined symbols and their dependencies.",
+	Background:   "Worker CodeSymbols analyzes code snippets to identify defined symbols and their dependencies.",
 	OutputFields: llmtool.MustFieldsFromStruct(codeSymbolsOutput{}),
 	Constraints: []string{
 		"Describe only concrete identifiers defined in each file.",
@@ -159,9 +159,9 @@ func (p CodeSymbols) Run(ctx context.Context, in artifact.CodeSymbolsIn) (artifa
 	}
 
 	return artifact.CodeSymbolsOut{
-		Repo:  in.Repo,
-		Files: results,
-	},
+			Repo:  in.Repo,
+			Files: results,
+		},
 		nil
 }
 
@@ -223,7 +223,7 @@ func (p CodeSymbols) processChunk(ctx context.Context, repo string, fs *safeio.S
 	}
 	fmt.Printf("codeSymbols chunk: files=%d tokens=%d\n", len(payload.Files), llmclient.CountTokens(string(payloadBytes)))
 
-	raw, err := p.LLM.GenerateJSON(llm.WithPhase(ctx, "codeSymbols"), prompt, payload)
+	raw, err := p.LLM.GenerateJSON(llm.WithWorker(ctx, "codeSymbols"), prompt, payload)
 	if err != nil {
 		return nil, perNodeErr, err
 	}

@@ -357,20 +357,20 @@ func (l *logging) CountTokens(text string) int {
 func (l *logging) TokenCapacity() int { return l.next.TokenCapacity() }
 func (l *logging) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	in, _ := json.MarshalIndent(input, "", "  ")
-	l.log.Printf("LLM request (%s): %d bytes", PhaseFrom(ctx), len(prompt)+len(in))
+	l.log.Printf("LLM request (%s): %d bytes", WorkerFrom(ctx), len(prompt)+len(in))
 	raw, err := l.next.GenerateJSON(ctx, prompt, input)
 	if err != nil {
-		l.log.Printf("LLM error (%s): %v", PhaseFrom(ctx), err)
+		l.log.Printf("LLM error (%s): %v", WorkerFrom(ctx), err)
 	}
 	return raw, err
 }
 
 func (l *logging) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
 	in, _ := json.MarshalIndent(input, "", "  ")
-	l.log.Printf("LLM stream request (%s): %d bytes", PhaseFrom(ctx), len(prompt)+len(in))
+	l.log.Printf("LLM stream request (%s): %d bytes", WorkerFrom(ctx), len(prompt)+len(in))
 	raw, err := l.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 	if err != nil {
-		l.log.Printf("LLM stream error (%s): %v", PhaseFrom(ctx), err)
+		l.log.Printf("LLM stream error (%s): %v", WorkerFrom(ctx), err)
 	}
 	return raw, err
 }
@@ -393,22 +393,22 @@ func (h *hooked) CountTokens(text string) int {
 func (h *hooked) TokenCapacity() int { return h.next.TokenCapacity() }
 func (h *hooked) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
 	if hook := HookFrom(ctx); hook != nil {
-		hook.Before(ctx, PhaseFrom(ctx), prompt, input)
+		hook.Before(ctx, WorkerFrom(ctx), prompt, input)
 	}
 	raw, err := h.next.GenerateJSON(ctx, prompt, input)
 	if hook := HookFrom(ctx); hook != nil {
-		hook.After(ctx, PhaseFrom(ctx), raw, err)
+		hook.After(ctx, WorkerFrom(ctx), raw, err)
 	}
 	return raw, err
 }
 
 func (h *hooked) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
 	if hook := HookFrom(ctx); hook != nil {
-		hook.Before(ctx, PhaseFrom(ctx), prompt, input)
+		hook.Before(ctx, WorkerFrom(ctx), prompt, input)
 	}
 	raw, err := h.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 	if hook := HookFrom(ctx); hook != nil {
-		hook.After(ctx, PhaseFrom(ctx), raw, err)
+		hook.After(ctx, WorkerFrom(ctx), raw, err)
 	}
 	return raw, err
 }

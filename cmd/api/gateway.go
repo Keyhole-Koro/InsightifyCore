@@ -27,7 +27,7 @@ var runStore = struct {
 	runs: make(map[string]chan *insightifyv1.RunEvent),
 }
 
-// StartRun executes a single pipeline phase and returns the result.
+// StartRun executes a single pipeline worker and returns the result.
 func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightifyv1.StartRunRequest]) (*connect.Response[insightifyv1.StartRunResponse], error) {
 	pipelineID := req.Msg.GetPipelineId()
 
@@ -111,7 +111,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 
 	key := pipelineID
 	if key == "" {
-		key = "phase_DAG"
+		key = "worker_DAG"
 	}
 
 	spec, ok := runCtx.Env.Resolver.Get(key)
@@ -121,7 +121,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		delete(runStore.runs, runID)
 		runStore.Unlock()
 		close(eventCh)
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown phase %s", key))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown worker %s", key))
 	}
 
 	// Start pipeline in background with emitter
@@ -136,7 +136,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 
 		// Create emitter that bridges runner events to proto events
 		internalCh := make(chan runner.RunEvent, 100)
-		emitter := &runner.ChannelEmitter{Ch: internalCh, Phase: key}
+		emitter := &runner.ChannelEmitter{Ch: internalCh, Worker: key}
 
 		// Bridge internal events to proto events
 		go func() {
@@ -161,7 +161,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		}()
 
 		execCtx := runner.WithEmitter(context.Background(), emitter)
-		out, err := runner.ExecutePhaseWithResult(execCtx, spec, runCtx.Env)
+		out, err := runner.ExecuteWorkerWithResult(execCtx, spec, runCtx.Env)
 		close(internalCh)
 
 		if err != nil {

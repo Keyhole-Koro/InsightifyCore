@@ -17,7 +17,7 @@ import (
 // CodeSpecs prompt — imports/includes only, plus normalization hints for later post-processing.
 var codeSpecsPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Emit one spec per language family present in extension counts for dependency analysis.",
-	Background:   "Stage CodeSpecs analyzes file extension counts to detect language families and generate heuristic rules for import extraction.",
+	Background:   "Worker CodeSpecs analyzes file extension counts to detect language families and generate heuristic rules for import extraction.",
 	OutputFields: llmtool.MustFieldsFromStruct(artifact.CodeSpecsOut{}),
 	Constraints: []string{
 		"Emit specs **only** for families that appear in 'ext_counts'.",

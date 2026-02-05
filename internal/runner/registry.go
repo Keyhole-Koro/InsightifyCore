@@ -19,29 +19,29 @@ import (
 	"insightify/internal/wordidx"
 )
 
-// SpecResolver resolves phase keys to specs, enabling cross-registry lookup.
+// SpecResolver resolves worker keys to specs, enabling cross-registry lookup.
 type SpecResolver interface {
-	Get(key string) (PhaseSpec, bool)
-	List() []PhaseSpec
+	Get(key string) (WorkerSpec, bool)
+	List() []WorkerSpec
 }
 
-// MapResolver is a simple SpecResolver backed by a map keyed by normalized phase keys.
+// MapResolver is a simple SpecResolver backed by a map keyed by normalized worker keys.
 type MapResolver struct {
-	specs map[string]PhaseSpec
+	specs map[string]WorkerSpec
 }
 
-// Get returns the PhaseSpec for the provided key, if present.
-func (r MapResolver) Get(key string) (PhaseSpec, bool) {
+// Get returns the WorkerSpec for the provided key, if present.
+func (r MapResolver) Get(key string) (WorkerSpec, bool) {
 	if len(r.specs) == 0 {
-		return PhaseSpec{}, false
+		return WorkerSpec{}, false
 	}
 	spec, ok := r.specs[normalizeKey(key)]
 	return spec, ok
 }
 
-// List returns all registered phase specs.
-func (r MapResolver) List() []PhaseSpec {
-	specs := make([]PhaseSpec, 0, len(r.specs))
+// List returns all registered worker specs.
+func (r MapResolver) List() []WorkerSpec {
+	specs := make([]WorkerSpec, 0, len(r.specs))
 	for _, s := range r.specs {
 		specs = append(specs, s)
 	}
@@ -49,10 +49,10 @@ func (r MapResolver) List() []PhaseSpec {
 	return specs
 }
 
-// MergeRegistries flattens multiple phase registries into a single resolver.
+// MergeRegistries flattens multiple worker registries into a single resolver.
 // It also computes downstream dependencies automatically from 'Requires'.
-func MergeRegistries(regs ...map[string]PhaseSpec) SpecResolver {
-	merged := make(map[string]PhaseSpec, 16)
+func MergeRegistries(regs ...map[string]WorkerSpec) SpecResolver {
+	merged := make(map[string]WorkerSpec, 16)
 	downstream := make(map[string][]string)
 
 	for _, reg := range regs {
@@ -79,7 +79,7 @@ func MergeRegistries(regs ...map[string]PhaseSpec) SpecResolver {
 	return MapResolver{specs: merged}
 }
 
-// Env is the shared environment passed to builders/runners.
+// Env is the shared environment passed to builders/workers.
 type Env struct {
 	Repo       string
 	RepoRoot   string
@@ -104,20 +104,20 @@ type Env struct {
 	MDDocs []artifact.MDDoc
 }
 
-// PhaseOutput bundles internal RuntimeState with an optional ClientView payload for the client.
-type PhaseOutput struct {
+// WorkerOutput bundles internal RuntimeState with an optional ClientView payload for the client.
+type WorkerOutput struct {
 	RuntimeState any
 	ClientView   any
 }
 
-// PhaseSpec declares "what" a phase needs, not "how" the app calls it.
-type PhaseSpec struct {
+// WorkerSpec declares "what" a worker needs, not "how" the app calls it.
+type WorkerSpec struct {
 	Description string // ログやエラーメッセージ用の最小限の説明
 
 	Key         string                                            // e.g. "m0"
 	File        string                                            // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, deps Deps) (any, error) // produce logical input
-	Run         func(ctx context.Context, in any, env *Env) (PhaseOutput, error)
+	Run         func(ctx context.Context, in any, env *Env) (WorkerOutput, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
 	Downstream  []string                      // automatically computed
 	Requires    []string
@@ -127,14 +127,14 @@ type PhaseSpec struct {
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
 type CacheStrategy interface {
 	// TryLoad returns (out, true) if cache hit and not forced.
-	TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool)
+	TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool)
 	// Save persists result and metadata.
-	Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error
-	// Invalidate removes outputs/meta for this phase (used for downstream invalidation).
-	Invalidate(ctx context.Context, spec PhaseSpec, env *Env) error
+	Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error
+	// Invalidate removes outputs/meta for this worker (used for downstream invalidation).
+	Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error
 }
 
-// --------------------- JSON file strategy (m0/m1/m2/x1) ---------------------
+// --------------------- JSON file strategy ---------------------
 
 type jsonStrategy struct{}
 
@@ -144,18 +144,18 @@ type cacheMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (s jsonStrategy) dir(spec PhaseSpec, env *Env) string {
+func (s jsonStrategy) dir(spec WorkerSpec, env *Env) string {
 	return filepath.Join(env.OutDir, spec.Key)
 }
-func (s jsonStrategy) metaPath(spec PhaseSpec, env *Env) string {
+func (s jsonStrategy) metaPath(spec WorkerSpec, env *Env) string {
 	return filepath.Join(s.dir(spec, env), "meta.json")
 }
-func (s jsonStrategy) outPath(spec PhaseSpec, env *Env) string {
+func (s jsonStrategy) outPath(spec WorkerSpec, env *Env) string {
 	return filepath.Join(s.dir(spec, env), "output.json")
 }
 
-func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool) {
-	var zero PhaseOutput
+func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool) {
+	var zero WorkerOutput
 	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
 		return zero, false
 	}
@@ -170,14 +170,14 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inp
 			var out any
 			if b, err := fs.SafeReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
 				log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), op)
-				return PhaseOutput{RuntimeState: out, ClientView: nil}, true
+				return WorkerOutput{RuntimeState: out, ClientView: nil}, true
 			}
 		}
 	}
 	return zero, false
 }
 
-func (s jsonStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error {
+func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error {
 	dir := s.dir(spec, env)
 	_ = os.MkdirAll(dir, 0755)
 	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
@@ -190,24 +190,24 @@ func (s jsonStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out Ph
 	return nil
 }
 
-func (s jsonStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *Env) error {
+func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
 	_ = os.Remove(s.outPath(spec, env))
 	_ = os.Remove(s.metaPath(spec, env))
 	return nil
 }
 
-// --------------------- Versioned JSON strategy (x0) -------------------------
+// --------------------- Versioned JSON strategy -------------------------
 
-// versionedStrategy always writes a new versioned file (x0_vN.json) and updates x0.json.
-// Cache read is intentionally disabled (x0 is exploratory / append-only).
+// versionedStrategy always writes a new versioned file and updates latest.
+// Cache read is intentionally disabled (exploratory / append-only).
 type versionedStrategy struct{}
 
-func (versionedStrategy) TryLoad(ctx context.Context, spec PhaseSpec, env *Env, inputFP string) (PhaseOutput, bool) {
-	// Never reuse cache for versioned phases (consistent with previous x0 behavior).
-	return PhaseOutput{}, false
+func (versionedStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool) {
+	// Never reuse cache for versioned workers.
+	return WorkerOutput{}, false
 }
 
-func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out PhaseOutput, inputFP string) error {
+func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error {
 	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
 	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
 	versionedPath := filepath.Join(env.OutDir, versioned)
@@ -222,7 +222,7 @@ func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
 	_ = os.WriteFile(mp, mb, 0o644)
 
-	// Best-effort pruning of other versions (x0_vN.json where N != 1)
+	// Best-effort pruning of other versions
 	entries, _ := ensureFS(env.ArtifactFS).SafeReadDir(env.OutDir)
 	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
 	for _, e := range entries {
@@ -238,23 +238,23 @@ func (versionedStrategy) Save(ctx context.Context, spec PhaseSpec, env *Env, out
 	return nil
 }
 
-func (versionedStrategy) Invalidate(ctx context.Context, spec PhaseSpec, env *Env) error {
-	// No-op: x0 keeps versions; do not delete history. Keep spec.File (latest) as well.
+func (versionedStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
+	// No-op: keeps versions; do not delete history. Keep spec.File (latest) as well.
 	return nil
 }
 
 // --------------------- Execution with force+cache middlewares ----------------
 
-// ExecutePhase builds input, applies force-from + strategy caching, runs, then invalidates downstream.
-func ExecutePhase(ctx context.Context, spec PhaseSpec, env *Env) error {
-	_, err := ExecutePhaseWithResult(ctx, spec, env)
+// ExecuteWorker builds input, applies force-from + strategy caching, runs, then invalidates downstream.
+func ExecuteWorker(ctx context.Context, spec WorkerSpec, env *Env) error {
+	_, err := ExecuteWorkerWithResult(ctx, spec, env)
 	return err
 }
 
-// ExecutePhaseWithResult is the same as ExecutePhase but also returns PhaseOutput.
-// RuntimeState is populated from the legacy Run() return; ClientView is nil unless a phase chooses to set it.
-func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (PhaseOutput, error) {
-	var zero PhaseOutput
+// ExecuteWorkerWithResult is the same as ExecuteWorker but also returns WorkerOutput.
+// RuntimeState is populated from the legacy Run() return; ClientView is nil unless a worker chooses to set it.
+func ExecuteWorkerWithResult(ctx context.Context, spec WorkerSpec, env *Env) (WorkerOutput, error) {
+	var zero WorkerOutput
 	if len(spec.Requires) > 0 {
 		visiting := make(map[string]bool)
 		for _, r := range spec.Requires {
@@ -279,9 +279,9 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 		case DepsUsageIgnore:
 			// no-op
 		case DepsUsageWarn:
-			log.Printf("WARNING: phase %s declared but did not use: %v", spec.Key, unused)
+			log.Printf("WARNING: worker %s declared but did not use: %v", spec.Key, unused)
 		default:
-			return zero, fmt.Errorf("phase %s declared but did not use: %v", spec.Key, unused)
+			return zero, fmt.Errorf("worker %s declared but did not use: %v", spec.Key, unused)
 		}
 	}
 
@@ -293,7 +293,7 @@ func ExecutePhaseWithResult(ctx context.Context, spec PhaseSpec, env *Env) (Phas
 		return out, nil
 	}
 
-	// Run phase
+	// Run worker
 	out, err := spec.Run(ctx, in, env)
 	if err != nil {
 		return zero, err
@@ -320,7 +320,7 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 		return fmt.Errorf("runner: resolver is not configured")
 	}
 	if normalizeKey(key) == "" {
-		return fmt.Errorf("runner: empty required phase key")
+		return fmt.Errorf("runner: empty required worker key")
 	}
 	spec, ok := env.Resolver.Get(key)
 	if !ok {
@@ -328,7 +328,7 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 		if FileExists(env.ArtifactFS, fallback) {
 			return nil
 		}
-		return fmt.Errorf("runner: unknown required phase %s", key)
+		return fmt.Errorf("runner: unknown required worker %s", key)
 	}
 	path := filepath.Join(env.OutDir, spec.File)
 	if FileExists(env.ArtifactFS, path) {
@@ -339,7 +339,7 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 	}
 	specKey := normalizeKey(spec.Key)
 	if visiting[specKey] {
-		return fmt.Errorf("runner: cyclic phase dependency detected at %s", spec.Key)
+		return fmt.Errorf("runner: cyclic worker dependency detected at %s", spec.Key)
 	}
 	visiting[specKey] = true
 	defer delete(visiting, specKey)
@@ -348,8 +348,8 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 			return err
 		}
 	}
-	if err := ExecutePhase(ctx, spec, env); err != nil {
-		return fmt.Errorf("failed to build required phase %s: %w", spec.Key, err)
+	if err := ExecuteWorker(ctx, spec, env); err != nil {
+		return fmt.Errorf("failed to build required worker %s: %w", spec.Key, err)
 	}
 	return nil
 }

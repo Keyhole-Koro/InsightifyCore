@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 )
 
-// FakeClient returns deterministic, minimal JSON payloads per phase for offline/testing.
+// FakeClient returns deterministic, minimal JSON payloads per worker for offline/testing.
 type FakeClient struct {
 	tokenCap int
 }
@@ -27,9 +27,9 @@ func (f *FakeClient) CountTokens(text string) int {
 func (f *FakeClient) TokenCapacity() int { return f.tokenCap }
 
 func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-	phase := PhaseFrom(ctx)
+	worker := WorkerFrom(ctx)
 	var obj any
-	switch phase {
+	switch worker {
 	case "code_roots":
 		obj = map[string]any{
 			"main_source_roots":    []string{"src", "internal"},

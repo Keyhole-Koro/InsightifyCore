@@ -50,7 +50,7 @@ func Artifact[T any](env *Env, key string) (T, error) {
 	}
 	norm := normalizeKey(key)
 	if norm == "" {
-		return zero, fmt.Errorf("runner: empty phase key")
+		return zero, fmt.Errorf("runner: empty worker key")
 	}
 	fs := ensureFS(env.ArtifactFS)
 	path, label, err := resolveArtifactPath(env, key)
@@ -119,10 +119,10 @@ func resolveArtifactPath(env *Env, key string) (string, string, error) {
 	}
 	norm := normalizeKey(key)
 	if norm == "" {
-		return "", "", fmt.Errorf("runner: empty phase key")
+		return "", "", fmt.Errorf("runner: empty worker key")
 	}
 	filename := norm + ".json"
-	var spec PhaseSpec
+	var spec WorkerSpec
 	var hasSpec bool
 	if env.Resolver != nil {
 		if s, ok := env.Resolver.Get(key); ok {

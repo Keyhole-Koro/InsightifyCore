@@ -10,10 +10,10 @@ import (
 
 // BuildRegistryMainline defines arch_design.
 // Add/modify phases here without touching main or execution logic.
-func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
-	reg := map[string]PhaseSpec{}
+func BuildRegistryMainline(env *Env) map[string]WorkerSpec {
+	reg := map[string]WorkerSpec{}
 
-	reg["arch_design"] = PhaseSpec{
+	reg["arch_design"] = WorkerSpec{
 		Key:         "arch_design",
 		File:        "arch_design.json",
 		Requires:    []string{"code_roots"},
@@ -29,14 +29,14 @@ func BuildRegistryMainline(env *Env) map[string]PhaseSpec {
 				Hints:        &artifact.ArchDesignHints{},
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "arch_design")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "arch_design")
 			p := mlpipe.ArchDesign{LLM: env.LLM, Tools: env.MCP}
 			out, err := p.Run(ctx, in.(artifact.ArchDesignIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

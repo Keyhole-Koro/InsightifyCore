@@ -8,18 +8,18 @@ import (
 	planPipe "insightify/internal/pipeline/plan"
 )
 
-func BuildRegistryPlanDependencies(env *Env) map[string]PhaseSpec {
-	reg := map[string]PhaseSpec{}
+func BuildRegistryPlanDependencies(env *Env) map[string]WorkerSpec {
+	reg := map[string]WorkerSpec{}
 
-	reg["phase_DAG"] = PhaseSpec{
-		Key:         "phase_DAG",
-		File:        "phase_DAG.json",
+	reg["worker_DAG"] = WorkerSpec{
+		Key:         "worker_DAG",
+		File:        "worker_DAG.json",
 		Description: "Generates an execution plan based on the provided graph spec.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			var phases []artifact.PhaseMeta
+			var workers []artifact.WorkerMeta
 			if resolver := deps.Env().Resolver; resolver != nil {
 				for _, spec := range resolver.List() {
-					phases = append(phases, artifact.PhaseMeta{
+					workers = append(workers, artifact.WorkerMeta{
 						Key:         spec.Key,
 						Description: spec.Description,
 						Requires:    spec.Requires,
@@ -28,17 +28,17 @@ func BuildRegistryPlanDependencies(env *Env) map[string]PhaseSpec {
 			}
 			return artifact.PlanDependenciesIn{
 				RepoPath: deps.Root(),
-				Phases:   phases,
+				Workers:  workers,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "phase_DAG")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "worker_DAG")
 			p := planPipe.PlanContext{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(artifact.PlanDependenciesIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

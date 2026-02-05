@@ -19,8 +19,8 @@ const (
 // It enforces that requested artifacts are declared in 'Requires'
 // and tracks usage to detect unused declarations.
 type Deps interface {
-	// Artifact loads a required phase output into target.
-	// Returns error if the phase key is not declared in 'Requires'.
+	// Artifact loads a required worker output into target.
+	// Returns error if the worker key is not declared in 'Requires'.
 	Artifact(key string, target any) error
 
 	// Repo returns the repository name.
@@ -38,10 +38,10 @@ type depsImpl struct {
 	env      *Env
 	requires map[string]bool
 	accessed map[string]bool
-	phase    string
+	worker   string
 }
 
-func newDeps(env *Env, phase string, requires []string) *depsImpl {
+func newDeps(env *Env, worker string, requires []string) *depsImpl {
 	reqMap := make(map[string]bool, len(requires))
 	for _, r := range requires {
 		reqMap[normalizeKey(r)] = true
@@ -50,14 +50,14 @@ func newDeps(env *Env, phase string, requires []string) *depsImpl {
 		env:      env,
 		requires: reqMap,
 		accessed: make(map[string]bool),
-		phase:    phase,
+		worker:   worker,
 	}
 }
 
 func (d *depsImpl) Artifact(key string, target any) error {
 	norm := normalizeKey(key)
 	if !d.requires[norm] {
-		return fmt.Errorf("phase %q requested artifact %q but it is not declared in Requires", d.phase, key)
+		return fmt.Errorf("worker %q requested artifact %q but it is not declared in Requires", d.worker, key)
 	}
 	d.accessed[norm] = true
 

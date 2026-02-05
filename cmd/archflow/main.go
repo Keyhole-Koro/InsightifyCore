@@ -152,7 +152,7 @@ func main() {
 	if !ok {
 		log.Fatalf("unknown --phase: %s (use code_roots|code_specs|code_imports|code_graph|code_tasks|code_symbols|arch_design|infra_context|infra_refine)", *phase)
 	}
-	if err := runner.ExecutePhase(ctx, spec, env); err != nil {
+	if err := runner.ExecuteWorker(ctx, spec, env); err != nil {
 		log.Fatal(err)
 	}
 }

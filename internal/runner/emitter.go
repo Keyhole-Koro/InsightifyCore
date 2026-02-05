@@ -16,16 +16,16 @@ const (
 	EventTypeError
 )
 
-// RunEvent represents a streamable event from a pipeline phase.
+// RunEvent represents a streamable event from a pipeline worker.
 type RunEvent struct {
 	Type     RunEventType
 	Message  string
 	Progress int32  // 0-100
 	Chunk    string // For LLM streaming chunks
-	Phase    string // Current phase name
+	Worker   string // Current worker name
 }
 
-// RunEventEmitter allows phases to emit events during execution.
+// RunEventEmitter allows workers to emit events during execution.
 type RunEventEmitter interface {
 	Emit(event RunEvent)
 	EmitLog(message string)
@@ -58,12 +58,12 @@ func (noopEmitter) EmitLLMChunk(string)        {}
 
 // ChannelEmitter sends events to a channel.
 type ChannelEmitter struct {
-	Ch    chan<- RunEvent
-	Phase string
+	Ch     chan<- RunEvent
+	Worker string
 }
 
 func (e *ChannelEmitter) Emit(event RunEvent) {
-	event.Phase = e.Phase
+	event.Worker = e.Worker
 	select {
 	case e.Ch <- event:
 	default: // non-blocking

@@ -9,10 +9,10 @@ import (
 )
 
 // BuildRegistryExternal wires the external (x*) pipeline stages.
-func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
-	reg := map[string]PhaseSpec{}
+func BuildRegistryExternal(env *Env) map[string]WorkerSpec {
+	reg := map[string]WorkerSpec{}
 
-	reg["infra_context"] = PhaseSpec{
+	reg["infra_context"] = WorkerSpec{
 		Key:         "infra_context",
 		File:        "infra_context.json",
 		Requires:    []string{"arch_design", "code_symbols", "code_roots"}, // Explicit code_roots dependency added for roots
@@ -41,14 +41,14 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 				ConfidenceThreshold: 0.65,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "infra_context")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "infra_context")
 			p := extpipe.InfraContext{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(artifact.InfraContextIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -59,7 +59,7 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	reg["infra_refine"] = PhaseSpec{
+	reg["infra_refine"] = WorkerSpec{
 		Key:         "infra_refine",
 		File:        "infra_refine.json",
 		Requires:    []string{"infra_context"},
@@ -76,14 +76,14 @@ func BuildRegistryExternal(env *Env) map[string]PhaseSpec {
 				Files:    files,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (PhaseOutput, error) {
-			ctx = llm.WithPhase(ctx, "infra_refine")
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "infra_refine")
 			p := extpipe.InfraRefine{LLM: env.LLM}
 			out, err := p.Run(ctx, in.(artifact.InfraRefineIn))
 			if err != nil {
-				return PhaseOutput{}, err
+				return WorkerOutput{}, err
 			}
-			return PhaseOutput{RuntimeState: out, ClientView: nil}, nil
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

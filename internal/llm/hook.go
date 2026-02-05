@@ -6,15 +6,15 @@ import (
 )
 
 type PromptHook interface {
-	Before(ctx context.Context, phase, prompt string, input any)
-	After(ctx context.Context, phase string, raw json.RawMessage, err error)
+	Before(ctx context.Context, worker, prompt string, input any)
+	After(ctx context.Context, worker string, raw json.RawMessage, err error)
 }
 
 type ctxKeyHook struct{}
-type ctxKeyPhase struct{}
+type ctxKeyWorker struct{}
 
-func WithPhase(ctx context.Context, phase string) context.Context {
-	return context.WithValue(ctx, ctxKeyPhase{}, phase)
+func WithWorker(ctx context.Context, worker string) context.Context {
+	return context.WithValue(ctx, ctxKeyWorker{}, worker)
 }
 
 // WithPromptHook attaches a PromptHook to the context. Middlewares that call
@@ -33,9 +33,9 @@ func HookFrom(ctx context.Context) PromptHook {
 	return nil
 }
 
-// PhaseFrom returns the phase string stored in the context.
-func PhaseFrom(ctx context.Context) string {
-	if v := ctx.Value(ctxKeyPhase{}); v != nil {
+// WorkerFrom returns the worker string stored in the context.
+func WorkerFrom(ctx context.Context) string {
+	if v := ctx.Value(ctxKeyWorker{}); v != nil {
 		if s, ok := v.(string); ok {
 			return s
 		}

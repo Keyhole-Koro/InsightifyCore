@@ -5,18 +5,18 @@ import (
 	"strings"
 )
 
-// PhaseDescriptor is a simplified view of a PhaseSpec for visualization.
-type PhaseDescriptor struct {
+// WorkerDescriptor is a simplified view of a WorkerSpec for visualization.
+type WorkerDescriptor struct {
 	Key      string
 	Summary  string
 	Requires []string
 }
 
-// BuildPhaseDescriptors aggregates all known phases for visualization.
-func BuildPhaseDescriptors() []PhaseDescriptor {
+// BuildWorkerDescriptors aggregates all known workers for visualization.
+func BuildWorkerDescriptors() []WorkerDescriptor {
 	env := &Env{}
 	// Collect all registries
-	regs := []map[string]PhaseSpec{
+	regs := []map[string]WorkerSpec{
 		BuildRegistryMainline(env),
 		BuildRegistryArchitecture(env),
 		BuildRegistryCodebase(env),
@@ -27,9 +27,9 @@ func BuildPhaseDescriptors() []PhaseDescriptor {
 	resolver := MergeRegistries(regs...)
 	specs := resolver.List()
 
-	descs := make([]PhaseDescriptor, 0, len(specs))
+	descs := make([]WorkerDescriptor, 0, len(specs))
 	for _, s := range specs {
-		descs = append(descs, PhaseDescriptor{
+		descs = append(descs, WorkerDescriptor{
 			Key:      s.Key,
 			Summary:  s.Description,
 			Requires: s.Requires,
@@ -38,9 +38,9 @@ func BuildPhaseDescriptors() []PhaseDescriptor {
 	return descs
 }
 
-// GenerateMermaidGraph returns a Mermaid flowchart string of the pipeline phases.
+// GenerateMermaidGraph returns a Mermaid flowchart string of the pipeline workers.
 func GenerateMermaidGraph() string {
-	descs := BuildPhaseDescriptors()
+	descs := BuildWorkerDescriptors()
 	var sb strings.Builder
 	// Enable HTML labels so we can size the key/summary independently.
 	sb.WriteString("%%{init: {'flowchart': {'htmlLabels': true}, 'themeVariables': {'fontSize': '14px'}}}%%\n")
