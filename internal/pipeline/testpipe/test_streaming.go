@@ -12,6 +12,7 @@ type StreamStep struct {
 	Message  string
 	Progress int32
 	Delay    time.Duration
+	View     *pipelinev1.ClientView
 }
 
 // TestStreamingPipeline is a mock pipeline that simulates streaming progress.
@@ -51,7 +52,26 @@ func (p *TestStreamingPipeline) GenerateSampleGraph() *pipelinev1.ClientView {
 func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- StreamStep) (*pipelinev1.ClientView, error) {
 	defer close(progressCh)
 
-	for _, step := range p.Steps() {
+	fullView := p.GenerateSampleGraph()
+	partialView := &pipelinev1.ClientView{
+		Phase: fullView.GetPhase(),
+		Graph: &pipelinev1.GraphView{},
+	}
+
+	for i, step := range p.Steps() {
+		if fullView != nil && fullView.Graph != nil && partialView.Graph != nil {
+			if i < len(fullView.Graph.Nodes) {
+				partialView.Graph.Nodes = append(partialView.Graph.Nodes, fullView.Graph.Nodes[i])
+			}
+
+			edgeIndex := i - 1
+			if edgeIndex >= 0 && edgeIndex < len(fullView.Graph.Edges) {
+				partialView.Graph.Edges = append(partialView.Graph.Edges, fullView.Graph.Edges[edgeIndex])
+			}
+
+			step.View = cloneClientView(partialView)
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -60,5 +80,21 @@ func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- Strea
 		time.Sleep(step.Delay)
 	}
 
-	return p.GenerateSampleGraph(), nil
+	return fullView, nil
+}
+
+func cloneClientView(view *pipelinev1.ClientView) *pipelinev1.ClientView {
+	if view == nil {
+		return nil
+	}
+
+	cloned := &pipelinev1.ClientView{Phase: view.GetPhase()}
+	if view.Graph == nil {
+		return cloned
+	}
+
+	cloned.Graph = &pipelinev1.GraphView{}
+	cloned.Graph.Nodes = append([]*pipelinev1.GraphNode{}, view.Graph.Nodes...)
+	cloned.Graph.Edges = append([]*pipelinev1.GraphEdge{}, view.Graph.Edges...)
+	return cloned
 }
