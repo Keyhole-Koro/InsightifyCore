@@ -179,8 +179,6 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		if out.ClientView != nil {
 			if view, ok := out.ClientView.(*pipelinev1.ClientView); ok {
 				finalEvent.ClientView = view
-			} else if view, ok := out.ClientView.(pipelinev1.ClientView); ok {
-				finalEvent.ClientView = &view
 			}
 		}
 		eventCh <- finalEvent

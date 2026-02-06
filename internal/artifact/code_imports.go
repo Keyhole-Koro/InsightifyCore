@@ -1,13 +1,10 @@
 package artifact
 
-import "insightify/internal/wordidx"
-
 // CodeImportsIn carries inputs to build a dependency graph from extractor specs.
 type CodeImportsIn struct {
-	Repo      string           `json:"repo"`
-	Roots     CodeRootsOut            `json:"roots"`
-	Families  []FamilySpec     `json:"families"`
-	WordIndex wordidx.AggIndex `json:"word_index"`
+	Repo     string       `json:"repo"`
+	Roots    CodeRootsOut `json:"roots"`
+	Families []FamilySpec `json:"families"`
 }
 
 // CodeImportsOut is a minimal dependency graph.
