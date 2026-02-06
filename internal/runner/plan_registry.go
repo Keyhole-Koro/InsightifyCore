@@ -13,7 +13,6 @@ func BuildRegistryPlanDependencies(env *Env) map[string]WorkerSpec {
 
 	reg["worker_DAG"] = WorkerSpec{
 		Key:         "worker_DAG",
-		File:        "worker_DAG.json",
 		Description: "Generates an execution plan based on the provided graph spec.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var workers []artifact.WorkerMeta

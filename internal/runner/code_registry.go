@@ -16,7 +16,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 	reg["code_roots"] = WorkerSpec{
 		Key:         "code_roots",
-		File:        "c0.json",
 		Description: "Scan repo layout and ask LLM to classify main source roots, library/vendor roots, and config hotspots.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return artifact.CodeRootsIn{Repo: deps.Repo()}, nil
@@ -41,7 +40,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 
 	reg["code_specs"] = WorkerSpec{
 		Key:         "code_specs",
-		File:        "c1.json", // latest pointer; versioned writes also occur
 		Requires:    []string{"code_roots"},
 		Description: "LLM infers language families/import heuristics from extension counts and roots.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
@@ -77,7 +75,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 
 	reg["code_imports"] = WorkerSpec{
 		Key:         "code_imports",
-		File:        "c2.json",
 		Requires:    []string{"code_specs", "code_roots"},
 		Description: "Word-index dependency sweep across source roots to collect possible file-level dependencies.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
@@ -117,7 +114,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 
 	reg["code_graph"] = WorkerSpec{
 		Key:         "code_graph",
-		File:        "c3.json",
 		Requires:    []string{"code_imports"},
 		Description: "Normalize dependency hits into a DAG and drop weaker bidirectional edges.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
@@ -150,7 +146,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 
 	reg["code_tasks"] = WorkerSpec{
 		Key:         "code_tasks",
-		File:        "c4.json",
 		Requires:    []string{"code_graph"},
 		Description: "Chunk graph nodes into LLM-sized tasks with token estimates per file.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
@@ -189,7 +184,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 
 	reg["code_symbols"] = WorkerSpec{
 		Key:         "code_symbols",
-		File:        "c5.json",
 		Requires:    []string{"code_tasks"},
 		Description: "LLM traverses tasks to build identifier reference maps (outgoing/incoming).",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {

@@ -14,7 +14,6 @@ func BuildRegistryExternal(env *Env) map[string]WorkerSpec {
 
 	reg["infra_context"] = WorkerSpec{
 		Key:         "infra_context",
-		File:        "infra_context.json",
 		Requires:    []string{"arch_design", "code_symbols", "code_roots"}, // Explicit code_roots dependency added for roots
 		Description: "LLM summarizes external systems/infra using architecture (arch_design) + identifier refs (code_symbols), surfacing evidence gaps.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
@@ -61,7 +60,6 @@ func BuildRegistryExternal(env *Env) map[string]WorkerSpec {
 
 	reg["infra_refine"] = WorkerSpec{
 		Key:         "infra_refine",
-		File:        "infra_refine.json",
 		Requires:    []string{"infra_context"},
 		Description: "LLM drills into evidence gaps from infra_context by opening targeted files/snippets.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {

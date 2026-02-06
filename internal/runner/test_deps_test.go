@@ -32,8 +32,7 @@ func newTestEnv(t *testing.T) *Env {
 func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 	reg["m0"] = WorkerSpec{
-		Key:  "m0",
-		File: "m0.json",
+		Key: "m0",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return nil, nil
 		},
@@ -48,7 +47,6 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	}
 	reg["m1"] = WorkerSpec{
 		Key:      "m1",
-		File:     "m1.json",
 		Requires: []string{"m0"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev testArtifact
@@ -68,7 +66,6 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	}
 	reg["m2"] = WorkerSpec{
 		Key:      "m2",
-		File:     "m2.json",
 		Requires: []string{"m1"},
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev testArtifact
@@ -136,7 +133,6 @@ func TestExecuteWorkerDetectsCycles(t *testing.T) {
 	reg := map[string]WorkerSpec{
 		"a": {
 			Key:        "a",
-			File:       "a.json",
 			Requires:   []string{"b"},
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -147,7 +143,6 @@ func TestExecuteWorkerDetectsCycles(t *testing.T) {
 		},
 		"b": {
 			Key:        "b",
-			File:       "b.json",
 			Requires:   []string{"a"},
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -171,7 +166,6 @@ func TestExecuteWorkerFailsOnUnusedRequires(t *testing.T) {
 	reg := map[string]WorkerSpec{
 		"a": {
 			Key:        "a",
-			File:       "a.json",
 			Requires:   []string{"b"},
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -182,7 +176,6 @@ func TestExecuteWorkerFailsOnUnusedRequires(t *testing.T) {
 		},
 		"b": {
 			Key:        "b",
-			File:       "b.json",
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 				return WorkerOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
@@ -199,12 +192,12 @@ func TestExecuteWorkerFailsOnUnusedRequires(t *testing.T) {
 	}
 }
 
-func TestArtifactUsesResolverFile(t *testing.T) {
+func TestArtifactUsesKeyJSON(t *testing.T) {
 	env := newTestEnv(t)
 	env.Resolver = MergeRegistries(map[string]WorkerSpec{
-		"x": {Key: "x", File: "custom.json"},
+		"x": {Key: "x"},
 	})
-	WriteJSON(env.OutDir, "custom.json", testArtifact{Value: "hello"})
+	WriteJSON(env.OutDir, "x.json", testArtifact{Value: "hello"})
 
 	got, err := Artifact[testArtifact](env, "x")
 	if err != nil {

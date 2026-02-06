@@ -122,40 +122,27 @@ func resolveArtifactPath(env *Env, key string) (string, string, error) {
 		return "", "", fmt.Errorf("runner: empty worker key")
 	}
 	filename := norm + ".json"
-	var spec WorkerSpec
-	var hasSpec bool
+	var specKey string
 	if env.Resolver != nil {
 		if s, ok := env.Resolver.Get(key); ok {
-			spec = s
-			hasSpec = true
-			if strings.TrimSpace(spec.File) != "" {
-				filename = spec.File
-			}
+			specKey = strings.TrimSpace(s.Key)
 		}
+	}
+	if specKey != "" {
+		filename = specKey + ".json"
 	}
 	fs := ensureFS(env.ArtifactFS)
 
 	primary := filepath.Join(env.OutDir, filename)
-	if hasSpec {
-		switch spec.Strategy.(type) {
-		case jsonStrategy:
-			primary = filepath.Join(env.OutDir, spec.Key, "output.json")
-		case versionedStrategy:
-			if strings.TrimSpace(spec.File) != "" {
-				primary = filepath.Join(env.OutDir, spec.File)
-			}
-		default:
-			if strings.TrimSpace(spec.File) != "" {
-				primary = filepath.Join(env.OutDir, spec.File)
-			}
-		}
-	}
 	if FileExists(fs, primary) {
 		return primary, filepath.Base(primary), nil
 	}
-	legacy := filepath.Join(env.OutDir, filename)
-	if primary != legacy && FileExists(fs, legacy) {
-		return legacy, filename, nil
+	// Backward-compat: pre-key migration JSON artifacts were stored at <OutDir>/<key>/output.json.
+	if specKey != "" {
+		legacy := filepath.Join(env.OutDir, specKey, "output.json")
+		if FileExists(fs, legacy) {
+			return legacy, filepath.Base(legacy), nil
+		}
 	}
 	return primary, filepath.Base(primary), nil
 }

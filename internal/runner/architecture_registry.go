@@ -15,7 +15,6 @@ func BuildRegistryArchitecture(env *Env) map[string]WorkerSpec {
 
 	reg["arch_design"] = WorkerSpec{
 		Key:         "arch_design",
-		File:        "arch_design.json",
 		Requires:    []string{"code_roots"},
 		Description: "LLM drafts initial architecture hypothesis from file index + Markdown docs and proposes next files to open.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {

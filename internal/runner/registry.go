@@ -115,7 +115,6 @@ type WorkerSpec struct {
 	Description string // ログやエラーメッセージ用の最小限の説明
 
 	Key         string                                            // e.g. "m0"
-	File        string                                            // e.g. "m0.json"
 	BuildInput  func(ctx context.Context, deps Deps) (any, error) // produce logical input
 	Run         func(ctx context.Context, in any, env *Env) (WorkerOutput, error)
 	Fingerprint func(in any, env *Env) string // stable hash for caching
@@ -144,23 +143,14 @@ type cacheMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (s jsonStrategy) dir(spec WorkerSpec, env *Env) string {
-	return filepath.Join(env.OutDir, spec.Key)
-}
-func (s jsonStrategy) metaPath(spec WorkerSpec, env *Env) string {
-	return filepath.Join(s.dir(spec, env), "meta.json")
-}
-func (s jsonStrategy) outPath(spec WorkerSpec, env *Env) string {
-	return filepath.Join(s.dir(spec, env), "output.json")
-}
-
 func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool) {
 	var zero WorkerOutput
 	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
 		return zero, false
 	}
 	fs := ensureFS(env.ArtifactFS)
-	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
+	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
+	op := filepath.Join(env.OutDir, spec.Key+".json")
 	if !FileExists(fs, mp) || !FileExists(fs, op) {
 		return zero, false
 	}
@@ -178,9 +168,9 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, in
 }
 
 func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error {
-	dir := s.dir(spec, env)
-	_ = os.MkdirAll(dir, 0755)
-	mp, op := s.metaPath(spec, env), s.outPath(spec, env)
+	_ = os.MkdirAll(env.OutDir, 0755)
+	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
+	op := filepath.Join(env.OutDir, spec.Key+".json")
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(op, b, 0o644)
 	}
@@ -191,8 +181,8 @@ func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out W
 }
 
 func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
-	_ = os.Remove(s.outPath(spec, env))
-	_ = os.Remove(s.metaPath(spec, env))
+	_ = os.Remove(filepath.Join(env.OutDir, spec.Key+".json"))
+	_ = os.Remove(filepath.Join(env.OutDir, spec.Key+".meta.json"))
 	return nil
 }
 
@@ -211,7 +201,7 @@ func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, ou
 	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
 	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
 	versionedPath := filepath.Join(env.OutDir, versioned)
-	latestPath := filepath.Join(env.OutDir, spec.File)
+	latestPath := filepath.Join(env.OutDir, spec.Key+".json")
 
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(versionedPath, b, 0o644)
@@ -239,7 +229,7 @@ func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, ou
 }
 
 func (versionedStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
-	// No-op: keeps versions; do not delete history. Keep spec.File (latest) as well.
+	// No-op: keeps versions; do not delete history. Keep latest key artifact as well.
 	return nil
 }
 
@@ -330,7 +320,7 @@ func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[stri
 		}
 		return fmt.Errorf("runner: unknown required worker %s", key)
 	}
-	path := filepath.Join(env.OutDir, spec.File)
+	path := filepath.Join(env.OutDir, spec.Key+".json")
 	if FileExists(env.ArtifactFS, path) {
 		return nil
 	}
