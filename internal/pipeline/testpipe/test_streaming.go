@@ -94,7 +94,27 @@ func cloneClientView(view *pipelinev1.ClientView) *pipelinev1.ClientView {
 	}
 
 	cloned.Graph = &pipelinev1.GraphView{}
-	cloned.Graph.Nodes = append([]*pipelinev1.GraphNode{}, view.Graph.Nodes...)
-	cloned.Graph.Edges = append([]*pipelinev1.GraphEdge{}, view.Graph.Edges...)
+	if len(view.Graph.Nodes) > 0 {
+		cloned.Graph.Nodes = make([]*pipelinev1.GraphNode, 0, len(view.Graph.Nodes))
+		for _, n := range view.Graph.Nodes {
+			if n == nil {
+				cloned.Graph.Nodes = append(cloned.Graph.Nodes, nil)
+				continue
+			}
+			cp := *n
+			cloned.Graph.Nodes = append(cloned.Graph.Nodes, &cp)
+		}
+	}
+	if len(view.Graph.Edges) > 0 {
+		cloned.Graph.Edges = make([]*pipelinev1.GraphEdge, 0, len(view.Graph.Edges))
+		for _, e := range view.Graph.Edges {
+			if e == nil {
+				cloned.Graph.Edges = append(cloned.Graph.Edges, nil)
+				continue
+			}
+			cp := *e
+			cloned.Graph.Edges = append(cloned.Graph.Edges, &cp)
+		}
+	}
 	return cloned
 }

@@ -15,6 +15,7 @@ import (
 	pipelinev1 "insightify/gen/go/pipeline/v1"
 	"insightify/internal/pipeline/testpipe"
 	"insightify/internal/runner"
+	"insightify/internal/utils"
 
 	"connectrpc.com/connect"
 )
@@ -34,6 +35,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	// Handle test_pipeline separately for streaming demo
 	if pipelineID == "test_pipeline" {
 		runID := fmt.Sprintf("test-%d", time.Now().UnixNano())
+		uidGen := utils.NewUIDGenerator()
 
 		// Create event channel for this run
 		eventCh := make(chan *insightifyv1.RunEvent, 20)
@@ -55,6 +57,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 
 			go func() {
 				for step := range progressCh {
+					utils.AssignGraphNodeUIDsWithGenerator(uidGen, step.View)
 					eventCh <- &insightifyv1.RunEvent{
 						EventType:       insightifyv1.RunEvent_EVENT_TYPE_LOG,
 						Message:         step.Message,
@@ -72,6 +75,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 				}
 				return
 			}
+			utils.AssignGraphNodeUIDsWithGenerator(uidGen, result)
 
 			eventCh <- &insightifyv1.RunEvent{
 				EventType:  insightifyv1.RunEvent_EVENT_TYPE_COMPLETE,

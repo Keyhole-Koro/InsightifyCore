@@ -16,7 +16,10 @@ import (
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/safeio"
+	"insightify/internal/utils"
 	"insightify/internal/wordidx"
+
+	pipelinev1 "insightify/gen/go/pipeline/v1"
 )
 
 // SpecResolver resolves worker keys to specs, enabling cross-registry lookup.
@@ -96,7 +99,8 @@ type Env struct {
 	ForceFrom string
 	DepsUsage DepsUsageMode
 
-	LLM llmclient.LLMClient
+	LLM    llmclient.LLMClient
+	UIDGen *utils.UIDGenerator
 
 	WordIndexer wordidx.AggIndex
 
@@ -288,6 +292,7 @@ func ExecuteWorkerWithResult(ctx context.Context, spec WorkerSpec, env *Env) (Wo
 	if err != nil {
 		return zero, err
 	}
+	normalizeClientViewUIDs(env, &out)
 
 	// Persist artifact via strategy (only RuntimeState should be cached)
 	if err := spec.Strategy.Save(ctx, spec, env, out, fp); err != nil {
@@ -303,6 +308,24 @@ func ExecuteWorkerWithResult(ctx context.Context, spec WorkerSpec, env *Env) (Wo
 		}
 	}
 	return out, nil
+}
+
+func normalizeClientViewUIDs(env *Env, out *WorkerOutput) {
+	if out == nil || out.ClientView == nil {
+		return
+	}
+	view, ok := out.ClientView.(*pipelinev1.ClientView)
+	if !ok || view == nil {
+		return
+	}
+	if env != nil && env.UIDGen == nil {
+		env.UIDGen = utils.NewUIDGenerator()
+	}
+	var gen *utils.UIDGenerator
+	if env != nil {
+		gen = env.UIDGen
+	}
+	utils.AssignGraphNodeUIDsWithGenerator(gen, view)
 }
 
 func ensureArtifact(ctx context.Context, key string, env *Env, visiting map[string]bool) error {

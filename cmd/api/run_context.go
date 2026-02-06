@@ -10,6 +10,7 @@ import (
 	"insightify/internal/mcp"
 	"insightify/internal/runner"
 	"insightify/internal/safeio"
+	"insightify/internal/utils"
 )
 
 // RunContext holds the environment and metadata for a single pipeline execution request.
@@ -59,6 +60,7 @@ func NewRunContext(repoName string) (*RunContext, error) {
 		ArtifactFS: artifactFS,
 		ModelSalt:  "gateway|" + sessionID,
 		LLM:        llmCli,
+		UIDGen:     utils.NewUIDGenerator(),
 	}
 
 	// Setup MCP & Registry
