@@ -10,7 +10,7 @@ import (
 // StreamStep represents a step in the test streaming pipeline.
 type StreamStep struct {
 	Message  string
-	Progress int32
+	Progress float32
 	Delay    time.Duration
 	View     *pipelinev1.ClientView
 }
@@ -21,11 +21,11 @@ type TestStreamingPipeline struct{}
 // Steps returns the predefined steps for the test pipeline.
 func (p *TestStreamingPipeline) Steps() []StreamStep {
 	return []StreamStep{
-		{Message: "Step 1: Initializing...", Progress: 10, Delay: 1 * time.Second},
-		{Message: "Step 2: Loading Graph...", Progress: 30, Delay: 2 * time.Second},
-		{Message: "Step 3: Analyzing nodes...", Progress: 50, Delay: 2 * time.Second},
-		{Message: "Step 4: Computing edges...", Progress: 70, Delay: 1500 * time.Millisecond},
-		{Message: "Step 5: Finalizing...", Progress: 90, Delay: 1 * time.Second},
+		{Message: "Step 1: Initializing...", Progress: 10, Delay: 300 * time.Millisecond},
+		{Message: "Step 2: Loading Graph...", Progress: 30, Delay: 300 * time.Millisecond},
+		{Message: "Step 3: Analyzing nodes...", Progress: 50, Delay: 300 * time.Millisecond},
+		{Message: "Step 4: Computing edges...", Progress: 70, Delay: 300 * time.Millisecond},
+		{Message: "Step 5: Finalizing...", Progress: 90, Delay: 300 * time.Millisecond},
 	}
 }
 

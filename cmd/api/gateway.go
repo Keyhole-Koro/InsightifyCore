@@ -58,7 +58,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 					eventCh <- &insightifyv1.RunEvent{
 						EventType:       insightifyv1.RunEvent_EVENT_TYPE_LOG,
 						Message:         step.Message,
-						ProgressPercent: step.Progress,
+						ProgressPercent: int32(step.Progress),
 						ClientView:      step.View,
 					}
 				}
