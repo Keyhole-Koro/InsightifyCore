@@ -23,9 +23,43 @@ import (
 // runStore holds active runs and their event channels.
 var runStore = struct {
 	sync.RWMutex
-	runs map[string]chan *insightifyv1.RunEvent
+	runs map[string]chan *insightifyv1.WatchRunResponse
 }{
-	runs: make(map[string]chan *insightifyv1.RunEvent),
+	runs: make(map[string]chan *insightifyv1.WatchRunResponse),
+}
+
+type initSession struct {
+	UserID  string
+	RepoURL string
+}
+
+var initRunStore = struct {
+	sync.RWMutex
+	sessions map[string]initSession
+}{
+	sessions: make(map[string]initSession),
+}
+
+// InitRun initializes a run session. Current implementation is a lightweight mock.
+func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
+	userID := strings.TrimSpace(req.Msg.GetUserId())
+	repoURL := strings.TrimSpace(req.Msg.GetRepoUrl())
+	if userID == "" || repoURL == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id and repo_url are required"))
+	}
+
+	sessionID := fmt.Sprintf("session-%d", time.Now().UnixNano())
+	initRunStore.Lock()
+	initRunStore.sessions[sessionID] = initSession{
+		UserID:  userID,
+		RepoURL: repoURL,
+	}
+	initRunStore.Unlock()
+
+	return connect.NewResponse(&insightifyv1.InitRunResponse{
+		SessionId: sessionID,
+		RepoName:  "mock-repo",
+	}), nil
 }
 
 // StartRun executes a single pipeline worker and returns the result.
@@ -38,7 +72,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		uidGen := utils.NewUIDGenerator()
 
 		// Create event channel for this run
-		eventCh := make(chan *insightifyv1.RunEvent, 20)
+		eventCh := make(chan *insightifyv1.WatchRunResponse, 20)
 		runStore.Lock()
 		runStore.runs[runID] = eventCh
 		runStore.Unlock()
@@ -58,8 +92,8 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 			go func() {
 				for step := range progressCh {
 					utils.AssignGraphNodeUIDsWithGenerator(uidGen, step.View)
-					eventCh <- &insightifyv1.RunEvent{
-						EventType:       insightifyv1.RunEvent_EVENT_TYPE_LOG,
+					eventCh <- &insightifyv1.WatchRunResponse{
+						EventType:       insightifyv1.WatchRunResponse_EVENT_TYPE_LOG,
 						Message:         step.Message,
 						ProgressPercent: int32(step.Progress),
 						ClientView:      step.View,
@@ -69,16 +103,16 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 
 			result, err := pipeline.Run(context.Background(), progressCh)
 			if err != nil {
-				eventCh <- &insightifyv1.RunEvent{
-					EventType: insightifyv1.RunEvent_EVENT_TYPE_ERROR,
+				eventCh <- &insightifyv1.WatchRunResponse{
+					EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 					Message:   err.Error(),
 				}
 				return
 			}
 			utils.AssignGraphNodeUIDsWithGenerator(uidGen, result)
 
-			eventCh <- &insightifyv1.RunEvent{
-				EventType:  insightifyv1.RunEvent_EVENT_TYPE_COMPLETE,
+			eventCh <- &insightifyv1.WatchRunResponse{
+				EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE,
 				Message:    "Done",
 				ClientView: result,
 			}
@@ -93,7 +127,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	runID := fmt.Sprintf("run-%d", time.Now().UnixNano())
 
 	// Create event channel for this run
-	eventCh := make(chan *insightifyv1.RunEvent, 100)
+	eventCh := make(chan *insightifyv1.WatchRunResponse, 100)
 	runStore.Lock()
 	runStore.runs[runID] = eventCh
 	runStore.Unlock()
@@ -145,17 +179,17 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		// Bridge internal events to proto events
 		go func() {
 			for ev := range internalCh {
-				protoEvent := &insightifyv1.RunEvent{
+				protoEvent := &insightifyv1.WatchRunResponse{
 					Message:         ev.Message,
 					ProgressPercent: ev.Progress,
 				}
 				switch ev.Type {
 				case runner.EventTypeLog:
-					protoEvent.EventType = insightifyv1.RunEvent_EVENT_TYPE_LOG
+					protoEvent.EventType = insightifyv1.WatchRunResponse_EVENT_TYPE_LOG
 				case runner.EventTypeProgress:
-					protoEvent.EventType = insightifyv1.RunEvent_EVENT_TYPE_PROGRESS
+					protoEvent.EventType = insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS
 				case runner.EventTypeLLMChunk:
-					protoEvent.EventType = insightifyv1.RunEvent_EVENT_TYPE_LOG
+					protoEvent.EventType = insightifyv1.WatchRunResponse_EVENT_TYPE_LOG
 					protoEvent.Message = ev.Chunk
 				default:
 					continue
@@ -169,15 +203,15 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		close(internalCh)
 
 		if err != nil {
-			eventCh <- &insightifyv1.RunEvent{
-				EventType: insightifyv1.RunEvent_EVENT_TYPE_ERROR,
+			eventCh <- &insightifyv1.WatchRunResponse{
+				EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 				Message:   err.Error(),
 			}
 			return
 		}
 
-		finalEvent := &insightifyv1.RunEvent{
-			EventType: insightifyv1.RunEvent_EVENT_TYPE_COMPLETE,
+		finalEvent := &insightifyv1.WatchRunResponse{
+			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE,
 			Message:   "Done",
 		}
 		if out.ClientView != nil {
@@ -194,7 +228,7 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 }
 
 // WatchRun streams events for a running pipeline.
-func (s *apiServer) WatchRun(ctx context.Context, req *connect.Request[insightifyv1.WatchRunRequest], stream *connect.ServerStream[insightifyv1.RunEvent]) error {
+func (s *apiServer) WatchRun(ctx context.Context, req *connect.Request[insightifyv1.WatchRunRequest], stream *connect.ServerStream[insightifyv1.WatchRunResponse]) error {
 	runID := req.Msg.GetRunId()
 
 	runStore.RLock()
@@ -217,8 +251,8 @@ func (s *apiServer) WatchRun(ctx context.Context, req *connect.Request[insightif
 			if err := stream.Send(event); err != nil {
 				return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to send event: %w", err))
 			}
-			if event.EventType == insightifyv1.RunEvent_EVENT_TYPE_COMPLETE ||
-				event.EventType == insightifyv1.RunEvent_EVENT_TYPE_ERROR {
+			if event.EventType == insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE ||
+				event.EventType == insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR {
 				return nil
 			}
 		}
@@ -284,8 +318,8 @@ func (s *apiServer) handleWatchSSE(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 
 			// Close on terminal events
-			if event.EventType == insightifyv1.RunEvent_EVENT_TYPE_COMPLETE ||
-				event.EventType == insightifyv1.RunEvent_EVENT_TYPE_ERROR {
+			if event.EventType == insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE ||
+				event.EventType == insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR {
 				return
 			}
 		}

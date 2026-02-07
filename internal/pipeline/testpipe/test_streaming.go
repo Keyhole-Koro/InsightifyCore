@@ -34,10 +34,10 @@ func (p *TestStreamingPipeline) GenerateSampleGraph() *pipelinev1.ClientView {
 	return &pipelinev1.ClientView{
 		Graph: &pipelinev1.GraphView{
 			Nodes: []*pipelinev1.GraphNode{
-				{Id: "init", Label: "Initialize", Description: "System initialization"},
-				{Id: "load", Label: "Load Data", Description: "Loading input data"},
-				{Id: "process", Label: "Process", Description: "Main processing step"},
-				{Id: "output", Label: "Output", Description: "Generate output"},
+				{Uid: "init", Label: "Initialize", Description: "System initialization"},
+				{Uid: "load", Label: "Load Data", Description: "Loading input data"},
+				{Uid: "process", Label: "Process", Description: "Main processing step"},
+				{Uid: "output", Label: "Output", Description: "Generate output"},
 			},
 			Edges: []*pipelinev1.GraphEdge{
 				{From: "init", To: "load"},

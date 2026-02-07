@@ -127,9 +127,10 @@ func (x *GraphView) GetEdges() []*GraphEdge {
 
 type GraphNode struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Uid           string                 `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
 	Label         string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	ParentUid     string                 `protobuf:"bytes,4,opt,name=parent_uid,json=parentUid,proto3" json:"parent_uid,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -164,9 +165,9 @@ func (*GraphNode) Descriptor() ([]byte, []int) {
 	return file_pipeline_v1_client_view_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GraphNode) GetId() string {
+func (x *GraphNode) GetUid() string {
 	if x != nil {
-		return x.Id
+		return x.Uid
 	}
 	return ""
 }
@@ -181,6 +182,13 @@ func (x *GraphNode) GetLabel() string {
 func (x *GraphNode) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *GraphNode) GetParentUid() string {
+	if x != nil {
+		return x.ParentUid
 	}
 	return ""
 }
@@ -248,11 +256,13 @@ const file_pipeline_v1_client_view_proto_rawDesc = "" +
 	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewR\x05graph\"g\n" +
 	"\tGraphView\x12,\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x16.pipeline.v1.GraphNodeR\x05nodes\x12,\n" +
-	"\x05edges\x18\x02 \x03(\v2\x16.pipeline.v1.GraphEdgeR\x05edges\"S\n" +
-	"\tGraphNode\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05edges\x18\x02 \x03(\v2\x16.pipeline.v1.GraphEdgeR\x05edges\"t\n" +
+	"\tGraphNode\x12\x10\n" +
+	"\x03uid\x18\x01 \x01(\tR\x03uid\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\"/\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"parent_uid\x18\x04 \x01(\tR\tparentUid\"/\n" +
 	"\tGraphEdge\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
 	"\x02to\x18\x02 \x01(\tR\x02toB\x99\x01\n" +

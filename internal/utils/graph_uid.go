@@ -7,8 +7,8 @@ import (
 	pipelinev1 "insightify/gen/go/pipeline/v1"
 )
 
-// AssignGraphNodeUIDs rewrites GraphNode.Id values to generated UIDs and updates edges accordingly.
-// It mutates the provided view in place and returns old->new ID mappings for non-empty original IDs.
+// AssignGraphNodeUIDs rewrites GraphNode.Uid values to generated UIDs and updates edges accordingly.
+// It mutates the provided view in place and returns old->new UID mappings for non-empty original UIDs.
 func AssignGraphNodeUIDs(view *pipelinev1.ClientView) map[string]string {
 	return AssignGraphNodeUIDsWithGenerator(nil, view)
 }
@@ -28,7 +28,7 @@ func AssignGraphNodeUIDsWithGenerator(gen *UIDGenerator, view *pipelinev1.Client
 		if n == nil {
 			continue
 		}
-		seed := strings.TrimSpace(n.GetId())
+		seed := strings.TrimSpace(n.GetUid())
 		if seed == "" {
 			seed = strings.TrimSpace(n.GetLabel())
 		}
@@ -36,7 +36,7 @@ func AssignGraphNodeUIDsWithGenerator(gen *UIDGenerator, view *pipelinev1.Client
 			seed = fmt.Sprintf("node-%d", i+1)
 		}
 
-		oldID := strings.TrimSpace(n.GetId())
+		oldID := strings.TrimSpace(n.GetUid())
 		key := ""
 		if oldID != "" {
 			idSeen[oldID]++
@@ -50,7 +50,7 @@ func AssignGraphNodeUIDsWithGenerator(gen *UIDGenerator, view *pipelinev1.Client
 		}
 
 		uid := gen.GenerateForKey(key, seed)
-		n.Id = uid
+		n.Uid = uid
 
 		if oldID != "" {
 			oldToNew[oldID] = uid

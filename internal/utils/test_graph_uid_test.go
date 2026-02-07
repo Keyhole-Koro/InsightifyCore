@@ -11,9 +11,9 @@ func TestAssignGraphNodeUIDs_RewritesNodeIDsAndEdges(t *testing.T) {
 	view := &pipelinev1.ClientView{
 		Graph: &pipelinev1.GraphView{
 			Nodes: []*pipelinev1.GraphNode{
-				{Id: "a", Label: "A"},
-				{Id: "a", Label: "A-dup"},
-				{Id: "", Label: "B"},
+				{Uid: "a", Label: "A"},
+				{Uid: "a", Label: "A-dup"},
+				{Uid: "", Label: "B"},
 			},
 			Edges: []*pipelinev1.GraphEdge{
 				{From: "a", To: "a"},
@@ -26,9 +26,9 @@ func TestAssignGraphNodeUIDs_RewritesNodeIDsAndEdges(t *testing.T) {
 		t.Fatalf("expected non-empty id map")
 	}
 
-	n0 := view.Graph.Nodes[0].GetId()
-	n1 := view.Graph.Nodes[1].GetId()
-	n2 := view.Graph.Nodes[2].GetId()
+	n0 := view.Graph.Nodes[0].GetUid()
+	n1 := view.Graph.Nodes[1].GetUid()
+	n2 := view.Graph.Nodes[2].GetUid()
 	if n0 == "" || n1 == "" || n2 == "" {
 		t.Fatalf("all node IDs must be assigned")
 	}
@@ -49,13 +49,13 @@ func TestAssignGraphNodeUIDs_DeterministicPattern(t *testing.T) {
 	view := &pipelinev1.ClientView{
 		Graph: &pipelinev1.GraphView{
 			Nodes: []*pipelinev1.GraphNode{
-				{Id: "node-main", Label: "Node Main"},
+				{Uid: "node-main", Label: "Node Main"},
 			},
 		},
 	}
 
 	AssignGraphNodeUIDs(view)
-	got := view.Graph.Nodes[0].GetId()
+	got := view.Graph.Nodes[0].GetUid()
 	if !strings.HasPrefix(got, "node-main-") {
 		t.Fatalf("unexpected uid format: %q", got)
 	}
@@ -66,8 +66,8 @@ func TestAssignGraphNodeUIDsWithGenerator_StableAcrossSnapshots(t *testing.T) {
 	view1 := &pipelinev1.ClientView{
 		Graph: &pipelinev1.GraphView{
 			Nodes: []*pipelinev1.GraphNode{
-				{Id: "init", Label: "Initialize"},
-				{Id: "load", Label: "Load"},
+				{Uid: "init", Label: "Initialize"},
+				{Uid: "load", Label: "Load"},
 			},
 			Edges: []*pipelinev1.GraphEdge{
 				{From: "init", To: "load"},
@@ -77,8 +77,8 @@ func TestAssignGraphNodeUIDsWithGenerator_StableAcrossSnapshots(t *testing.T) {
 	view2 := &pipelinev1.ClientView{
 		Graph: &pipelinev1.GraphView{
 			Nodes: []*pipelinev1.GraphNode{
-				{Id: "init", Label: "Initialize"},
-				{Id: "load", Label: "Load"},
+				{Uid: "init", Label: "Initialize"},
+				{Uid: "load", Label: "Load"},
 			},
 			Edges: []*pipelinev1.GraphEdge{
 				{From: "init", To: "load"},
@@ -87,12 +87,12 @@ func TestAssignGraphNodeUIDsWithGenerator_StableAcrossSnapshots(t *testing.T) {
 	}
 
 	AssignGraphNodeUIDsWithGenerator(gen, view1)
-	uidInit1 := view1.Graph.Nodes[0].GetId()
-	uidLoad1 := view1.Graph.Nodes[1].GetId()
+	uidInit1 := view1.Graph.Nodes[0].GetUid()
+	uidLoad1 := view1.Graph.Nodes[1].GetUid()
 
 	AssignGraphNodeUIDsWithGenerator(gen, view2)
-	uidInit2 := view2.Graph.Nodes[0].GetId()
-	uidLoad2 := view2.Graph.Nodes[1].GetId()
+	uidInit2 := view2.Graph.Nodes[0].GetUid()
+	uidLoad2 := view2.Graph.Nodes[1].GetUid()
 
 	if uidInit1 != uidInit2 || uidLoad1 != uidLoad2 {
 		t.Fatalf("uids must stay stable across snapshots: (%q,%q) vs (%q,%q)", uidInit1, uidLoad1, uidInit2, uidLoad2)
