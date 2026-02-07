@@ -29,7 +29,7 @@ func TestAllWorkersExecuteWithFakeLLM_MainlineRegistry(t *testing.T) {
 	env := newWorkerIntegrationEnv(t)
 	resolver := MergeRegistries(
 		BuildRegistryCodebase(env),
-		BuildRegistryMainline(env),
+		BuildRegistryArchitecture(env),
 		BuildRegistryExternal(env),
 		BuildRegistryPlanDependencies(env),
 	)

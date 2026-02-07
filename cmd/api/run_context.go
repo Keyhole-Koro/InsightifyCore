@@ -110,11 +110,11 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
-	mainline := runner.BuildRegistryMainline(env)
+	architecture := runner.BuildRegistryArchitecture(env)
 	codebase := runner.BuildRegistryCodebase(env)
 	external := runner.BuildRegistryExternal(env)
 	planReg := runner.BuildRegistryPlanDependencies(env)
-	env.Resolver = runner.MergeRegistries(mainline, codebase, external, planReg)
+	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg)
 
 	return &RunContext{
 		ID:       sessionID,

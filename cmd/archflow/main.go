@@ -74,7 +74,7 @@ func main() {
 			"groq":   "free",
 		},
 	})
-	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
+	ctx = llm.WithPromptHook(ctx, &llm.PromptSaver{Dir: *outDir})
 
 	capacity := *tokenCap
 	if capacity <= 0 {

@@ -31,6 +31,16 @@ var runStore = struct {
 	runs: make(map[string]chan *insightifyv1.WatchRunResponse),
 }
 
+const completedRunRetention = 30 * time.Second
+
+func scheduleRunCleanup(runID string) {
+	time.AfterFunc(completedRunRetention, func() {
+		runStore.Lock()
+		delete(runStore.runs, runID)
+		runStore.Unlock()
+	})
+}
+
 type initSession struct {
 	UserID  string
 	RepoURL string
@@ -131,10 +141,8 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 				sess.Running = false
 				initRunStore.sessions[sessionID] = sess
 				initRunStore.Unlock()
-				runStore.Lock()
-				delete(runStore.runs, runID)
-				runStore.Unlock()
 				close(eventCh)
+				scheduleRunCleanup(runID)
 			}()
 
 			pipeline := &testpipe.TestStreamingPipeline{}
@@ -210,10 +218,8 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 			sess.Running = false
 			initRunStore.sessions[sessionID] = sess
 			initRunStore.Unlock()
-			runStore.Lock()
-			delete(runStore.runs, runID)
-			runStore.Unlock()
 			close(eventCh)
+			scheduleRunCleanup(runID)
 		}()
 
 		// Create emitter that bridges runner events to proto events

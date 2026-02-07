@@ -17,7 +17,6 @@ func BuildWorkerDescriptors() []WorkerDescriptor {
 	env := &Env{}
 	// Collect all registries
 	regs := []map[string]WorkerSpec{
-		BuildRegistryMainline(env),
 		BuildRegistryArchitecture(env),
 		BuildRegistryCodebase(env),
 		BuildRegistryExternal(env),
