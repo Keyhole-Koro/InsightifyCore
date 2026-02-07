@@ -109,6 +109,7 @@ func RegisterGeminiModels(reg ModelRegistrar) error {
 			Level:          level,
 			MaxTokens:      tokens,
 			ParameterCount: params,
+			RateLimit:      &RateLimitConfig{RPM: 60, RPS: 1, Burst: 1},
 			Factory: func(ctx context.Context, tokenCap int) (LLMClient, error) {
 				if tokenCap <= 0 {
 					tokenCap = tokens

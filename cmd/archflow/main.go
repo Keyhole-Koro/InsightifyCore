@@ -75,6 +75,7 @@ func main() {
 	}
 
 	reg, rateBinding, err := setupModelRegistry(*provider, *model, *fake)
+	reg, err := setupModelRegistry(*provider, *model, *fake)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,15 +138,19 @@ type modelBinding struct {
 }
 
 func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, modelBinding, error) {
+func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, error) {
 	reg := llm.NewInMemoryModelRegistry()
 	if err := llmclient.RegisterGeminiModels(reg); err != nil {
 		return nil, modelBinding{}, err
+		return nil, err
 	}
 	if err := llmclient.RegisterGroqModels(reg); err != nil {
 		return nil, modelBinding{}, err
+		return nil, err
 	}
 	if err := llm.RegisterFakeModels(reg); err != nil {
 		return nil, modelBinding{}, err
+		return nil, err
 	}
 
 	roles := []llm.ModelRole{llm.ModelRoleWorker, llm.ModelRolePlanner}
@@ -158,6 +163,7 @@ func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*
 			}
 			if err := reg.SetDefault(role, level, binding.provider, binding.model); err != nil {
 				return nil, modelBinding{}, err
+				return nil, err
 			}
 		}
 	}
@@ -167,6 +173,7 @@ func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*
 		rateBinding = modelBinding{provider: "fake", model: llm.FakeModelByLevel(llm.ModelLevelMiddle)}
 	}
 	return reg, rateBinding, nil
+	return reg, nil
 }
 
 func resolveModelBinding(role llm.ModelRole, level llm.ModelLevel, defaultProvider, defaultModel string) modelBinding {

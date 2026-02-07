@@ -40,14 +40,17 @@ type RunContext struct {
 	Cleanup  func()
 }
 
-// NewRunContext creates a new context with a unique timestamp-based artifact directory.
-func NewRunContext(repoName string) (*RunContext, error) {
+// NewRunContext creates a new context bound to the provided session ID.
+// If sessionID is empty, it falls back to a timestamp.
+func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	name, repoPath, repoFS, err := resolveRepoPaths(repoName)
 	if err != nil {
 		return nil, err
 	}
 
-	sessionID := time.Now().Format("20060102-150405")
+	if sessionID == "" {
+		sessionID = time.Now().Format("20060102-150405")
+	}
 	outDir := filepath.Join("artifacts", name, sessionID)
 	absOutDir, err := filepath.Abs(outDir)
 	if err != nil {

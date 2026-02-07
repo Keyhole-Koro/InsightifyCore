@@ -13,12 +13,21 @@ const (
 
 type ClientFactory func(ctx context.Context, tokenCap int) (LLMClient, error)
 
+type RateLimitConfig struct {
+	RPM   int
+	RPD   int
+	TPM   int
+	RPS   float64
+	Burst int
+}
+
 type ModelRegistration struct {
 	Provider       string
 	Model          string
 	Level          ModelLevel
 	MaxTokens      int
 	ParameterCount int64
+	RateLimit      *RateLimitConfig
 	Factory        ClientFactory
 }
 

@@ -37,6 +37,7 @@ type ModelProfile struct {
 	MaxTokens      int
 	CountTokens    TokenCountFunc
 	ParameterCount int64
+	RateLimit      *llmclient.RateLimitConfig
 }
 
 type RegisteredModel struct {
@@ -121,6 +122,7 @@ func (r *InMemoryModelRegistry) RegisterModel(spec llmclient.ModelRegistration) 
 			Level:          level,
 			MaxTokens:      spec.MaxTokens,
 			ParameterCount: spec.ParameterCount,
+			RateLimit:      spec.RateLimit,
 		},
 		Factory: spec.Factory,
 	}
@@ -227,6 +229,15 @@ func (r *InMemoryModelRegistry) BuildClient(
 	cli, err := entry.Factory(ctx, tokenCap)
 	if err != nil {
 		return nil, err
+	}
+
+	if rl := entry.Profile.RateLimit; rl != nil {
+		if rl.RPM > 0 || rl.RPD > 0 || rl.TPM > 0 {
+			cli = MultiLimit(rl.RPM, rl.RPD, rl.TPM)(cli)
+		}
+		if rl.RPS > 0 || rl.Burst > 0 {
+			cli = RateLimit(rl.RPS, rl.Burst)(cli)
+		}
 	}
 	return cli, nil
 }

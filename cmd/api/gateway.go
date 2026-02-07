@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,8 @@ import (
 	"connectrpc.com/connect"
 )
 
+const sessionCookieName = "insightify_session_id"
+
 // runStore holds active runs and their event channels.
 var runStore = struct {
 	sync.RWMutex
@@ -31,6 +34,9 @@ var runStore = struct {
 type initSession struct {
 	UserID  string
 	RepoURL string
+	Repo    string
+	RunCtx  *RunContext
+	Running bool
 }
 
 var initRunStore = struct {
@@ -49,22 +55,62 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	}
 
 	sessionID := fmt.Sprintf("session-%d", time.Now().UnixNano())
+	repoName := inferRepoName(repoURL)
+	if repoName == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid repo_url: could not infer repository name"))
+	}
+	runCtx, err := NewRunContext(repoName, sessionID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
+	}
+
 	initRunStore.Lock()
 	initRunStore.sessions[sessionID] = initSession{
 		UserID:  userID,
 		RepoURL: repoURL,
+		Repo:    repoName,
+		RunCtx:  runCtx,
+		Running: false,
 	}
 	initRunStore.Unlock()
 
-	return connect.NewResponse(&insightifyv1.InitRunResponse{
+	res := connect.NewResponse(&insightifyv1.InitRunResponse{
 		SessionId: sessionID,
-		RepoName:  "mock-repo",
-	}), nil
+		RepoName:  repoName,
+	})
+	res.Header().Add("Set-Cookie", (&http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		// Local development uses plain HTTP; enable Secure in TLS deployments.
+		Secure: false,
+	}).String())
+	return res, nil
 }
 
 // StartRun executes a single pipeline worker and returns the result.
 func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightifyv1.StartRunRequest]) (*connect.Response[insightifyv1.StartRunResponse], error) {
 	pipelineID := req.Msg.GetPipelineId()
+	sessionID := resolveSessionID(req)
+	if sessionID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required (request field or cookie)"))
+	}
+	initRunStore.Lock()
+	sess, ok := initRunStore.sessions[sessionID]
+	if !ok || sess.RunCtx == nil {
+		initRunStore.Unlock()
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+	}
+	if sess.Running {
+		initRunStore.Unlock()
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("session %s already has an active run", sessionID))
+	}
+	sess.Running = true
+	initRunStore.sessions[sessionID] = sess
+	initRunStore.Unlock()
+	runCtx := sess.RunCtx
 
 	// Handle test_pipeline separately for streaming demo
 	if pipelineID == "test_pipeline" {
@@ -80,6 +126,11 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 		// Start pipeline in background
 		go func() {
 			defer func() {
+				initRunStore.Lock()
+				sess := initRunStore.sessions[sessionID]
+				sess.Running = false
+				initRunStore.sessions[sessionID] = sess
+				initRunStore.Unlock()
 				runStore.Lock()
 				delete(runStore.runs, runID)
 				runStore.Unlock()
@@ -132,21 +183,6 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	runStore.runs[runID] = eventCh
 	runStore.Unlock()
 
-	// Original logic for other pipelines
-	repoName := req.Msg.GetParams()["repo_name"]
-	if repoName == "" {
-		repoName = "PoliTopics"
-	}
-
-	runCtx, err := NewRunContext(repoName)
-	if err != nil {
-		runStore.Lock()
-		delete(runStore.runs, runID)
-		runStore.Unlock()
-		close(eventCh)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
-	}
-
 	key := pipelineID
 	if key == "" {
 		key = "worker_DAG"
@@ -154,7 +190,11 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 
 	spec, ok := runCtx.Env.Resolver.Get(key)
 	if !ok {
-		runCtx.Cleanup()
+		initRunStore.Lock()
+		sess := initRunStore.sessions[sessionID]
+		sess.Running = false
+		initRunStore.sessions[sessionID] = sess
+		initRunStore.Unlock()
 		runStore.Lock()
 		delete(runStore.runs, runID)
 		runStore.Unlock()
@@ -165,7 +205,11 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	// Start pipeline in background with emitter
 	go func() {
 		defer func() {
-			runCtx.Cleanup()
+			initRunStore.Lock()
+			sess := initRunStore.sessions[sessionID]
+			sess.Running = false
+			initRunStore.sessions[sessionID] = sess
+			initRunStore.Unlock()
 			runStore.Lock()
 			delete(runStore.runs, runID)
 			runStore.Unlock()
@@ -225,6 +269,49 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	return connect.NewResponse(&insightifyv1.StartRunResponse{
 		RunId: runID,
 	}), nil
+}
+
+func inferRepoName(repoURL string) string {
+	repoURL = strings.TrimSpace(repoURL)
+	if repoURL == "" {
+		return ""
+	}
+	trimmed := strings.TrimSuffix(repoURL, "/")
+	trimmed = strings.TrimSuffix(trimmed, ".git")
+	if strings.Contains(trimmed, ":") && !strings.Contains(trimmed, "://") {
+		// git@github.com:owner/repo form
+		parts := strings.SplitN(trimmed, ":", 2)
+		if len(parts) == 2 {
+			trimmed = parts[1]
+		}
+	}
+	name := path.Base(trimmed)
+	name = strings.TrimSpace(name)
+	if name == "." || name == "/" {
+		return ""
+	}
+	return name
+}
+
+func resolveSessionID(req *connect.Request[insightifyv1.StartRunRequest]) string {
+	if req == nil {
+		return ""
+	}
+	if sid := strings.TrimSpace(req.Msg.GetSessionId()); sid != "" {
+		return sid
+	}
+	cookieHeader := req.Header().Get("Cookie")
+	if cookieHeader == "" {
+		return ""
+	}
+	for _, part := range strings.Split(cookieHeader, ";") {
+		p := strings.TrimSpace(part)
+		if !strings.HasPrefix(p, sessionCookieName+"=") {
+			continue
+		}
+		return strings.TrimSpace(strings.TrimPrefix(p, sessionCookieName+"="))
+	}
+	return ""
 }
 
 // WatchRun streams events for a running pipeline.
