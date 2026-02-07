@@ -136,3 +136,41 @@ func (g *GroqClient) GenerateJSONStream(ctx context.Context, prompt string, inpu
 	}
 	return raw, nil
 }
+
+func RegisterGroqModels(reg ModelRegistrar) error {
+	type groqModel struct {
+		name   string
+		level  ModelLevel
+		tokens int
+		params int64
+	}
+	models := []groqModel{
+		{name: "llama-3.1-8b-instant", level: ModelLevelLow, tokens: 6000, params: 8_000_000_000},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelMiddle, tokens: 6000, params: 70_000_000_000},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelHigh, tokens: 6000, params: 70_000_000_000},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelXHigh, tokens: 6000, params: 70_000_000_000},
+	}
+	for _, m := range models {
+		modelName := m.name
+		tokens := m.tokens
+		params := m.params
+		level := m.level
+		if err := reg.RegisterModel(ModelRegistration{
+			Provider:       "groq",
+			Model:          modelName,
+			Level:          level,
+			MaxTokens:      tokens,
+			ParameterCount: params,
+			Factory: func(ctx context.Context, tokenCap int) (LLMClient, error) {
+				_ = ctx
+				if tokenCap <= 0 {
+					tokenCap = tokens
+				}
+				return NewGroqClient(os.Getenv("GROQ_API_KEY"), modelName, tokenCap)
+			},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}

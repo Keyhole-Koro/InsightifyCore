@@ -3,6 +3,7 @@ package llmclient
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 
 	genai "google.golang.org/genai"
@@ -82,4 +83,41 @@ func (g *GeminiClient) GenerateJSONStream(ctx context.Context, prompt string, in
 		return nil, ErrInvalidJSON
 	}
 	return json.RawMessage(resp.Candidates[0].Content.Parts[0].Text), nil
+}
+
+func RegisterGeminiModels(reg ModelRegistrar) error {
+	type geminiModel struct {
+		name   string
+		level  ModelLevel
+		tokens int
+		params int64
+	}
+	models := []geminiModel{
+		{name: "gemini-2.5-flash", level: ModelLevelLow, tokens: 12000, params: 0},
+		{name: "gemini-2.5-flash", level: ModelLevelMiddle, tokens: 12000, params: 0},
+		{name: "gemini-2.5-pro", level: ModelLevelHigh, tokens: 12000, params: 0},
+		{name: "gemini-2.5-pro", level: ModelLevelXHigh, tokens: 12000, params: 0},
+	}
+	for _, m := range models {
+		modelName := m.name
+		tokens := m.tokens
+		params := m.params
+		level := m.level
+		if err := reg.RegisterModel(ModelRegistration{
+			Provider:       "gemini",
+			Model:          modelName,
+			Level:          level,
+			MaxTokens:      tokens,
+			ParameterCount: params,
+			Factory: func(ctx context.Context, tokenCap int) (LLMClient, error) {
+				if tokenCap <= 0 {
+					tokenCap = tokens
+				}
+				return NewGeminiClient(ctx, os.Getenv("GEMINI_API_KEY"), modelName, tokenCap)
+			},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

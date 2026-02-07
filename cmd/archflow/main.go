@@ -25,9 +25,9 @@ func main() {
 	// ----- Flags -----
 	repo := flag.String("repo", "", "repository folder name under ./repos")
 	outDir := flag.String("out", "artifacts", "output directory")
-	provider := flag.String("provider", "gemini", "LLM provider (gemini|groq)")
+	provider := flag.String("provider", "gemini", "LLM provider (gemini|groq|fake)")
 	model := flag.String("model", "gemini-2.5-pro", "LLM model id (provider-specific)")
-	fake := flag.Bool("fake", false, "use a fake LLM (no network)")
+	fake := flag.Bool("fake", false, "use fake LLM defaults for all levels")
 	phase := flag.String("phase", "code_roots", "phase to run (code_roots|code_specs|code_imports|code_graph|code_tasks|code_symbols|arch_design|infra_context|infra_refine)")
 	forceFrom := flag.String("force_from", "", "force recompute starting at this phase (e.g., c0|c1|m1)")
 	cache := flag.Bool("cache", false, "use cached artifacts (default: off)")
@@ -41,7 +41,6 @@ func main() {
 		return
 	}
 
-	// Load .env before resolving paths so REPOS_ROOT can be picked up from file
 	_ = godotenv.Load()
 
 	repoName, repoPath, repoFS, err := resolveRepoPaths(*repo)
@@ -61,20 +60,13 @@ func main() {
 	}
 	safeio.SetDefault(repoFS)
 
-	// Determine requested phase key and default force behavior when cache is disabled
 	key := strings.ToLower(strings.TrimSpace(*phase))
 	force := strings.ToLower(strings.TrimSpace(*forceFrom))
 	if !*cache && force == "" {
-		// Default: do not use cache → force recompute of the requested phase
 		force = key
 	}
 
-	// ----- LLM setup -----
-	// Defer provider-specific API key checks until after flags are parsed
-	apiKey := ""
 	ctx := context.Background()
-
-	// Prompt hook persists prompts & raw responses under artifacts/prompt/
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
 	capacity := *tokenCap
@@ -82,48 +74,31 @@ func main() {
 		capacity = defaultTokenCapacity(*provider, *model)
 	}
 
-	var base llmclient.LLMClient
-	if *fake {
-		base = llm.NewFakeClient(capacity)
-	} else {
-		switch strings.ToLower(strings.TrimSpace(*provider)) {
-		case "gemini":
-			// Prefer GEMINI_API_KEY for Gemini
-			apiKey = os.Getenv("GEMINI_API_KEY")
-			if apiKey == "" {
-				log.Fatal("GEMINI_API_KEY must be set (or use --fake)")
-			}
-			base, err = llmclient.NewGeminiClient(ctx, apiKey, *model, capacity)
-		case "groq":
-			// Prefer GROQ_API_KEY for Groq
-			apiKey = os.Getenv("GROQ_API_KEY")
-			if apiKey == "" {
-				log.Fatal("GROQ_API_KEY must be set (or use --fake)")
-			}
-			base, err = llmclient.NewGroqClient(apiKey, *model, capacity)
-		case "fake":
-			base = llm.NewFakeClient(capacity)
-			err = nil
-		default:
-			log.Fatalf("unknown --provider: %s (use gemini|groq|fake)", *provider)
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
+	reg, rateBinding, err := setupModelRegistry(*provider, *model, *fake)
+	if err != nil {
+		log.Fatal(err)
 	}
-	cfg := defaultLLMRateConfig(*provider, *model)
-	mws := buildRateMiddlewares(cfg)
+
+	fallback, err := reg.BuildClient(ctx, llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "", capacity)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cfg := defaultLLMRateConfig(rateBinding.provider, rateBinding.model)
+	mws := []llm.Middleware{
+		llm.SelectModel(reg, capacity),
+	}
+	mws = append(mws, buildRateMiddlewares(cfg)...)
 	mws = append(mws,
 		llm.Retry(3, 300*time.Millisecond),
 		llm.WithHooks(),
 		llm.WithLogging(nil),
 	)
-	llmCli := llm.Wrap(base, mws...)
+
+	dispatch := llm.NewModelDispatchClient(fallback)
+	llmCli := llm.Wrap(dispatch, mws...)
 	defer llmCli.Close()
 
-	// Scanning is performed per-phase inside runner.BuildRegistryMainline via PlanScan.
-
-	// ----- Build environment & registry -----
 	env := &runner.Env{
 		Repo:       repoName,
 		RepoRoot:   repoPath,
@@ -131,7 +106,7 @@ func main() {
 		MaxNext:    *maxNext,
 		RepoFS:     repoFS,
 		ArtifactFS: artifactFS,
-		ModelSalt:  os.Getenv("CACHE_SALT") + "|" + *model, // Salt helps invalidate cache when model/prompts change
+		ModelSalt:  os.Getenv("CACHE_SALT") + "|" + reg.DefaultsSalt(),
 		ForceFrom:  force,
 		LLM:        llmCli,
 		Index:      nil,
@@ -141,13 +116,12 @@ func main() {
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
-	architecture := runner.BuildRegistryArchitecture(env) // m1
-	codebase := runner.BuildRegistryCodebase(env)         // c0..c5
-	external := runner.BuildRegistryExternal(env)         // x0..x1
-	planReg := runner.BuildRegistryPlanDependencies(env)  // plan_dependencies
+	architecture := runner.BuildRegistryArchitecture(env)
+	codebase := runner.BuildRegistryCodebase(env)
+	external := runner.BuildRegistryExternal(env)
+	planReg := runner.BuildRegistryPlanDependencies(env)
 	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg)
 
-	// ----- Execute requested phase -----
 	spec, ok := env.Resolver.Get(key)
 	if !ok {
 		log.Fatalf("unknown --phase: %s (use code_roots|code_specs|code_imports|code_graph|code_tasks|code_symbols|arch_design|infra_context|infra_refine)", *phase)
@@ -157,18 +131,107 @@ func main() {
 	}
 }
 
+type modelBinding struct {
+	provider string
+	model    string
+}
+
+func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, modelBinding, error) {
+	reg := llm.NewInMemoryModelRegistry()
+	if err := llmclient.RegisterGeminiModels(reg); err != nil {
+		return nil, modelBinding{}, err
+	}
+	if err := llmclient.RegisterGroqModels(reg); err != nil {
+		return nil, modelBinding{}, err
+	}
+	if err := llm.RegisterFakeModels(reg); err != nil {
+		return nil, modelBinding{}, err
+	}
+
+	roles := []llm.ModelRole{llm.ModelRoleWorker, llm.ModelRolePlanner}
+	levels := []llm.ModelLevel{llm.ModelLevelLow, llm.ModelLevelMiddle, llm.ModelLevelHigh, llm.ModelLevelXHigh}
+	for _, role := range roles {
+		for _, level := range levels {
+			binding := resolveModelBinding(role, level, defaultProvider, defaultModel)
+			if forceFake {
+				binding = modelBinding{provider: "fake", model: llm.FakeModelByLevel(level)}
+			}
+			if err := reg.SetDefault(role, level, binding.provider, binding.model); err != nil {
+				return nil, modelBinding{}, err
+			}
+		}
+	}
+
+	rateBinding := resolveModelBinding(llm.ModelRoleWorker, llm.ModelLevelMiddle, defaultProvider, defaultModel)
+	if forceFake {
+		rateBinding = modelBinding{provider: "fake", model: llm.FakeModelByLevel(llm.ModelLevelMiddle)}
+	}
+	return reg, rateBinding, nil
+}
+
+func resolveModelBinding(role llm.ModelRole, level llm.ModelLevel, defaultProvider, defaultModel string) modelBinding {
+	provider := firstNonEmpty(
+		os.Getenv("LLM_"+strings.ToUpper(string(role))+"_"+strings.ToUpper(string(level))+"_PROVIDER"),
+		os.Getenv("LLM_"+strings.ToUpper(string(role))+"_PROVIDER"),
+		os.Getenv("LLM_PROVIDER"),
+		defaultProvider,
+	)
+	model := firstNonEmpty(
+		os.Getenv("LLM_"+strings.ToUpper(string(role))+"_"+strings.ToUpper(string(level))+"_MODEL"),
+		os.Getenv("LLM_"+strings.ToUpper(string(role))+"_MODEL"),
+		os.Getenv("LLM_MODEL"),
+		defaultModel,
+	)
+	// Env/flag values often include accidental whitespace; provider is
+	// compared as a key, so normalize case as well.
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	model = strings.TrimSpace(model)
+	if model == "" {
+		model = fallbackModelForProvider(provider, level)
+	}
+	return modelBinding{provider: provider, model: model}
+}
+
+func fallbackModelForProvider(provider string, level llm.ModelLevel) string {
+	switch provider {
+	case "gemini":
+		if level == llm.ModelLevelHigh || level == llm.ModelLevelXHigh {
+			return "gemini-2.5-pro"
+		}
+		return "gemini-2.5-flash"
+	case "groq":
+		if level == llm.ModelLevelLow {
+			return "llama-3.1-8b-instant"
+		}
+		return "llama-3.3-70b-versatile"
+	case "fake":
+		return llm.FakeModelByLevel(level)
+	default:
+		return ""
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		// Treat whitespace-only values as unset.
+		v = strings.TrimSpace(v)
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 // LLMRateConfig captures rate limiting in a clear, declarative way.
 // Zero values disable the corresponding limiter.
 type LLMRateConfig struct {
-	RPM   int     // requests per minute
-	RPD   int     // requests per day
-	TPM   int     // tokens per minute (approximate)
-	RPS   float64 // legacy requests per second limiter
-	Burst int     // burst for RPS
+	RPM   int
+	RPD   int
+	TPM   int
+	RPS   float64
+	Burst int
 }
 
-// defaultLLMRateConfig defines built-in rate configs per provider/model.
-// Example: {RPM: 60} for clarity instead of positional params.
 func defaultLLMRateConfig(provider, model string) LLMRateConfig {
 	_ = model
 	switch strings.ToLower(strings.TrimSpace(provider)) {
@@ -193,7 +256,6 @@ func defaultTokenCapacity(provider, model string) int {
 	}
 }
 
-// buildRateMiddlewares converts LLMRateConfig into the corresponding middlewares.
 func buildRateMiddlewares(c LLMRateConfig) []llm.Middleware {
 	out := []llm.Middleware{}
 	if c.RPM > 0 || c.RPD > 0 || c.TPM > 0 {

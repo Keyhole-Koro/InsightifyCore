@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"insightify/internal/llm"
 	"insightify/internal/safeio"
 )
 
@@ -32,7 +33,8 @@ func newTestEnv(t *testing.T) *Env {
 func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 	reg["m0"] = WorkerSpec{
-		Key: "m0",
+		Key:      "m0",
+		LLMLevel: llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return nil, nil
 		},
@@ -48,6 +50,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	reg["m1"] = WorkerSpec{
 		Key:      "m1",
 		Requires: []string{"m0"},
+		LLMLevel: llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev testArtifact
 			if err := deps.Artifact("m0", &prev); err != nil {
@@ -67,6 +70,7 @@ func buildTestRegistry(env *Env, runs map[string]int) map[string]WorkerSpec {
 	reg["m2"] = WorkerSpec{
 		Key:      "m2",
 		Requires: []string{"m1"},
+		LLMLevel: llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev testArtifact
 			if err := deps.Artifact("m1", &prev); err != nil {
@@ -134,6 +138,7 @@ func TestExecuteWorkerDetectsCycles(t *testing.T) {
 		"a": {
 			Key:        "a",
 			Requires:   []string{"b"},
+			LLMLevel:   llm.ModelLevelMiddle,
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 				return WorkerOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
@@ -144,6 +149,7 @@ func TestExecuteWorkerDetectsCycles(t *testing.T) {
 		"b": {
 			Key:        "b",
 			Requires:   []string{"a"},
+			LLMLevel:   llm.ModelLevelMiddle,
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 				return WorkerOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil
@@ -167,6 +173,7 @@ func TestExecuteWorkerFailsOnUnusedRequires(t *testing.T) {
 		"a": {
 			Key:        "a",
 			Requires:   []string{"b"},
+			LLMLevel:   llm.ModelLevelMiddle,
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 				return WorkerOutput{RuntimeState: testArtifact{Value: "a"}, ClientView: nil}, nil
@@ -176,6 +183,7 @@ func TestExecuteWorkerFailsOnUnusedRequires(t *testing.T) {
 		},
 		"b": {
 			Key:        "b",
+			LLMLevel:   llm.ModelLevelMiddle,
 			BuildInput: func(ctx context.Context, deps Deps) (any, error) { return nil, nil },
 			Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 				return WorkerOutput{RuntimeState: testArtifact{Value: "b"}, ClientView: nil}, nil

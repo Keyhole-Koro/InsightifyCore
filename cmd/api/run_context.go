@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,23 @@ import (
 	"insightify/internal/utils"
 )
 
+func buildGatewayLLM() (*llm.InMemoryModelRegistry, error) {
+	reg := llm.NewInMemoryModelRegistry()
+	if err := llm.RegisterFakeModels(reg); err != nil {
+		return nil, err
+	}
+	roles := []llm.ModelRole{llm.ModelRoleWorker, llm.ModelRolePlanner}
+	levels := []llm.ModelLevel{llm.ModelLevelLow, llm.ModelLevelMiddle, llm.ModelLevelHigh, llm.ModelLevelXHigh}
+	for _, role := range roles {
+		for _, level := range levels {
+			if err := reg.SetDefault(role, level, "fake", llm.FakeModelByLevel(level)); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return reg, nil
+}
+
 // RunContext holds the environment and metadata for a single pipeline execution request.
 type RunContext struct {
 	ID       string
@@ -24,16 +42,12 @@ type RunContext struct {
 
 // NewRunContext creates a new context with a unique timestamp-based artifact directory.
 func NewRunContext(repoName string) (*RunContext, error) {
-	// resolveRepoPaths is defined in main.go (same package)
 	name, repoPath, repoFS, err := resolveRepoPaths(repoName)
 	if err != nil {
 		return nil, err
 	}
 
-	// Generate session ID based on timestamp (e.g., 20231027-100000)
 	sessionID := time.Now().Format("20060102-150405")
-
-	// Artifacts go to artifacts/<repo>/<session_id>
 	outDir := filepath.Join("artifacts", name, sessionID)
 	absOutDir, err := filepath.Abs(outDir)
 	if err != nil {
@@ -48,8 +62,21 @@ func NewRunContext(repoName string) (*RunContext, error) {
 		return nil, fmt.Errorf("artifact fs: %w", err)
 	}
 
-	// Setup LLM (Using FakeClient for Gateway default for now)
-	llmCli := llm.Wrap(llm.NewFakeClient(4096), llm.WithHooks())
+	reg, err := buildGatewayLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	fallback, err := reg.BuildClient(context.Background(), llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "", 4096)
+	if err != nil {
+		return nil, err
+	}
+
+	llmCli := llm.Wrap(
+		llm.NewModelDispatchClient(fallback),
+		llm.SelectModel(reg, 4096),
+		llm.WithHooks(),
+	)
 
 	env := &runner.Env{
 		Repo:       name,
@@ -58,17 +85,15 @@ func NewRunContext(repoName string) (*RunContext, error) {
 		MaxNext:    8,
 		RepoFS:     repoFS,
 		ArtifactFS: artifactFS,
-		ModelSalt:  "gateway|" + sessionID,
+		ModelSalt:  "gateway|" + reg.DefaultsSalt(),
 		LLM:        llmCli,
 		UIDGen:     utils.NewUIDGenerator(),
 	}
 
-	// Setup MCP & Registry
 	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
-	// Build Registry
 	mainline := runner.BuildRegistryMainline(env)
 	codebase := runner.BuildRegistryCodebase(env)
 	external := runner.BuildRegistryExternal(env)

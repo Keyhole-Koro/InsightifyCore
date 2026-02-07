@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"insightify/internal/artifact"
+	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/safeio"
@@ -125,6 +126,11 @@ type WorkerSpec struct {
 	Downstream  []string                      // automatically computed
 	Requires    []string
 	Strategy    CacheStrategy // how to cache (json, versioned, none)
+	// LLMLevel is required. Role/provider/model are optional hints.
+	LLMRole     llm.ModelRole
+	LLMLevel    llm.ModelLevel
+	LLMProvider string
+	LLMModel    string
 }
 
 // CacheStrategy abstracts artifact persistence policies (json, versioned, …).
@@ -287,8 +293,13 @@ func ExecuteWorkerWithResult(ctx context.Context, spec WorkerSpec, env *Env) (Wo
 		return out, nil
 	}
 
-	// Run worker
-	out, err := spec.Run(ctx, in, env)
+	if spec.LLMLevel == "" {
+		return zero, fmt.Errorf("worker %s: llm level must be specified", spec.Key)
+	}
+
+	// Run worker with model routing metadata.
+	runCtx := llm.WithModelSelection(ctx, spec.LLMRole, spec.LLMLevel, spec.LLMProvider, spec.LLMModel)
+	out, err := spec.Run(runCtx, in, env)
 	if err != nil {
 		return zero, err
 	}

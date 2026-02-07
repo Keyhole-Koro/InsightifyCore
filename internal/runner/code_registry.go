@@ -17,6 +17,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 	reg["code_roots"] = WorkerSpec{
 		Key:         "code_roots",
 		Description: "Scan repo layout and ask LLM to classify main source roots, library/vendor roots, and config hotspots.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return artifact.CodeRootsIn{Repo: deps.Repo()}, nil
 		},
@@ -42,6 +43,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_specs",
 		Requires:    []string{"code_roots"},
 		Description: "LLM infers language families/import heuristics from extension counts and roots.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeRootsPrev artifact.CodeRootsOut
 			if err := deps.Artifact("code_roots", &codeRootsPrev); err != nil {
@@ -77,6 +79,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_imports",
 		Requires:    []string{"code_specs", "code_roots"},
 		Description: "Word-index dependency sweep across source roots to collect possible file-level dependencies.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeSpecsPrev artifact.CodeSpecsOut
 			if err := deps.Artifact("code_specs", &codeSpecsPrev); err != nil {
@@ -116,6 +119,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_graph",
 		Requires:    []string{"code_imports"},
 		Description: "Normalize dependency hits into a DAG and drop weaker bidirectional edges.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeImportsOut artifact.CodeImportsOut
 			if err := deps.Artifact("code_imports", &codeImportsOut); err != nil {
@@ -148,6 +152,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_tasks",
 		Requires:    []string{"code_graph"},
 		Description: "Chunk graph nodes into LLM-sized tasks with token estimates per file.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var graph artifact.CodeGraphOut
 			if err := deps.Artifact("code_graph", &graph); err != nil {
@@ -186,6 +191,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_symbols",
 		Requires:    []string{"code_tasks"},
 		Description: "LLM traverses tasks to build identifier reference maps (outgoing/incoming).",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeTasksOut artifact.CodeTasksOut
 			if err := deps.Artifact("code_tasks", &codeTasksOut); err != nil {

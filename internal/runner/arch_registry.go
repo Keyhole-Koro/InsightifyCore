@@ -17,6 +17,7 @@ func BuildRegistryMainline(env *Env) map[string]WorkerSpec {
 		Key:         "arch_design",
 		Requires:    []string{"code_roots"},
 		Description: "LLM drafts initial architecture hypothesis from file index + Markdown docs and proposes next files to open.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c0prev artifact.CodeRootsOut
 			if err := deps.Artifact("code_roots", &c0prev); err != nil {

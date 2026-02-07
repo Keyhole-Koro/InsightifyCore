@@ -16,6 +16,7 @@ func BuildRegistryExternal(env *Env) map[string]WorkerSpec {
 		Key:         "infra_context",
 		Requires:    []string{"arch_design", "code_symbols", "code_roots"}, // Explicit code_roots dependency added for roots
 		Description: "LLM summarizes external systems/infra using architecture (arch_design) + identifier refs (code_symbols), surfacing evidence gaps.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c0 artifact.CodeRootsOut
 			if err := deps.Artifact("code_roots", &c0); err != nil {
@@ -62,6 +63,7 @@ func BuildRegistryExternal(env *Env) map[string]WorkerSpec {
 		Key:         "infra_refine",
 		Requires:    []string{"infra_context"},
 		Description: "LLM drills into evidence gaps from infra_context by opening targeted files/snippets.",
+		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var prev artifact.InfraContextOut
 			if err := deps.Artifact("infra_context", &prev); err != nil {
