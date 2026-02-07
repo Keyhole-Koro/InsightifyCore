@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,11 @@ type GroqClient struct {
 	model    string
 	baseURL  string
 	tokenCap int
+
+	rlMu      sync.RWMutex
+	rlLast    RateLimitHeaders
+	rlHasLast bool
+	rlHandler RateLimitHeaderHandler
 }
 
 // NewGroqClient creates a Groq client. If apiKey is empty, it falls back to GROQ_API_KEY env var.
@@ -49,6 +55,18 @@ func (g *GroqClient) CountTokens(text string) int {
 	return CountTokens(text)
 }
 func (g *GroqClient) TokenCapacity() int { return g.tokenCap }
+
+func (g *GroqClient) SetRateLimitHeaderHandler(handler RateLimitHeaderHandler) {
+	g.rlMu.Lock()
+	defer g.rlMu.Unlock()
+	g.rlHandler = handler
+}
+
+func (g *GroqClient) LastRateLimitHeaders() (RateLimitHeaders, bool) {
+	g.rlMu.RLock()
+	defer g.rlMu.RUnlock()
+	return g.rlLast, g.rlHasLast
+}
 
 type groqChatReq struct {
 	Model          string            `json:"model"`
@@ -97,6 +115,7 @@ func (g *GroqClient) GenerateJSON(ctx context.Context, prompt string, input any)
 		return nil, err
 	}
 	defer resp.Body.Close()
+	g.captureRateLimitHeaders(resp.Header)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		const max = 2048
@@ -126,6 +145,21 @@ func (g *GroqClient) GenerateJSON(ctx context.Context, prompt string, input any)
 	return raw, nil
 }
 
+func (g *GroqClient) captureRateLimitHeaders(h http.Header) {
+	parsed, ok := parseGroqRateLimitHeaders(h)
+	if !ok {
+		return
+	}
+	g.rlMu.Lock()
+	g.rlLast = parsed
+	g.rlHasLast = true
+	handler := g.rlHandler
+	g.rlMu.Unlock()
+	if handler != nil {
+		handler(parsed)
+	}
+}
+
 func (g *GroqClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
 	raw, err := g.GenerateJSON(ctx, prompt, input)
 	if err != nil {
@@ -138,29 +172,78 @@ func (g *GroqClient) GenerateJSONStream(ctx context.Context, prompt string, inpu
 }
 
 func RegisterGroqModels(reg ModelRegistrar) error {
+	return RegisterGroqModelsForTier(reg, "free")
+}
+
+func RegisterGroqModelsForTier(reg ModelRegistrar, tier string) error {
+	tier = normalizeTier(tier, "free")
+
 	type groqModel struct {
 		name   string
 		level  ModelLevel
 		tokens int
-		params int64
+		meta   map[string]any
+		limit  *RateLimitConfig
 	}
+	// Base limits are sourced from Groq rate-limit docs and used as defaults.
+	// See: https://console.groq.com/docs/rate-limits
+	// Note: limits can vary by account/tier. These values are hints, not guarantees.
 	models := []groqModel{
-		{name: "llama-3.1-8b-instant", level: ModelLevelLow, tokens: 6000, params: 8_000_000_000},
-		{name: "llama-3.3-70b-versatile", level: ModelLevelMiddle, tokens: 6000, params: 70_000_000_000},
-		{name: "llama-3.3-70b-versatile", level: ModelLevelHigh, tokens: 6000, params: 70_000_000_000},
-		{name: "llama-3.3-70b-versatile", level: ModelLevelXHigh, tokens: 6000, params: 70_000_000_000},
+		{name: "allam-2-7b", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 7_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 7_000, TPM: 6_000, TPD: 500_000}},
+		{name: "groq/compound", level: ModelLevelHigh, tokens: 6000, meta: map[string]any{"params": 0}, limit: &RateLimitConfig{RPM: 15, RPD: 200}},
+		{name: "groq/compound-mini", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 0}, limit: &RateLimitConfig{RPM: 15, RPD: 200}},
+		{name: "llama-3.1-8b-instant", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 8_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 14_400, TPM: 6_000, TPD: 500_000}},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 70_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 12_000, TPD: 100_000}},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelHigh, tokens: 6000, meta: map[string]any{"params": 70_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 12_000, TPD: 100_000}},
+		{name: "llama-3.3-70b-versatile", level: ModelLevelXHigh, tokens: 6000, meta: map[string]any{"params": 70_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 12_000, TPD: 100_000}},
+		{name: "meta-llama/llama-4-maverick-17b-128e-instruct", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 17_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 6_000, TPD: 500_000}},
+		{name: "meta-llama/llama-4-scout-17b-16e-instruct", level: ModelLevelHigh, tokens: 6000, meta: map[string]any{"params": 17_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 30_000, TPD: 500_000}},
+		{name: "meta-llama/llama-guard-4-12b", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 12_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 14_400, TPM: 15_000, TPD: 500_000}},
+		{name: "meta-llama/llama-prompt-guard-2-22m", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 22_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 14_400, TPM: 15_000, TPD: 500_000}},
+		{name: "meta-llama/llama-prompt-guard-2-86m", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 86_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 14_400, TPM: 15_000, TPD: 500_000}},
+		{name: "moonshotai/kimi-k2-instruct", level: ModelLevelHigh, tokens: 6000, meta: map[string]any{"params": 0}, limit: &RateLimitConfig{RPM: 60, RPD: 1_000, TPM: 10_000, TPD: 300_000}},
+		{name: "moonshotai/kimi-k2-instruct-0905", level: ModelLevelHigh, tokens: 6000, meta: map[string]any{"params": 0}, limit: &RateLimitConfig{RPM: 60, RPD: 1_000, TPM: 10_000, TPD: 300_000}},
+		{name: "openai/gpt-oss-120b", level: ModelLevelXHigh, tokens: 6000, meta: map[string]any{"params": 120_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 8_000, TPD: 200_000}},
+		{name: "openai/gpt-oss-20b", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 20_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 8_000, TPD: 200_000}},
+		{name: "openai/gpt-oss-safeguard-20b", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 20_000_000_000}, limit: &RateLimitConfig{RPM: 30, RPD: 1_000, TPM: 8_000, TPD: 200_000}},
+		{name: "qwen/qwen3-32b", level: ModelLevelMiddle, tokens: 6000, meta: map[string]any{"params": 32_000_000_000}, limit: &RateLimitConfig{RPM: 60, RPD: 1_000, TPM: 6_000, TPD: 500_000}},
+		{name: "whisper-large-v3", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 0, "modality": "audio"}, limit: &RateLimitConfig{RPM: 20, RPD: 2_000}},
+		{name: "whisper-large-v3-turbo", level: ModelLevelLow, tokens: 6000, meta: map[string]any{"params": 0, "modality": "audio"}, limit: &RateLimitConfig{RPM: 20, RPD: 2_000}},
 	}
+
+	boostLimitForTier := func(in *RateLimitConfig) *RateLimitConfig {
+		if in == nil {
+			return nil
+		}
+		out := *in
+		if tier == "developer" {
+			out.RPM *= 3
+			out.RPD *= 3
+			out.TPM *= 3
+			out.TPD *= 3
+			if out.RPS > 0 {
+				out.RPS = out.RPS * 3
+			}
+			if out.Burst > 0 {
+				out.Burst = out.Burst * 2
+			}
+		}
+		return &out
+	}
+
 	for _, m := range models {
 		modelName := m.name
 		tokens := m.tokens
-		params := m.params
+		meta := m.meta
 		level := m.level
 		if err := reg.RegisterModel(ModelRegistration{
-			Provider:       "groq",
-			Model:          modelName,
-			Level:          level,
-			MaxTokens:      tokens,
-			ParameterCount: params,
+			Provider:  "groq",
+			Tier:      tier,
+			Model:     modelName,
+			Level:     level,
+			MaxTokens: tokens,
+			Meta:      meta,
+			RateLimit: boostLimitForTier(m.limit),
 			Factory: func(ctx context.Context, tokenCap int) (LLMClient, error) {
 				_ = ctx
 				if tokenCap <= 0 {

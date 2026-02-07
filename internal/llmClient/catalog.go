@@ -1,6 +1,9 @@
 package llmclient
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type ModelLevel string
 
@@ -17,20 +20,30 @@ type RateLimitConfig struct {
 	RPM   int
 	RPD   int
 	TPM   int
+	TPD   int
 	RPS   float64
 	Burst int
 }
 
 type ModelRegistration struct {
-	Provider       string
-	Model          string
-	Level          ModelLevel
-	MaxTokens      int
-	ParameterCount int64
-	RateLimit      *RateLimitConfig
-	Factory        ClientFactory
+	Provider  string
+	Tier      string
+	Model     string
+	Level     ModelLevel
+	MaxTokens int
+	Meta      map[string]any
+	RateLimit *RateLimitConfig
+	Factory   ClientFactory
 }
 
 type ModelRegistrar interface {
 	RegisterModel(spec ModelRegistration) error
+}
+
+func normalizeTier(tier, fallback string) string {
+	t := strings.ToLower(strings.TrimSpace(tier))
+	if t == "" {
+		return strings.ToLower(strings.TrimSpace(fallback))
+	}
+	return t
 }

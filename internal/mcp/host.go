@@ -10,6 +10,7 @@ import (
 // Host wires repo/artifact access for tools.
 type Host struct {
 	RepoRoot   string
+	ReposRoot  string
 	RepoFS     *safeio.SafeFS
 	ArtifactFS *safeio.SafeFS
 }
@@ -24,6 +25,7 @@ func RegisterDefaultTools(r *Registry, h Host) {
 	r.Register(newWordIdxSearchTool(h))
 	r.Register(newSnippetCollectTool(h))
 	r.Register(newDeltaDiffTool())
+	r.Register(newGitHubCloneTool(h))
 }
 
 func resolveRepoPath(repoRoot, rel string) string {

@@ -1,4 +1,3 @@
-// internal/llm/sanitize.go（新規）
 package llm
 
 import (

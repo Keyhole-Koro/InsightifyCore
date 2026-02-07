@@ -160,3 +160,33 @@ tools:
               field: { type: string }
               before: {}
               after: {}
+
+  - name: github.clone
+    description: Clone a GitHub repository into repos root.
+    input_schema:
+      type: object
+      required: [repo_url]
+      properties:
+        repo_url:
+          type: string
+          description: GitHub repository URL (https://github.com/owner/repo or git@github.com:owner/repo).
+        branch:
+          type: string
+          description: Optional branch to clone/pull.
+        depth:
+          type: integer
+          description: Shallow clone depth (default 1).
+          default: 1
+        target_name:
+          type: string
+          description: Optional local directory name under repos root. Defaults to repo name inferred from URL.
+        if_exists:
+          type: string
+          description: Behavior when target already exists (skip|error|pull). Default skip.
+          default: skip
+    output_schema:
+      type: object
+      properties:
+        repo_name: { type: string }
+        repo_path: { type: string }
+        status: { type: string }

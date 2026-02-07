@@ -34,6 +34,7 @@ out, err := reg.Call(ctx, "scan.list", inputJSON)
 - `wordidx.search`  : search via word index
 - `snippet.collect` : collect related snippets from C4 artifact
 - `delta.diff`      : compute JSON delta between before/after
+- `github.clone`    : clone GitHub repository into repos root
 
 ## Tool contract
 

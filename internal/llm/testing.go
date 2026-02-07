@@ -1,0 +1,217 @@
+package llm
+
+import (
+	"context"
+	"encoding/json"
+
+	llmclient "insightify/internal/llmClient"
+)
+
+// ----------------------------------------------------------------------------
+// FakeClient – deterministic test client
+// ----------------------------------------------------------------------------
+
+// FakeClient returns deterministic, minimal JSON payloads per worker for offline/testing.
+type FakeClient struct {
+	tokenCap int
+}
+
+// NewFakeClient creates a new fake LLM client.
+func NewFakeClient(cap int) *FakeClient {
+	if cap <= 0 {
+		cap = 4096
+	}
+	return &FakeClient{tokenCap: cap}
+}
+
+func (f *FakeClient) Name() string { return "FakeLLM" }
+func (f *FakeClient) Close() error { return nil }
+func (f *FakeClient) CountTokens(text string) int {
+	if len(text) == 0 {
+		return 0
+	}
+	return len(text) / 4
+}
+func (f *FakeClient) TokenCapacity() int { return f.tokenCap }
+
+func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
+	worker := WorkerFrom(ctx)
+	var obj any
+	switch worker {
+	case "code_roots":
+		obj = map[string]any{
+			"main_source_roots":    []string{"src", "internal"},
+			"library_roots":        []string{"third_party", "vendor"},
+			"config_roots":         []string{".github", "scripts"},
+			"config_files":         []string{".env.example"},
+			"runtime_config_files": []string{},
+			"notes":                []string{"fake c0 output"},
+		}
+		return wrapFinal(obj), nil
+	case "m1":
+		obj = map[string]any{
+			"delta": map[string]any{
+				"added":   []string{},
+				"removed": []string{},
+				"modified": []any{
+					map[string]any{
+						"field":  "architecture_hypothesis.summary",
+						"before": nil,
+						"after":  "fake summary",
+					},
+					map[string]any{
+						"field":  "architecture_hypothesis.purpose",
+						"before": nil,
+						"after":  "fake purpose",
+					},
+					map[string]any{
+						"field":  "architecture_hypothesis.tech_stack.languages",
+						"before": nil,
+						"after":  []string{"Go"},
+					},
+				},
+			},
+		}
+		return wrapFinal(obj), nil
+	case "m2":
+		obj = map[string]any{
+			"updated_hypothesis": map[string]any{
+				"purpose":         "fake purpose",
+				"summary":         "fake summary",
+				"key_components":  []any{},
+				"execution_model": "fake",
+				"tech_stack": map[string]any{
+					"platforms":   []string{},
+					"languages":   []string{"Go"},
+					"build_tools": []string{"go"},
+				},
+				"assumptions":          []string{},
+				"unknowns":             []string{},
+				"confidence":           0.5,
+				"verification_targets": []any{},
+			},
+			"question_status": []any{},
+			"delta":           map[string]any{"added": []string{}, "removed": []string{}, "modified": []any{}},
+			"contradictions":  []any{},
+			"needs_input":     []string{},
+			"stop_when":       []string{},
+			"notes":           []string{"fake m2 output"},
+		}
+	case "x0":
+		obj = map[string]any{
+			"external_overview": map[string]any{
+				"purpose":              "fake external summary",
+				"architecture_summary": "fake architecture summary",
+				"external_systems": []any{
+					map[string]any{
+						"name":        "FakeAPI",
+						"kind":        "REST",
+						"interaction": "calls FakeAPI for demo",
+						"evidence":    []any{},
+						"confidence":  0.5,
+					},
+				},
+				"infra_components": []any{},
+				"build_and_deploy": []any{},
+				"runtime_configs":  []any{},
+				"confidence":       0.5,
+			},
+			"evidence_gaps": []any{},
+			"notes":         []string{"fake x0 output"},
+		}
+	case "x1":
+		obj = map[string]any{
+			"delta": map[string]any{
+				"added":   []string{},
+				"removed": []string{},
+				"modified": []any{
+					map[string]any{
+						"field":  "external_overview.confidence",
+						"before": "0.5",
+						"after":  "0.75",
+					},
+				},
+			},
+			"needs_input": []string{},
+			"stop_when":   []string{},
+			"notes":       []string{"fake x1 output"},
+		}
+	default:
+		// generic empty JSON object
+		obj = map[string]any{}
+	}
+	b, _ := json.Marshal(obj)
+	return json.RawMessage(b), nil
+}
+
+func (f *FakeClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
+	return f.GenerateJSON(ctx, prompt, input)
+}
+
+func wrapFinal(obj any) json.RawMessage {
+	payload := map[string]any{
+		"action": "final",
+		"final":  obj,
+	}
+	b, _ := json.Marshal(payload)
+	return json.RawMessage(b)
+}
+
+// ----------------------------------------------------------------------------
+// RegisterFakeModels – register fake models for testing
+// ----------------------------------------------------------------------------
+
+// RegisterFakeModels registers fake models at all levels for testing.
+func RegisterFakeModels(reg llmclient.ModelRegistrar) error {
+	type fakeModel struct {
+		name   string
+		level  llmclient.ModelLevel
+		tokens int
+		meta   map[string]any
+		limit  *llmclient.RateLimitConfig
+	}
+	models := []fakeModel{
+		{name: "fake-low", level: llmclient.ModelLevelLow, tokens: 2048, meta: map[string]any{"params": 1_000_000_000}, limit: &llmclient.RateLimitConfig{RPS: 100, Burst: 10}},
+		{name: "fake-middle", level: llmclient.ModelLevelMiddle, tokens: 4096, meta: map[string]any{"params": 7_000_000_000}, limit: &llmclient.RateLimitConfig{RPS: 100, Burst: 10}},
+		{name: "fake-high", level: llmclient.ModelLevelHigh, tokens: 8192, meta: map[string]any{"params": 30_000_000_000}, limit: &llmclient.RateLimitConfig{RPS: 100, Burst: 10}},
+		{name: "fake-xhigh", level: llmclient.ModelLevelXHigh, tokens: 16384, meta: map[string]any{"params": 70_000_000_000}, limit: &llmclient.RateLimitConfig{RPS: 100, Burst: 10}},
+	}
+	for _, m := range models {
+		name := m.name
+		tokens := m.tokens
+		meta := m.meta
+		level := m.level
+		if err := reg.RegisterModel(llmclient.ModelRegistration{
+			Provider:  "fake",
+			Model:     name,
+			Level:     level,
+			MaxTokens: tokens,
+			Meta:      meta,
+			RateLimit: m.limit,
+			Factory: func(ctx context.Context, tokenCap int) (llmclient.LLMClient, error) {
+				_ = ctx
+				if tokenCap <= 0 {
+					tokenCap = tokens
+				}
+				return NewFakeClient(tokenCap), nil
+			},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// FakeModelByLevel returns the fake model name for a given level.
+func FakeModelByLevel(level ModelLevel) string {
+	switch level {
+	case ModelLevelLow:
+		return "fake-low"
+	case ModelLevelHigh:
+		return "fake-high"
+	case ModelLevelXHigh:
+		return "fake-xhigh"
+	default:
+		return "fake-middle"
+	}
+}

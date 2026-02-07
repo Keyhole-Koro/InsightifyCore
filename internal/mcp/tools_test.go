@@ -173,3 +173,111 @@ func TestDeltaDiffTool(t *testing.T) {
 		t.Fatalf("expected modified entries, got %+v", out["modified"])
 	}
 }
+
+func TestGitHubCloneTool_CloneAndValidation(t *testing.T) {
+	repoRoot, _, _ := setupRepo(t)
+	reposRoot := filepath.Dir(repoRoot)
+	tool := newGitHubCloneTool(Host{ReposRoot: reposRoot})
+
+	orig := runGitCommand
+	t.Cleanup(func() { runGitCommand = orig })
+	var calls [][]string
+	runGitCommand = func(ctx context.Context, args ...string) error {
+		_ = ctx
+		calls = append(calls, append([]string{}, args...))
+		return nil
+	}
+
+	raw, _ := json.Marshal(githubCloneInput{
+		RepoURL: "https://github.com/Keyhole-Koro/PoliTopics.git",
+	})
+	outRaw, err := tool.Call(context.Background(), raw)
+	if err != nil {
+		t.Fatalf("github.clone call: %v", err)
+	}
+	var out githubCloneOutput
+	if err := json.Unmarshal(outRaw, &out); err != nil {
+		t.Fatalf("decode output: %v", err)
+	}
+	if out.Status != "cloned" || out.RepoName != "PoliTopics" {
+		t.Fatalf("unexpected output: %+v", out)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 git call, got %d", len(calls))
+	}
+	args := strings.Join(calls[0], " ")
+	if !strings.Contains(args, "clone --depth 1 https://github.com/Keyhole-Koro/PoliTopics.git") {
+		t.Fatalf("unexpected clone args: %v", calls[0])
+	}
+
+	badRaw, _ := json.Marshal(githubCloneInput{RepoURL: "https://gitlab.com/example/hello"})
+	if _, err := tool.Call(context.Background(), badRaw); err == nil {
+		t.Fatalf("expected non-github URL to fail")
+	}
+}
+
+func TestGitHubCloneTool_IfExistsSkipAndPull(t *testing.T) {
+	repoRoot, _, _ := setupRepo(t)
+	reposRoot := filepath.Dir(repoRoot)
+	target := filepath.Join(reposRoot, "already")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatalf("mkdir target: %v", err)
+	}
+
+	tool := newGitHubCloneTool(Host{ReposRoot: reposRoot})
+
+	orig := runGitCommand
+	t.Cleanup(func() { runGitCommand = orig })
+	var calls [][]string
+	runGitCommand = func(ctx context.Context, args ...string) error {
+		_ = ctx
+		calls = append(calls, append([]string{}, args...))
+		return nil
+	}
+
+	skipRaw, _ := json.Marshal(githubCloneInput{
+		RepoURL:    "git@github.com:Keyhole-Koro/PoliTopics.git",
+		TargetName: "already",
+		IfExists:   "skip",
+	})
+	outRaw, err := tool.Call(context.Background(), skipRaw)
+	if err != nil {
+		t.Fatalf("skip call: %v", err)
+	}
+	var out githubCloneOutput
+	if err := json.Unmarshal(outRaw, &out); err != nil {
+		t.Fatalf("decode skip output: %v", err)
+	}
+	if out.Status != "skipped" {
+		t.Fatalf("unexpected skip status: %+v", out)
+	}
+	if len(calls) != 0 {
+		t.Fatalf("skip should not call git: %v", calls)
+	}
+
+	pullRaw, _ := json.Marshal(githubCloneInput{
+		RepoURL:    "git@github.com:Keyhole-Koro/PoliTopics.git",
+		TargetName: "already",
+		IfExists:   "pull",
+		Branch:     "main",
+	})
+	outRaw, err = tool.Call(context.Background(), pullRaw)
+	if err != nil {
+		t.Fatalf("pull call: %v", err)
+	}
+	if err := json.Unmarshal(outRaw, &out); err != nil {
+		t.Fatalf("decode pull output: %v", err)
+	}
+	if out.Status != "updated" {
+		t.Fatalf("unexpected pull status: %+v", out)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("pull should call git once, got %d", len(calls))
+	}
+	wantPrefix := []string{"-C", target, "pull", "--ff-only", "origin", "main"}
+	for i, w := range wantPrefix {
+		if i >= len(calls[0]) || calls[0][i] != w {
+			t.Fatalf("unexpected pull args: %v", calls[0])
+		}
+	}
+}

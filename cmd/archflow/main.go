@@ -12,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"insightify/internal/globalctx"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/safeio"
@@ -66,7 +67,13 @@ func main() {
 		force = key
 	}
 
-	ctx := context.Background()
+	ctx := globalctx.WithGlobalContext(context.Background(), globalctx.GlobalContext{
+		ModelSelectionMode: globalctx.ModelSelectionModePreferAvailable,
+		ProviderTiers: map[string]string{
+			"gemini": "free",
+			"groq":   "free",
+		},
+	})
 	ctx = llm.WithPromptHook(ctx, &runner.PromptSaver{Dir: *outDir})
 
 	capacity := *tokenCap
@@ -74,8 +81,7 @@ func main() {
 		capacity = defaultTokenCapacity(*provider, *model)
 	}
 
-	reg, rateBinding, err := setupModelRegistry(*provider, *model, *fake)
-	reg, err := setupModelRegistry(*provider, *model, *fake)
+	reg, err := setupModelRegistry(ctx, *provider, *model, *fake)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,11 +91,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cfg := defaultLLMRateConfig(rateBinding.provider, rateBinding.model)
 	mws := []llm.Middleware{
 		llm.SelectModel(reg, capacity),
+		llm.RespectRateLimitSignals(llmclient.HeaderRateLimitControlAdapter{}),
+		llm.WithUsageLedger(filepath.Join(outAbs, "llm_usage_daily.json")),
 	}
-	mws = append(mws, buildRateMiddlewares(cfg)...)
 	mws = append(mws,
 		llm.Retry(3, 300*time.Millisecond),
 		llm.WithHooks(),
@@ -113,7 +119,7 @@ func main() {
 		Index:      nil,
 		MDDocs:     nil,
 	}
-	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
+	env.MCPHost = mcp.Host{RepoRoot: repoPath, ReposRoot: scan.ReposDir(), RepoFS: repoFS, ArtifactFS: artifactFS}
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
@@ -137,19 +143,17 @@ type modelBinding struct {
 	model    string
 }
 
-func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, modelBinding, error) {
-func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, error) {
+func setupModelRegistry(ctx context.Context, defaultProvider, defaultModel string, forceFake bool) (*llm.InMemoryModelRegistry, error) {
 	reg := llm.NewInMemoryModelRegistry()
-	if err := llmclient.RegisterGeminiModels(reg); err != nil {
-		return nil, modelBinding{}, err
+	geminiTier := globalctx.ProviderTierFrom(ctx, "gemini", "free")
+	groqTier := globalctx.ProviderTierFrom(ctx, "groq", "free")
+	if err := llmclient.RegisterGeminiModelsForTier(reg, geminiTier); err != nil {
 		return nil, err
 	}
-	if err := llmclient.RegisterGroqModels(reg); err != nil {
-		return nil, modelBinding{}, err
+	if err := llmclient.RegisterGroqModelsForTier(reg, groqTier); err != nil {
 		return nil, err
 	}
 	if err := llm.RegisterFakeModels(reg); err != nil {
-		return nil, modelBinding{}, err
 		return nil, err
 	}
 
@@ -162,17 +166,11 @@ func setupModelRegistry(defaultProvider, defaultModel string, forceFake bool) (*
 				binding = modelBinding{provider: "fake", model: llm.FakeModelByLevel(level)}
 			}
 			if err := reg.SetDefault(role, level, binding.provider, binding.model); err != nil {
-				return nil, modelBinding{}, err
 				return nil, err
 			}
 		}
 	}
 
-	rateBinding := resolveModelBinding(llm.ModelRoleWorker, llm.ModelLevelMiddle, defaultProvider, defaultModel)
-	if forceFake {
-		rateBinding = modelBinding{provider: "fake", model: llm.FakeModelByLevel(llm.ModelLevelMiddle)}
-	}
-	return reg, rateBinding, nil
 	return reg, nil
 }
 
@@ -229,28 +227,6 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-// LLMRateConfig captures rate limiting in a clear, declarative way.
-// Zero values disable the corresponding limiter.
-type LLMRateConfig struct {
-	RPM   int
-	RPD   int
-	TPM   int
-	RPS   float64
-	Burst int
-}
-
-func defaultLLMRateConfig(provider, model string) LLMRateConfig {
-	_ = model
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "gemini":
-		return LLMRateConfig{RPM: 60, RPS: 1, Burst: 1}
-	case "groq":
-		return LLMRateConfig{RPM: 30, RPS: 1, Burst: 1}
-	default:
-		return LLMRateConfig{RPS: 1, Burst: 1}
-	}
-}
-
 func defaultTokenCapacity(provider, model string) int {
 	_ = model
 	switch strings.ToLower(strings.TrimSpace(provider)) {
@@ -261,17 +237,6 @@ func defaultTokenCapacity(provider, model string) int {
 	default:
 		return 1000
 	}
-}
-
-func buildRateMiddlewares(c LLMRateConfig) []llm.Middleware {
-	out := []llm.Middleware{}
-	if c.RPM > 0 || c.RPD > 0 || c.TPM > 0 {
-		out = append(out, llm.MultiLimit(c.RPM, c.RPD, c.TPM))
-	}
-	if c.RPS > 0 || c.Burst > 0 {
-		out = append(out, llm.RateLimit(c.RPS, c.Burst))
-	}
-	return out
 }
 
 func resolveRepoPaths(repo string) (string, string, *safeio.SafeFS, error) {

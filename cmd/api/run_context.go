@@ -7,10 +7,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"insightify/internal/globalctx"
 	"insightify/internal/llm"
+	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/runner"
 	"insightify/internal/safeio"
+	"insightify/internal/scan"
 	"insightify/internal/utils"
 )
 
@@ -70,7 +73,15 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 		return nil, err
 	}
 
-	fallback, err := reg.BuildClient(context.Background(), llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "", 4096)
+	baseCtx := globalctx.WithGlobalContext(context.Background(), globalctx.GlobalContext{
+		ModelSelectionMode: globalctx.ModelSelectionModePreferAvailable,
+		ProviderTiers: map[string]string{
+			"gemini": "free",
+			"groq":   "free",
+		},
+	})
+
+	fallback, err := reg.BuildClient(baseCtx, llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "", 4096)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +89,8 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	llmCli := llm.Wrap(
 		llm.NewModelDispatchClient(fallback),
 		llm.SelectModel(reg, 4096),
+		llm.RespectRateLimitSignals(llmclient.HeaderRateLimitControlAdapter{}),
+		llm.WithUsageLedger(filepath.Join(filepath.Dir(absOutDir), "llm_usage_daily.json")),
 		llm.WithHooks(),
 	)
 
@@ -93,7 +106,7 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 		UIDGen:     utils.NewUIDGenerator(),
 	}
 
-	env.MCPHost = mcp.Host{RepoRoot: repoPath, RepoFS: repoFS, ArtifactFS: artifactFS}
+	env.MCPHost = mcp.Host{RepoRoot: repoPath, ReposRoot: scan.ReposDir(), RepoFS: repoFS, ArtifactFS: artifactFS}
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
