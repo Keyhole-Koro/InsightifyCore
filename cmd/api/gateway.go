@@ -42,11 +42,13 @@ func scheduleRunCleanup(runID string) {
 }
 
 type initSession struct {
-	UserID  string
-	RepoURL string
-	Repo    string
-	RunCtx  *RunContext
-	Running bool
+	SessionID        string
+	UserID           string
+	RepoURL          string
+	Repo             string
+	RunCtx           *RunContext
+	Running          bool
+	InitPurposeRunID string
 }
 
 var initRunStore = struct {
@@ -60,33 +62,86 @@ var initRunStore = struct {
 func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
 	userID := strings.TrimSpace(req.Msg.GetUserId())
 	repoURL := strings.TrimSpace(req.Msg.GetRepoUrl())
-	if userID == "" || repoURL == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id and repo_url are required"))
+	if userID == "" {
+		userID = "demo-user"
 	}
 
-	sessionID := fmt.Sprintf("session-%d", time.Now().UnixNano())
-	repoName := inferRepoName(repoURL)
-	if repoName == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid repo_url: could not infer repository name"))
+	cookieSID := resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
+	sessionID := cookieSID
+	var (
+		sess    initSession
+		existed bool
+	)
+	if sessionID != "" {
+		initRunStore.RLock()
+		sess, existed = initRunStore.sessions[sessionID]
+		initRunStore.RUnlock()
 	}
-	runCtx, err := NewRunContext(repoName, sessionID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
+	if !existed {
+		sessionID = fmt.Sprintf("session-%d", time.Now().UnixNano())
+		repoName := inferRepoName(repoURL)
+		runCtx, err := NewRunContext(repoName, sessionID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
+		}
+		sess = initSession{
+			SessionID: sessionID,
+			UserID:    userID,
+			RepoURL:   repoURL,
+			Repo:      repoName,
+			RunCtx:    runCtx,
+			Running:   false,
+		}
+	}
+	if repoURL != "" {
+		sess.RepoURL = repoURL
+		if repoName := inferRepoName(repoURL); repoName != "" {
+			sess.Repo = repoName
+		}
+	}
+	if userID != "" {
+		sess.UserID = userID
+	}
+	sess.SessionID = sessionID
+	if sess.RunCtx == nil {
+		runCtx, err := NewRunContext(sess.Repo, sessionID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
+		}
+		sess.RunCtx = runCtx
 	}
 
 	initRunStore.Lock()
-	initRunStore.sessions[sessionID] = initSession{
-		UserID:  userID,
-		RepoURL: repoURL,
-		Repo:    repoName,
-		RunCtx:  runCtx,
-		Running: false,
-	}
+	initRunStore.sessions[sessionID] = sess
 	initRunStore.Unlock()
 
+	var (
+		bootstrapRunID string
+		updated        initSession
+	)
+	initRunStore.RLock()
+	current := initRunStore.sessions[sessionID]
+	initRunStore.RUnlock()
+	if current.Running && current.InitPurposeRunID != "" {
+		bootstrapRunID = current.InitPurposeRunID
+		updated = current
+	} else {
+		var err error
+		bootstrapRunID, err = s.launchInitPurposeRun(sessionID, "", true)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap init_purpose: %w", err))
+		}
+		initRunStore.Lock()
+		updated = initRunStore.sessions[sessionID]
+		updated.InitPurposeRunID = bootstrapRunID
+		initRunStore.sessions[sessionID] = updated
+		initRunStore.Unlock()
+	}
+
 	res := connect.NewResponse(&insightifyv1.InitRunResponse{
-		SessionId: sessionID,
-		RepoName:  repoName,
+		SessionId:      sessionID,
+		RepoName:       updated.Repo,
+		BootstrapRunId: bootstrapRunID,
 	})
 	res.Header().Add("Set-Cookie", (&http.Cookie{
 		Name:     sessionCookieName,
@@ -112,6 +167,16 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	if !ok || sess.RunCtx == nil {
 		initRunStore.Unlock()
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+	}
+	if pipelineID == "init_purpose" {
+		initRunStore.Unlock()
+		runID, err := s.launchInitPurposeRun(sessionID, strings.TrimSpace(req.Msg.GetParams()["user_input"]), false)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start init_purpose: %w", err))
+		}
+		return connect.NewResponse(&insightifyv1.StartRunResponse{
+			RunId: runID,
+		}), nil
 	}
 	if sess.Running {
 		initRunStore.Unlock()
@@ -306,7 +371,10 @@ func resolveSessionID(req *connect.Request[insightifyv1.StartRunRequest]) string
 	if sid := strings.TrimSpace(req.Msg.GetSessionId()); sid != "" {
 		return sid
 	}
-	cookieHeader := req.Header().Get("Cookie")
+	return resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
+}
+
+func resolveSessionIDFromCookieHeader(cookieHeader string) string {
 	if cookieHeader == "" {
 		return ""
 	}
@@ -318,6 +386,38 @@ func resolveSessionID(req *connect.Request[insightifyv1.StartRunRequest]) string
 		return strings.TrimSpace(strings.TrimPrefix(p, sessionCookieName+"="))
 	}
 	return ""
+}
+
+func (s *apiServer) SubmitRunInput(_ context.Context, req *connect.Request[insightifyv1.SubmitRunInputRequest]) (*connect.Response[insightifyv1.SubmitRunInputResponse], error) {
+	sessionID := strings.TrimSpace(req.Msg.GetSessionId())
+	if sessionID == "" {
+		sessionID = resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
+	}
+	if sessionID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required"))
+	}
+
+	runID := strings.TrimSpace(req.Msg.GetRunId())
+	userInput := strings.TrimSpace(req.Msg.GetInput())
+	if userInput == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("input is required"))
+	}
+
+	initRunStore.RLock()
+	sess, ok := initRunStore.sessions[sessionID]
+	initRunStore.RUnlock()
+	if !ok || sess.RunCtx == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+	}
+	if runID != "" && sess.InitPurposeRunID != "" && runID != sess.InitPurposeRunID {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("run %s is not active for session %s", runID, sessionID))
+	}
+
+	nextRunID, err := s.launchInitPurposeRun(sessionID, userInput, false)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to submit input: %w", err))
+	}
+	return connect.NewResponse(&insightifyv1.SubmitRunInputResponse{RunId: nextRunID}), nil
 }
 
 // WatchRun streams events for a running pipeline.

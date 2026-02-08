@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"insightify/internal/globalctx"
@@ -46,9 +47,30 @@ type RunContext struct {
 // NewRunContext creates a new context bound to the provided session ID.
 // If sessionID is empty, it falls back to a timestamp.
 func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
-	name, repoPath, repoFS, err := resolveRepoPaths(repoName)
-	if err != nil {
-		return nil, err
+	var (
+		name     string
+		repoPath string
+		repoFS   *safeio.SafeFS
+		err      error
+	)
+	if strings.TrimSpace(repoName) == "" {
+		name = "bootstrap"
+		repoPath = scan.ReposDir()
+		if strings.TrimSpace(repoPath) == "" {
+			repoPath = "."
+		}
+		if abs, absErr := filepath.Abs(repoPath); absErr == nil {
+			repoPath = abs
+		}
+		repoFS, err = safeio.NewSafeFS(repoPath)
+		if err != nil {
+			return nil, fmt.Errorf("bootstrap repo fs: %w", err)
+		}
+	} else {
+		name, repoPath, repoFS, err = resolveRepoPaths(repoName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if sessionID == "" {

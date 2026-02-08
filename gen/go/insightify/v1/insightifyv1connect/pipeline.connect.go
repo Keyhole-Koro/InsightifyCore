@@ -38,6 +38,9 @@ const (
 	// PipelineServiceStartRunProcedure is the fully-qualified name of the PipelineService's StartRun
 	// RPC.
 	PipelineServiceStartRunProcedure = "/insightify.v1.PipelineService/StartRun"
+	// PipelineServiceSubmitRunInputProcedure is the fully-qualified name of the PipelineService's
+	// SubmitRunInput RPC.
+	PipelineServiceSubmitRunInputProcedure = "/insightify.v1.PipelineService/SubmitRunInput"
 	// PipelineServiceWatchRunProcedure is the fully-qualified name of the PipelineService's WatchRun
 	// RPC.
 	PipelineServiceWatchRunProcedure = "/insightify.v1.PipelineService/WatchRun"
@@ -49,6 +52,8 @@ type PipelineServiceClient interface {
 	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
 	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
+	// Submit user input for an interactive run (e.g. init_purpose).
+	SubmitRunInput(context.Context, *connect.Request[v1.SubmitRunInputRequest]) (*connect.Response[v1.SubmitRunInputResponse], error)
 	// Streaming progress for a run (fan out to UI).
 	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.WatchRunResponse], error)
 }
@@ -76,6 +81,12 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
 			connect.WithClientOptions(opts...),
 		),
+		submitRunInput: connect.NewClient[v1.SubmitRunInputRequest, v1.SubmitRunInputResponse](
+			httpClient,
+			baseURL+PipelineServiceSubmitRunInputProcedure,
+			connect.WithSchema(pipelineServiceMethods.ByName("SubmitRunInput")),
+			connect.WithClientOptions(opts...),
+		),
 		watchRun: connect.NewClient[v1.WatchRunRequest, v1.WatchRunResponse](
 			httpClient,
 			baseURL+PipelineServiceWatchRunProcedure,
@@ -87,9 +98,10 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // pipelineServiceClient implements PipelineServiceClient.
 type pipelineServiceClient struct {
-	initRun  *connect.Client[v1.InitRunRequest, v1.InitRunResponse]
-	startRun *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
-	watchRun *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
+	initRun        *connect.Client[v1.InitRunRequest, v1.InitRunResponse]
+	startRun       *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
+	submitRunInput *connect.Client[v1.SubmitRunInputRequest, v1.SubmitRunInputResponse]
+	watchRun       *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
 }
 
 // InitRun calls insightify.v1.PipelineService.InitRun.
@@ -100,6 +112,11 @@ func (c *pipelineServiceClient) InitRun(ctx context.Context, req *connect.Reques
 // StartRun calls insightify.v1.PipelineService.StartRun.
 func (c *pipelineServiceClient) StartRun(ctx context.Context, req *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {
 	return c.startRun.CallUnary(ctx, req)
+}
+
+// SubmitRunInput calls insightify.v1.PipelineService.SubmitRunInput.
+func (c *pipelineServiceClient) SubmitRunInput(ctx context.Context, req *connect.Request[v1.SubmitRunInputRequest]) (*connect.Response[v1.SubmitRunInputResponse], error) {
+	return c.submitRunInput.CallUnary(ctx, req)
 }
 
 // WatchRun calls insightify.v1.PipelineService.WatchRun.
@@ -113,6 +130,8 @@ type PipelineServiceHandler interface {
 	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
 	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
+	// Submit user input for an interactive run (e.g. init_purpose).
+	SubmitRunInput(context.Context, *connect.Request[v1.SubmitRunInputRequest]) (*connect.Response[v1.SubmitRunInputResponse], error)
 	// Streaming progress for a run (fan out to UI).
 	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.WatchRunResponse]) error
 }
@@ -136,6 +155,12 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 		connect.WithSchema(pipelineServiceMethods.ByName("StartRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pipelineServiceSubmitRunInputHandler := connect.NewUnaryHandler(
+		PipelineServiceSubmitRunInputProcedure,
+		svc.SubmitRunInput,
+		connect.WithSchema(pipelineServiceMethods.ByName("SubmitRunInput")),
+		connect.WithHandlerOptions(opts...),
+	)
 	pipelineServiceWatchRunHandler := connect.NewServerStreamHandler(
 		PipelineServiceWatchRunProcedure,
 		svc.WatchRun,
@@ -148,6 +173,8 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 			pipelineServiceInitRunHandler.ServeHTTP(w, r)
 		case PipelineServiceStartRunProcedure:
 			pipelineServiceStartRunHandler.ServeHTTP(w, r)
+		case PipelineServiceSubmitRunInputProcedure:
+			pipelineServiceSubmitRunInputHandler.ServeHTTP(w, r)
 		case PipelineServiceWatchRunProcedure:
 			pipelineServiceWatchRunHandler.ServeHTTP(w, r)
 		default:
@@ -165,6 +192,10 @@ func (UnimplementedPipelineServiceHandler) InitRun(context.Context, *connect.Req
 
 func (UnimplementedPipelineServiceHandler) StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.StartRun is not implemented"))
+}
+
+func (UnimplementedPipelineServiceHandler) SubmitRunInput(context.Context, *connect.Request[v1.SubmitRunInputRequest]) (*connect.Response[v1.SubmitRunInputResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.SubmitRunInput is not implemented"))
 }
 
 func (UnimplementedPipelineServiceHandler) WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.WatchRunResponse]) error {
