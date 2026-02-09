@@ -80,9 +80,11 @@ func (p *PlanContext) Run(ctx context.Context, in artifact.PlanDependenciesIn) (
 		RuntimeState: in,
 		ClientView: &pipelinev1.ClientView{
 			Phase: "worker_DAG",
-			Graph: &pipelinev1.GraphView{
-				Nodes: nodes,
-				Edges: edges,
+			Content: &pipelinev1.ClientView_Graph{
+				Graph: &pipelinev1.GraphView{
+					Nodes: nodes,
+					Edges: edges,
+				},
 			},
 		},
 	}, nil

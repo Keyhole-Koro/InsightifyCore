@@ -32,17 +32,19 @@ func (p *TestStreamingPipeline) Steps() []StreamStep {
 // GenerateSampleGraph creates a sample graph for the test result.
 func (p *TestStreamingPipeline) GenerateSampleGraph() *pipelinev1.ClientView {
 	return &pipelinev1.ClientView{
-		Graph: &pipelinev1.GraphView{
-			Nodes: []*pipelinev1.GraphNode{
-				{Uid: "init", Label: "Initialize", Description: "System initialization"},
-				{Uid: "load", Label: "Load Data", Description: "Loading input data"},
-				{Uid: "process", Label: "Process", Description: "Main processing step"},
-				{Uid: "output", Label: "Output", Description: "Generate output"},
-			},
-			Edges: []*pipelinev1.GraphEdge{
-				{From: "init", To: "load"},
-				{From: "load", To: "process"},
-				{From: "process", To: "output"},
+		Content: &pipelinev1.ClientView_Graph{
+			Graph: &pipelinev1.GraphView{
+				Nodes: []*pipelinev1.GraphNode{
+					{Uid: "init", Label: "Initialize", Description: "System initialization"},
+					{Uid: "load", Label: "Load Data", Description: "Loading input data"},
+					{Uid: "process", Label: "Process", Description: "Main processing step"},
+					{Uid: "output", Label: "Output", Description: "Generate output"},
+				},
+				Edges: []*pipelinev1.GraphEdge{
+					{From: "init", To: "load"},
+					{From: "load", To: "process"},
+					{From: "process", To: "output"},
+				},
 			},
 		},
 	}
@@ -55,18 +57,22 @@ func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- Strea
 	fullView := p.GenerateSampleGraph()
 	partialView := &pipelinev1.ClientView{
 		Phase: fullView.GetPhase(),
-		Graph: &pipelinev1.GraphView{},
+		Content: &pipelinev1.ClientView_Graph{
+			Graph: &pipelinev1.GraphView{},
+		},
 	}
 
 	for i, step := range p.Steps() {
-		if fullView != nil && fullView.Graph != nil && partialView.Graph != nil {
-			if i < len(fullView.Graph.Nodes) {
-				partialView.Graph.Nodes = append(partialView.Graph.Nodes, fullView.Graph.Nodes[i])
+		fullGraph := fullView.GetGraph()
+		partialGraph := partialView.GetGraph()
+		if fullGraph != nil && partialGraph != nil {
+			if i < len(fullGraph.Nodes) {
+				partialGraph.Nodes = append(partialGraph.Nodes, fullGraph.Nodes[i])
 			}
 
 			edgeIndex := i - 1
-			if edgeIndex >= 0 && edgeIndex < len(fullView.Graph.Edges) {
-				partialView.Graph.Edges = append(partialView.Graph.Edges, fullView.Graph.Edges[edgeIndex])
+			if edgeIndex >= 0 && edgeIndex < len(fullGraph.Edges) {
+				partialGraph.Edges = append(partialGraph.Edges, fullGraph.Edges[edgeIndex])
 			}
 
 			step.View = cloneClientView(partialView)
@@ -89,31 +95,32 @@ func cloneClientView(view *pipelinev1.ClientView) *pipelinev1.ClientView {
 	}
 
 	cloned := &pipelinev1.ClientView{Phase: view.GetPhase()}
-	if view.Graph == nil {
+	if view.GetGraph() == nil {
 		return cloned
 	}
 
-	cloned.Graph = &pipelinev1.GraphView{}
-	if len(view.Graph.Nodes) > 0 {
-		cloned.Graph.Nodes = make([]*pipelinev1.GraphNode, 0, len(view.Graph.Nodes))
-		for _, n := range view.Graph.Nodes {
+	clonedGraph := &pipelinev1.GraphView{}
+	cloned.Content = &pipelinev1.ClientView_Graph{Graph: clonedGraph}
+	if len(view.GetGraph().Nodes) > 0 {
+		clonedGraph.Nodes = make([]*pipelinev1.GraphNode, 0, len(view.GetGraph().Nodes))
+		for _, n := range view.GetGraph().Nodes {
 			if n == nil {
-				cloned.Graph.Nodes = append(cloned.Graph.Nodes, nil)
+				clonedGraph.Nodes = append(clonedGraph.Nodes, nil)
 				continue
 			}
 			cp := *n
-			cloned.Graph.Nodes = append(cloned.Graph.Nodes, &cp)
+			clonedGraph.Nodes = append(clonedGraph.Nodes, &cp)
 		}
 	}
-	if len(view.Graph.Edges) > 0 {
-		cloned.Graph.Edges = make([]*pipelinev1.GraphEdge, 0, len(view.Graph.Edges))
-		for _, e := range view.Graph.Edges {
+	if len(view.GetGraph().Edges) > 0 {
+		clonedGraph.Edges = make([]*pipelinev1.GraphEdge, 0, len(view.GetGraph().Edges))
+		for _, e := range view.GetGraph().Edges {
 			if e == nil {
-				cloned.Graph.Edges = append(cloned.Graph.Edges, nil)
+				clonedGraph.Edges = append(clonedGraph.Edges, nil)
 				continue
 			}
 			cp := *e
-			cloned.Graph.Edges = append(cloned.Graph.Edges, &cp)
+			clonedGraph.Edges = append(clonedGraph.Edges, &cp)
 		}
 	}
 	return cloned

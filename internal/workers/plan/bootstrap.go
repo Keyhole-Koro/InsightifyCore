@@ -149,31 +149,13 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 }
 
 func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
-	state := "Waiting for input"
-	if !result.NeedMoreInput {
-		state = "Ready"
-	}
 	view := &pipelinev1.ClientView{
-		Phase:    "bootstrap",
-		Response: strings.TrimSpace(result.AssistantMessage),
-		Graph: &pipelinev1.GraphView{
-			Nodes: []*pipelinev1.GraphNode{
-				{
-					Uid:         "plan-assistant",
-					Label:       "Plan Assistant",
-					Description: strings.TrimSpace(result.AssistantMessage),
-				},
-				{
-					Uid:         "plan-state",
-					Label:       "State",
-					Description: state,
-				},
-			},
-			Edges: []*pipelinev1.GraphEdge{
-				{From: "plan-assistant", To: "plan-state"},
-			},
-		},
+		Phase:   "bootstrap",
+		Content: &pipelinev1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.AssistantMessage)},
 	}
-	utils.AssignGraphNodeUIDs(view)
+	if view.GetGraph() != nil {
+		// Keep compatibility with graph-based workers if content kind changes in future.
+		utils.AssignGraphNodeUIDs(view)
+	}
 	return view
 }

@@ -22,10 +22,13 @@ const (
 )
 
 type ClientView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Phase         string                 `protobuf:"bytes,1,opt,name=phase,proto3" json:"phase,omitempty"`
-	Graph         *GraphView             `protobuf:"bytes,2,opt,name=graph,proto3" json:"graph,omitempty"`
-	Response      string                 `protobuf:"bytes,3,opt,name=response,proto3" json:"response,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Phase string                 `protobuf:"bytes,1,opt,name=phase,proto3" json:"phase,omitempty"`
+	// Types that are valid to be assigned to Content:
+	//
+	//	*ClientView_Graph
+	//	*ClientView_LlmResponse
+	Content       isClientView_Content `protobuf_oneof:"content"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,19 +70,46 @@ func (x *ClientView) GetPhase() string {
 	return ""
 }
 
-func (x *ClientView) GetGraph() *GraphView {
+func (x *ClientView) GetContent() isClientView_Content {
 	if x != nil {
-		return x.Graph
+		return x.Content
 	}
 	return nil
 }
 
-func (x *ClientView) GetResponse() string {
+func (x *ClientView) GetGraph() *GraphView {
 	if x != nil {
-		return x.Response
+		if x, ok := x.Content.(*ClientView_Graph); ok {
+			return x.Graph
+		}
+	}
+	return nil
+}
+
+func (x *ClientView) GetLlmResponse() string {
+	if x != nil {
+		if x, ok := x.Content.(*ClientView_LlmResponse); ok {
+			return x.LlmResponse
+		}
 	}
 	return ""
 }
+
+type isClientView_Content interface {
+	isClientView_Content()
+}
+
+type ClientView_Graph struct {
+	Graph *GraphView `protobuf:"bytes,2,opt,name=graph,proto3,oneof"`
+}
+
+type ClientView_LlmResponse struct {
+	LlmResponse string `protobuf:"bytes,3,opt,name=llm_response,json=llmResponse,proto3,oneof"`
+}
+
+func (*ClientView_Graph) isClientView_Content() {}
+
+func (*ClientView_LlmResponse) isClientView_Content() {}
 
 type GraphView struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -257,12 +287,13 @@ var File_pipeline_v1_client_view_proto protoreflect.FileDescriptor
 
 const file_pipeline_v1_client_view_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpipeline/v1/client_view.proto\x12\vpipeline.v1\"l\n" +
+	"\x1dpipeline/v1/client_view.proto\x12\vpipeline.v1\"\x82\x01\n" +
 	"\n" +
 	"ClientView\x12\x14\n" +
-	"\x05phase\x18\x01 \x01(\tR\x05phase\x12,\n" +
-	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewR\x05graph\x12\x1a\n" +
-	"\bresponse\x18\x03 \x01(\tR\bresponse\"g\n" +
+	"\x05phase\x18\x01 \x01(\tR\x05phase\x12.\n" +
+	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewH\x00R\x05graph\x12#\n" +
+	"\fllm_response\x18\x03 \x01(\tH\x00R\vllmResponseB\t\n" +
+	"\acontent\"g\n" +
 	"\tGraphView\x12,\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x16.pipeline.v1.GraphNodeR\x05nodes\x12,\n" +
 	"\x05edges\x18\x02 \x03(\v2\x16.pipeline.v1.GraphEdgeR\x05edges\"t\n" +
@@ -311,6 +342,10 @@ func init() { file_pipeline_v1_client_view_proto_init() }
 func file_pipeline_v1_client_view_proto_init() {
 	if File_pipeline_v1_client_view_proto != nil {
 		return
+	}
+	file_pipeline_v1_client_view_proto_msgTypes[0].OneofWrappers = []any{
+		(*ClientView_Graph)(nil),
+		(*ClientView_LlmResponse)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
