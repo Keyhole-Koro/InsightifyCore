@@ -18,7 +18,7 @@ func TestAllWorkersExecuteWithFakeLLM_ArchitectureRegistry(t *testing.T) {
 		BuildRegistryCodebase(env),
 		BuildRegistryArchitecture(env),
 		BuildRegistryExternal(env),
-		BuildRegistryPlanDependencies(env),
+		BuildRegistryPlan(env),
 	)
 	env.Resolver = resolver
 
@@ -31,7 +31,7 @@ func TestAllWorkersExecuteWithFakeLLM_MainlineRegistry(t *testing.T) {
 		BuildRegistryCodebase(env),
 		BuildRegistryArchitecture(env),
 		BuildRegistryExternal(env),
-		BuildRegistryPlanDependencies(env),
+		BuildRegistryPlan(env),
 	)
 	env.Resolver = resolver
 

@@ -5,7 +5,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
-	extpipe "insightify/internal/pipeline/external"
+	extpipe "insightify/internal/workers/external"
 )
 
 // BuildRegistryExternal wires the external (x*) pipeline stages.

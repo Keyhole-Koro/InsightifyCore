@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"insightify/internal/artifact"
-	"insightify/internal/pipeline/codebase"
+	"insightify/internal/workers/codebase"
 	"insightify/internal/snippet"
 )
 

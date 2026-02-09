@@ -20,7 +20,7 @@ func BuildWorkerDescriptors() []WorkerDescriptor {
 		BuildRegistryArchitecture(env),
 		BuildRegistryCodebase(env),
 		BuildRegistryExternal(env),
-		BuildRegistryPlanDependencies(env),
+		BuildRegistryPlan(env),
 	}
 
 	resolver := MergeRegistries(regs...)

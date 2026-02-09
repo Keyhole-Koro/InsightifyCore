@@ -135,7 +135,7 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	architecture := runner.BuildRegistryArchitecture(env)
 	codebase := runner.BuildRegistryCodebase(env)
 	external := runner.BuildRegistryExternal(env)
-	planReg := runner.BuildRegistryPlanDependencies(env)
+	planReg := runner.BuildRegistryPlan(env)
 	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg)
 
 	return &RunContext{

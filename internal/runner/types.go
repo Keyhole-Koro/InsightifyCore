@@ -22,6 +22,12 @@ type Env struct {
 	ArtifactFS *safeio.SafeFS
 	Resolver   SpecResolver
 
+	// InitPurpose carries interactive bootstrap context provided before planning.
+	InitPurpose          string
+	InitPurposeRepoURL   string
+	InitPurposeUserInput string
+	InitPurposeBootstrap bool
+
 	MCP     *mcp.Registry
 	MCPHost mcp.Host
 

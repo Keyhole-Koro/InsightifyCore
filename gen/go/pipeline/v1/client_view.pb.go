@@ -25,6 +25,7 @@ type ClientView struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Phase         string                 `protobuf:"bytes,1,opt,name=phase,proto3" json:"phase,omitempty"`
 	Graph         *GraphView             `protobuf:"bytes,2,opt,name=graph,proto3" json:"graph,omitempty"`
+	Response      string                 `protobuf:"bytes,3,opt,name=response,proto3" json:"response,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,6 +72,13 @@ func (x *ClientView) GetGraph() *GraphView {
 		return x.Graph
 	}
 	return nil
+}
+
+func (x *ClientView) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
 }
 
 type GraphView struct {
@@ -249,11 +257,12 @@ var File_pipeline_v1_client_view_proto protoreflect.FileDescriptor
 
 const file_pipeline_v1_client_view_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpipeline/v1/client_view.proto\x12\vpipeline.v1\"P\n" +
+	"\x1dpipeline/v1/client_view.proto\x12\vpipeline.v1\"l\n" +
 	"\n" +
 	"ClientView\x12\x14\n" +
 	"\x05phase\x18\x01 \x01(\tR\x05phase\x12,\n" +
-	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewR\x05graph\"g\n" +
+	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewR\x05graph\x12\x1a\n" +
+	"\bresponse\x18\x03 \x01(\tR\bresponse\"g\n" +
 	"\tGraphView\x12,\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x16.pipeline.v1.GraphNodeR\x05nodes\x12,\n" +
 	"\x05edges\x18\x02 \x03(\v2\x16.pipeline.v1.GraphEdgeR\x05edges\"t\n" +

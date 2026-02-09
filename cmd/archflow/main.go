@@ -126,7 +126,7 @@ func main() {
 	architecture := runner.BuildRegistryArchitecture(env)
 	codebase := runner.BuildRegistryCodebase(env)
 	external := runner.BuildRegistryExternal(env)
-	planReg := runner.BuildRegistryPlanDependencies(env)
+	planReg := runner.BuildRegistryPlan(env)
 	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg)
 
 	spec, ok := env.Resolver.Get(key)

@@ -13,8 +13,10 @@ type WorkerMeta struct {
 
 // PlanDependenciesIn is the input for the 'worker_DAG' worker.
 type PlanDependenciesIn struct {
-	RepoPath string       `json:"repo_path"`
-	Workers  []WorkerMeta `json:"workers"`
+	RepoPath    string       `json:"repo_path"`
+	InitPurpose string       `json:"init_purpose,omitempty"`
+	InitRepoURL string       `json:"init_repo_url,omitempty"`
+	Workers     []WorkerMeta `json:"workers"`
 }
 
 type PlanDependenciesOut struct {

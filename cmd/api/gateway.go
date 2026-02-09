@@ -14,7 +14,7 @@ import (
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	"insightify/gen/go/insightify/v1/insightifyv1connect"
 	pipelinev1 "insightify/gen/go/pipeline/v1"
-	"insightify/internal/pipeline/testpipe"
+	"insightify/internal/workers/testpipe"
 	"insightify/internal/runner"
 	"insightify/internal/utils"
 
@@ -42,13 +42,14 @@ func scheduleRunCleanup(runID string) {
 }
 
 type initSession struct {
-	SessionID        string
-	UserID           string
-	RepoURL          string
-	Repo             string
-	RunCtx           *RunContext
-	Running          bool
-	InitPurposeRunID string
+	SessionID   string
+	UserID      string
+	RepoURL     string
+	Purpose     string
+	Repo        string
+	RunCtx      *RunContext
+	Running     bool
+	ActiveRunID string
 }
 
 var initRunStore = struct {
@@ -60,6 +61,7 @@ var initRunStore = struct {
 
 // InitRun initializes a run session. Current implementation is a lightweight mock.
 func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
+	ensureSessionStoreLoaded()
 	userID := strings.TrimSpace(req.Msg.GetUserId())
 	repoURL := strings.TrimSpace(req.Msg.GetRepoUrl())
 	if userID == "" {
@@ -92,6 +94,9 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 			RunCtx:    runCtx,
 			Running:   false,
 		}
+		if runCtx != nil && runCtx.Env != nil {
+			runCtx.Env.InitPurposeRepoURL = repoURL
+		}
 	}
 	if repoURL != "" {
 		sess.RepoURL = repoURL
@@ -108,12 +113,17 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
 		}
+		if runCtx != nil && runCtx.Env != nil {
+			runCtx.Env.InitPurpose = strings.TrimSpace(sess.Purpose)
+			runCtx.Env.InitPurposeRepoURL = strings.TrimSpace(sess.RepoURL)
+		}
 		sess.RunCtx = runCtx
 	}
 
 	initRunStore.Lock()
 	initRunStore.sessions[sessionID] = sess
 	initRunStore.Unlock()
+	persistSessionStore()
 
 	var (
 		bootstrapRunID string
@@ -122,18 +132,18 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	initRunStore.RLock()
 	current := initRunStore.sessions[sessionID]
 	initRunStore.RUnlock()
-	if current.Running && current.InitPurposeRunID != "" {
-		bootstrapRunID = current.InitPurposeRunID
+	if current.Running && current.ActiveRunID != "" {
+		bootstrapRunID = current.ActiveRunID
 		updated = current
 	} else {
 		var err error
-		bootstrapRunID, err = s.launchInitPurposeRun(sessionID, "", true)
+		bootstrapRunID, err = s.launchPlanPipelineRun(sessionID, "", true)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap init_purpose: %w", err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap plan_pipeline: %w", err))
 		}
 		initRunStore.Lock()
 		updated = initRunStore.sessions[sessionID]
-		updated.InitPurposeRunID = bootstrapRunID
+		updated.ActiveRunID = bootstrapRunID
 		initRunStore.sessions[sessionID] = updated
 		initRunStore.Unlock()
 	}
@@ -157,6 +167,7 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 
 // StartRun executes a single pipeline worker and returns the result.
 func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightifyv1.StartRunRequest]) (*connect.Response[insightifyv1.StartRunResponse], error) {
+	ensureSessionStoreLoaded()
 	pipelineID := req.Msg.GetPipelineId()
 	sessionID := resolveSessionID(req)
 	if sessionID == "" {
@@ -164,15 +175,29 @@ func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightif
 	}
 	initRunStore.Lock()
 	sess, ok := initRunStore.sessions[sessionID]
-	if !ok || sess.RunCtx == nil {
+	if !ok {
 		initRunStore.Unlock()
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
 	}
-	if pipelineID == "init_purpose" {
-		initRunStore.Unlock()
-		runID, err := s.launchInitPurposeRun(sessionID, strings.TrimSpace(req.Msg.GetParams()["user_input"]), false)
+	if sess.RunCtx == nil {
+		runCtx, err := NewRunContext(sess.Repo, sessionID)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start init_purpose: %w", err))
+			initRunStore.Unlock()
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restore run context: %w", err))
+		}
+		if runCtx != nil && runCtx.Env != nil {
+			runCtx.Env.InitPurpose = strings.TrimSpace(sess.Purpose)
+			runCtx.Env.InitPurposeRepoURL = strings.TrimSpace(sess.RepoURL)
+		}
+		sess.RunCtx = runCtx
+		initRunStore.sessions[sessionID] = sess
+	}
+	// Handle plan_pipeline (and legacy init_purpose) via launchPlanPipelineRun
+	if pipelineID == "plan_pipeline" || pipelineID == "init_purpose" {
+		initRunStore.Unlock()
+		runID, err := s.launchPlanPipelineRun(sessionID, strings.TrimSpace(req.Msg.GetParams()["user_input"]), false)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start plan_pipeline: %w", err))
 		}
 		return connect.NewResponse(&insightifyv1.StartRunResponse{
 			RunId: runID,
@@ -389,6 +414,7 @@ func resolveSessionIDFromCookieHeader(cookieHeader string) string {
 }
 
 func (s *apiServer) SubmitRunInput(_ context.Context, req *connect.Request[insightifyv1.SubmitRunInputRequest]) (*connect.Response[insightifyv1.SubmitRunInputResponse], error) {
+	ensureSessionStoreLoaded()
 	sessionID := strings.TrimSpace(req.Msg.GetSessionId())
 	if sessionID == "" {
 		sessionID = resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
@@ -406,14 +432,30 @@ func (s *apiServer) SubmitRunInput(_ context.Context, req *connect.Request[insig
 	initRunStore.RLock()
 	sess, ok := initRunStore.sessions[sessionID]
 	initRunStore.RUnlock()
-	if !ok || sess.RunCtx == nil {
+	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
 	}
-	if runID != "" && sess.InitPurposeRunID != "" && runID != sess.InitPurposeRunID {
+	if sess.RunCtx == nil {
+		runCtx, err := NewRunContext(sess.Repo, sessionID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restore run context: %w", err))
+		}
+		if runCtx != nil && runCtx.Env != nil {
+			runCtx.Env.InitPurpose = strings.TrimSpace(sess.Purpose)
+			runCtx.Env.InitPurposeRepoURL = strings.TrimSpace(sess.RepoURL)
+		}
+		initRunStore.Lock()
+		fixed := initRunStore.sessions[sessionID]
+		fixed.RunCtx = runCtx
+		initRunStore.sessions[sessionID] = fixed
+		sess = fixed
+		initRunStore.Unlock()
+	}
+	if runID != "" && sess.ActiveRunID != "" && runID != sess.ActiveRunID {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("run %s is not active for session %s", runID, sessionID))
 	}
 
-	nextRunID, err := s.launchInitPurposeRun(sessionID, userInput, false)
+	nextRunID, err := s.launchPlanPipelineRun(sessionID, userInput, false)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to submit input: %w", err))
 	}

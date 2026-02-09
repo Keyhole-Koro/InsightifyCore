@@ -7,7 +7,7 @@ import (
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	codepipe "insightify/internal/pipeline/codebase"
+	codepipe "insightify/internal/workers/codebase"
 )
 
 // BuildRegistryCodebase defines code_roots-code_symbols.
