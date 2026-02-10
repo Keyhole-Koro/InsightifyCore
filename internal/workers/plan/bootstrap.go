@@ -43,6 +43,31 @@ type BootstrapPipeline struct {
 	Emitter ChunkEmitter
 }
 
+type initPurposeNeedInputAdapter struct{}
+
+func (initPurposeNeedInputAdapter) Extract(out artifact.InitPurposeOut) llmtool.NeedInputState {
+	return llmtool.NeedInputState{
+		NeedMoreInput:    out.NeedMoreInput,
+		AssistantMessage: strings.TrimSpace(out.AssistantMessage),
+		FollowupQuestion: strings.TrimSpace(out.FollowupQuestion),
+	}
+}
+
+func (initPurposeNeedInputAdapter) Apply(out artifact.InitPurposeOut, state llmtool.NeedInputState) artifact.InitPurposeOut {
+	out.NeedMoreInput = state.NeedMoreInput
+	out.AssistantMessage = strings.TrimSpace(state.AssistantMessage)
+	out.FollowupQuestion = strings.TrimSpace(state.FollowupQuestion)
+	return out
+}
+
+var initPurposeNeedInputPolicy = llmtool.NeedInputPolicy{
+	PreferFollowupAsMessage: true,
+	RequireAssistantMessage: true,
+	RequireFollowupQuestion: true,
+	DefaultAssistantMessage: "Thanks. Could you share a bit more detail about your goal or the repository URL?",
+	DefaultFollowupQuestion: "Could you share the repository URL or describe your learning goal more specifically?",
+}
+
 var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Collect user learning intent and optional repository target, then decide whether more input is needed.",
 	Background:   "This stage returns the assistant response for the planning bootstrap conversation.",
@@ -145,6 +170,7 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return artifact.InitPurposeOut{}, fmt.Errorf("Bootstrap JSON invalid: %w\nraw: %s", err, string(raw))
 	}
+	out = llmtool.NormalizeNeedInput(llmCtx, out, initPurposeNeedInputAdapter{}, initPurposeNeedInputPolicy, nil)
 	return out, nil
 }
 
