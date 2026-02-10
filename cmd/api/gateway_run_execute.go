@@ -38,6 +38,7 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string, isBo
 
 	go func() {
 		defer func() {
+			clearPendingUserInput(runID)
 			_, _ = updateSession(sessionID, func(current *initSession) {
 				current.Running = false
 				if current.ActiveRunID == runID {
@@ -48,13 +49,13 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string, isBo
 			scheduleRunCleanup(runID)
 		}()
 
-		s.executeWorkerRun(sess, workerKey, userInput, isBootstrap, eventCh)
+		s.executeWorkerRun(sess, runID, workerKey, userInput, isBootstrap, eventCh)
 	}()
 
 	return runID, nil
 }
 
-func (s *apiServer) executeWorkerRun(sess initSession, workerKey, userInput string, isBootstrap bool, eventCh chan<- *insightifyv1.WatchRunResponse) {
+func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInput string, isBootstrap bool, eventCh chan<- *insightifyv1.WatchRunResponse) {
 	if sess.RunCtx == nil || sess.RunCtx.Env == nil || sess.RunCtx.Env.Resolver == nil {
 		eventCh <- &insightifyv1.WatchRunResponse{
 			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
@@ -63,9 +64,6 @@ func (s *apiServer) executeWorkerRun(sess initSession, workerKey, userInput stri
 		return
 	}
 	runCtx := sess.RunCtx
-	runCtx.Env.InitPurposeUserInput = strings.TrimSpace(userInput)
-	runCtx.Env.InitPurposeBootstrap = isBootstrap
-
 	spec, ok := runCtx.Env.Resolver.Get(workerKey)
 	if !ok {
 		eventCh <- &insightifyv1.WatchRunResponse{
@@ -75,32 +73,70 @@ func (s *apiServer) executeWorkerRun(sess initSession, workerKey, userInput stri
 		return
 	}
 
-	internalCh := make(chan runner.RunEvent, 100)
-	emitter := &runner.ChannelEmitter{Ch: internalCh, Worker: workerKey}
-	go bridgeRunnerEvents(eventCh, internalCh)
+	nextInput := strings.TrimSpace(userInput)
+	nextBootstrap := isBootstrap
 
-	execCtx := runner.WithEmitter(context.Background(), emitter)
-	out, err := runner.ExecuteWorkerWithResult(execCtx, spec, runCtx.Env)
-	close(internalCh)
-	if err != nil {
+	for {
+		runCtx.Env.InitCtx.UserInput = nextInput
+		runCtx.Env.InitCtx.Bootstrap = nextBootstrap
+
+		internalCh := make(chan runner.RunEvent, 100)
+		emitter := &runner.ChannelEmitter{Ch: internalCh, Worker: workerKey}
+		go bridgeRunnerEvents(eventCh, internalCh)
+
+		execCtx := runner.WithEmitter(context.Background(), emitter)
+		out, err := runner.ExecuteWorkerWithResult(execCtx, spec, runCtx.Env)
+		close(internalCh)
+		if err != nil {
+			eventCh <- &insightifyv1.WatchRunResponse{
+				EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
+				Message:   err.Error(),
+			}
+			return
+		}
+
+		// Update session from result (worker-specific logic)
+		updateSessionFromResult(sess.SessionID, runCtx, out.RuntimeState)
+
+		finalView := extractWorkerClientView(out.ClientView, out.RuntimeState)
+		if outBootstrap, ok := out.RuntimeState.(plan.BootstrapOut); ok && outBootstrap.NeedMoreInput() {
+			prompt := strings.TrimSpace(outBootstrap.Result.FollowupQuestion)
+			if prompt == "" {
+				prompt = strings.TrimSpace(outBootstrap.Result.AssistantMessage)
+			}
+			requestID, err := registerPendingUserInput(sess.SessionID, runID, workerKey, prompt)
+			if err != nil {
+				eventCh <- &insightifyv1.WatchRunResponse{
+					EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
+					Message:   err.Error(),
+				}
+				return
+			}
+			eventCh <- &insightifyv1.WatchRunResponse{
+				EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS,
+				Message:    fmt.Sprintf("INPUT_REQUIRED:%s", requestID),
+				ClientView: finalView,
+			}
+
+			reply, err := waitPendingUserInput(runID, 10*time.Minute)
+			if err != nil {
+				eventCh <- &insightifyv1.WatchRunResponse{
+					EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
+					Message:   err.Error(),
+				}
+				return
+			}
+			nextInput = reply
+			nextBootstrap = false
+			continue
+		}
+
 		eventCh <- &insightifyv1.WatchRunResponse{
-			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
-			Message:   err.Error(),
+			EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE,
+			Message:    "COMPLETE",
+			ClientView: finalView,
 		}
 		return
-	}
-
-	// Update session from result (worker-specific logic)
-	updateSessionFromResult(sess.SessionID, runCtx, out.RuntimeState)
-
-	// Build final response
-	finalView := extractWorkerClientView(out.ClientView, out.RuntimeState)
-	finalMessage := determineCompletionMessage(out.RuntimeState)
-
-	eventCh <- &insightifyv1.WatchRunResponse{
-		EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE,
-		Message:    finalMessage,
-		ClientView: finalView,
 	}
 }
 
@@ -138,17 +174,6 @@ func extractWorkerClientView(clientView any, runtimeState any) *pipelinev1.Clien
 	return nil
 }
 
-// determineCompletionMessage determines the completion message based on runtime state.
-func determineCompletionMessage(runtimeState any) string {
-	// Check if more input is needed (for interactive workers)
-	if out, ok := runtimeState.(plan.BootstrapOut); ok {
-		if out.NeedMoreInput() {
-			return "INPUT_REQUIRED"
-		}
-	}
-	return "COMPLETE"
-}
-
 // updateSessionFromResult updates session state based on worker output.
 func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState any) {
 	// Handle BootstrapOut
@@ -165,17 +190,9 @@ func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState 
 			}
 			if trimmedRepoURL != "" {
 				cur.RepoURL = trimmedRepoURL
-				if repo := inferRepoName(cur.RepoURL); repo != "" {
-					cur.Repo = repo
-				}
 			}
 			if runCtx != nil && runCtx.Env != nil {
-				if trimmedPurpose != "" {
-					runCtx.Env.InitPurpose = trimmedPurpose
-				}
-				if trimmedRepoURL != "" {
-					runCtx.Env.InitPurposeRepoURL = trimmedRepoURL
-				}
+				runCtx.Env.InitCtx.SetPurpose(trimmedPurpose, trimmedRepoURL)
 			}
 			cur.RunCtx = runCtx
 		})
@@ -184,7 +201,7 @@ func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState 
 	}
 }
 
-// launchPlanPipelineRun is a convenience wrapper for launching the plan_pipeline worker.
-func (s *apiServer) launchPlanPipelineRun(sessionID, userInput string, isBootstrap bool) (string, error) {
-	return s.launchWorkerRun(sessionID, "plan_pipeline", userInput, isBootstrap)
+// launchInitPurposeRun is a convenience wrapper for launching the init_purpose worker.
+func (s *apiServer) launchInitPurposeRun(sessionID, userInput string, isBootstrap bool) (string, error) {
+	return s.launchWorkerRun(sessionID, "init_purpose", userInput, isBootstrap)
 }

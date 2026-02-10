@@ -118,8 +118,7 @@ func ensureSessionRunContext(sessionID string) (initSession, error) {
 		return initSession{}, fmt.Errorf("failed to restore run context: %w", err)
 	}
 	if runCtx != nil && runCtx.Env != nil {
-		runCtx.Env.InitPurpose = strings.TrimSpace(sess.Purpose)
-		runCtx.Env.InitPurposeRepoURL = strings.TrimSpace(sess.RepoURL)
+		runCtx.Env.InitCtx.SetPurpose(sess.Purpose, sess.RepoURL)
 	}
 
 	updated, _ := updateSession(sessionID, func(cur *initSession) {

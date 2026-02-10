@@ -7,9 +7,9 @@ import (
 	"insightify/internal/artifact"
 )
 
-func TestPlanRegistryBuildInputInjectsPlanPipelineWorker(t *testing.T) {
+func TestPlanRegistryBuildInputInjectsInitPurposeWorker(t *testing.T) {
 	env := &Env{
-		InitPurpose: "Goのランタイムを理解したい",
+		InitCtx: InitContext{Purpose: "Goのランタイムを理解したい"},
 		Resolver: MergeRegistries(map[string]WorkerSpec{
 			"worker_DAG": {
 				Key:         "worker_DAG",
@@ -35,28 +35,28 @@ func TestPlanRegistryBuildInputInjectsPlanPipelineWorker(t *testing.T) {
 		workers[w.Key] = w
 	}
 
-	planWorker, ok := workers["plan_pipeline"]
+	planWorker, ok := workers["init_purpose"]
 	if !ok {
-		t.Fatalf("expected plan_pipeline worker to be present")
+		t.Fatalf("expected init_purpose worker to be present")
 	}
-	if planWorker.Description != env.InitPurpose {
-		t.Fatalf("expected plan_pipeline description %q, got %q", env.InitPurpose, planWorker.Description)
+	if planWorker.Description != env.InitCtx.Purpose {
+		t.Fatalf("expected init_purpose description %q, got %q", env.InitCtx.Purpose, planWorker.Description)
 	}
 
 	workerDAG, ok := workers["worker_DAG"]
 	if !ok {
 		t.Fatalf("expected worker_DAG to be present")
 	}
-	if !containsWorkerKey(workerDAG.Requires, "plan_pipeline") {
-		t.Fatalf("expected worker_DAG to require plan_pipeline, got %v", workerDAG.Requires)
+	if !containsWorkerKey(workerDAG.Requires, "init_purpose") {
+		t.Fatalf("expected worker_DAG to require init_purpose, got %v", workerDAG.Requires)
 	}
 }
 
-func TestPlanRegistryIncludesPlanPipelineSpec(t *testing.T) {
+func TestPlanRegistryIncludesInitPurposeSpec(t *testing.T) {
 	env := &Env{}
 	reg := BuildRegistryPlan(env)
-	if _, ok := reg["plan_pipeline"]; !ok {
-		t.Fatalf("expected plan_pipeline worker spec in plan registry")
+	if _, ok := reg["init_purpose"]; !ok {
+		t.Fatalf("expected init_purpose worker spec in plan registry")
 	}
 	if _, ok := reg["plan_source_scout"]; !ok {
 		t.Fatalf("expected plan_source_scout worker spec in plan registry")

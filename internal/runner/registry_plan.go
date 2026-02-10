@@ -19,8 +19,9 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			input := strings.TrimSpace(deps.Env().InitPurposeUserInput)
-			isBootstrap := deps.Env().InitPurposeBootstrap
+			ic := deps.Env().InitCtx
+			input := strings.TrimSpace(ic.UserInput)
+			isBootstrap := ic.Bootstrap
 			if input == "" && !isBootstrap {
 				isBootstrap = true
 			}
@@ -47,16 +48,17 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	// plan_pipeline: interactive bootstrap flow
-	reg["plan_pipeline"] = WorkerSpec{
-		Key:         "plan_pipeline",
+	// init_purpose: interactive bootstrap flow
+	reg["init_purpose"] = WorkerSpec{
+		Key:         "init_purpose",
 		Requires:    []string{"plan_source_scout"},
-		Description: "Interactive planning pipeline: collects intent, confirms understanding, generates plan.",
+		Description: "Interactive intent bootstrap worker: collects user intent and repository context.",
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			input := strings.TrimSpace(deps.Env().InitPurposeUserInput)
-			isBootstrap := deps.Env().InitPurposeBootstrap
+			ic := deps.Env().InitCtx
+			input := strings.TrimSpace(ic.UserInput)
+			isBootstrap := ic.Bootstrap
 			if input == "" && !isBootstrap {
 				isBootstrap = true
 			}
@@ -71,22 +73,62 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "plan_pipeline")
+			ctx = llm.WithWorker(ctx, "init_purpose")
 			p := plan.BootstrapPipeline{
 				LLM:     env.LLM,
-				Emitter: EmitterFrom(ctx), // runner.RunEventEmitter implements ChunkEmitter
+				Emitter: EmitterFrom(ctx),
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
-			// Update env with collected purpose/repo
-			if purpose := strings.TrimSpace(out.Result.Purpose); purpose != "" {
-				env.InitPurpose = purpose
+			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
+			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+		},
+		Fingerprint: func(in any, env *Env) string {
+			return JSONFingerprint(struct {
+				In   plan.BootstrapIn
+				Salt string
+			}{in.(plan.BootstrapIn), env.ModelSalt})
+		},
+		Strategy: versionedStrategy{},
+	}
+
+	// plan_pipeline legacy alias kept for compatibility. It delegates to init_purpose behavior.
+	reg["plan_pipeline"] = WorkerSpec{
+		Key:         "plan_pipeline",
+		Requires:    []string{"plan_source_scout"},
+		Description: "Legacy alias of init_purpose.",
+		LLMRole:     llm.ModelRoleWorker,
+		LLMLevel:    llm.ModelLevelLow,
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			ic := deps.Env().InitCtx
+			input := strings.TrimSpace(ic.UserInput)
+			isBootstrap := ic.Bootstrap
+			if input == "" && !isBootstrap {
+				isBootstrap = true
 			}
-			if repoURL := strings.TrimSpace(out.Result.RepoURL); repoURL != "" {
-				env.InitPurposeRepoURL = repoURL
+			var scout artifact.PlanSourceScoutOut
+			if err := deps.Artifact("plan_source_scout", &scout); err != nil {
+				return nil, err
 			}
+			return plan.BootstrapIn{
+				UserInput:   input,
+				IsBootstrap: isBootstrap,
+				Scout:       scout,
+			}, nil
+		},
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "init_purpose")
+			p := plan.BootstrapPipeline{
+				LLM:     env.LLM,
+				Emitter: EmitterFrom(ctx),
+			}
+			out, err := p.Run(ctx, in.(plan.BootstrapIn))
+			if err != nil {
+				return WorkerOutput{}, err
+			}
+			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
 			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
 		},
 		Fingerprint: func(in any, env *Env) string {
@@ -115,13 +157,13 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 				}
 			}
 
-			planPipeDesc := "Interactive planning pipeline: collects intent, confirms understanding, generates plan."
-			if purpose := strings.TrimSpace(deps.Env().InitPurpose); purpose != "" {
-				planPipeDesc = purpose
+			initPurposeDesc := "Interactive intent bootstrap worker: collects user intent and repository context."
+			if purpose := strings.TrimSpace(deps.Env().InitCtx.Purpose); purpose != "" {
+				initPurposeDesc = purpose
 			}
-			workersByKey["plan_pipeline"] = artifact.WorkerMeta{
-				Key:         "plan_pipeline",
-				Description: planPipeDesc,
+			workersByKey["init_purpose"] = artifact.WorkerMeta{
+				Key:         "init_purpose",
+				Description: initPurposeDesc,
 			}
 
 			workerDAG := workersByKey["worker_DAG"]
@@ -129,8 +171,8 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			if strings.TrimSpace(workerDAG.Description) == "" {
 				workerDAG.Description = "Generates an execution plan based on the provided graph spec."
 			}
-			if !containsWorkerKey(workerDAG.Requires, "plan_pipeline") {
-				workerDAG.Requires = append(workerDAG.Requires, "plan_pipeline")
+			if !containsWorkerKey(workerDAG.Requires, "init_purpose") {
+				workerDAG.Requires = append(workerDAG.Requires, "init_purpose")
 			}
 			workersByKey["worker_DAG"] = workerDAG
 
@@ -139,10 +181,11 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 				workers = append(workers, w)
 			}
 
+			ic := deps.Env().InitCtx
 			return artifact.PlanDependenciesIn{
 				RepoPath:    deps.Root(),
-				InitPurpose: strings.TrimSpace(deps.Env().InitPurpose),
-				InitRepoURL: strings.TrimSpace(deps.Env().InitPurposeRepoURL),
+				InitPurpose: strings.TrimSpace(ic.Purpose),
+				InitRepoURL: strings.TrimSpace(ic.RepoURL),
 				Workers:     workers,
 			}, nil
 		},

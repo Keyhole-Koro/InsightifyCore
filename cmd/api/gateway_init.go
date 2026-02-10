@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
@@ -14,15 +13,7 @@ import (
 
 // InitRun initializes a run session. Current implementation is a lightweight mock.
 func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
-	ensureSessionStoreLoaded()
-	userID := strings.TrimSpace(req.Msg.GetUserId())
-	repoURL := strings.TrimSpace(req.Msg.GetRepoUrl())
-	if userID == "" {
-		userID = "demo-user"
-	}
-
-	cookieSID := resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
-	sessionID := cookieSID
+	sessionID, userID, repoURL := prepareInitRun(req)
 	var (
 		sess    initSession
 		existed bool
@@ -32,7 +23,7 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	}
 	if !existed {
 		sessionID = fmt.Sprintf("session-%d", time.Now().UnixNano())
-		repoName := inferRepoName(repoURL)
+		repoName := ""
 		runCtx, err := NewRunContext(repoName, sessionID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
@@ -46,14 +37,11 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 			Running:   false,
 		}
 		if runCtx != nil && runCtx.Env != nil {
-			runCtx.Env.InitPurposeRepoURL = repoURL
+			runCtx.Env.InitCtx.RepoURL = repoURL
 		}
 	}
 	if repoURL != "" {
 		sess.RepoURL = repoURL
-		if repoName := inferRepoName(repoURL); repoName != "" {
-			sess.Repo = repoName
-		}
 	}
 	if userID != "" {
 		sess.UserID = userID
@@ -65,8 +53,7 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
 		}
 		if runCtx != nil && runCtx.Env != nil {
-			runCtx.Env.InitPurpose = strings.TrimSpace(sess.Purpose)
-			runCtx.Env.InitPurposeRepoURL = strings.TrimSpace(sess.RepoURL)
+			runCtx.Env.InitCtx.SetPurpose(sess.Purpose, sess.RepoURL)
 		}
 		sess.RunCtx = runCtx
 	}
@@ -84,9 +71,9 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 		updated = current
 	} else {
 		var err error
-		bootstrapRunID, err = s.launchPlanPipelineRun(sessionID, "", true)
+		bootstrapRunID, err = s.launchInitPurposeRun(sessionID, "", true)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap plan_pipeline: %w", err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap init_purpose: %w", err))
 		}
 		updated, _ = updateSession(sessionID, func(cur *initSession) {
 			cur.ActiveRunID = bootstrapRunID

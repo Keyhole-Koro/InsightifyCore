@@ -44,39 +44,59 @@ type RunContext struct {
 	Cleanup  func()
 }
 
+type resolvedSources struct {
+	Name        string
+	SourcePaths []string
+	PrimaryPath string
+	PrimaryFS   *safeio.SafeFS
+}
+
+func resolveRunSources(repoName string) (resolvedSources, error) {
+	trimmedRepo := strings.TrimSpace(repoName)
+	if trimmedRepo == "" {
+		root := scan.ReposDir()
+		if strings.TrimSpace(root) == "" {
+			root = "."
+		}
+		if abs, err := filepath.Abs(root); err == nil {
+			root = abs
+		}
+		fs, err := safeio.NewSafeFS(root)
+		if err != nil {
+			return resolvedSources{}, fmt.Errorf("bootstrap repo fs: %w", err)
+		}
+		return resolvedSources{
+			Name:        "bootstrap",
+			SourcePaths: []string{root},
+			PrimaryPath: root,
+			PrimaryFS:   fs,
+		}, nil
+	}
+
+	name, repoPath, repoFS, err := resolveRepoPaths(trimmedRepo)
+	if err != nil {
+		return resolvedSources{}, err
+	}
+	return resolvedSources{
+		Name:        name,
+		SourcePaths: []string{repoPath},
+		PrimaryPath: repoPath,
+		PrimaryFS:   repoFS,
+	}, nil
+}
+
 // NewRunContext creates a new context bound to the provided session ID.
 // If sessionID is empty, it falls back to a timestamp.
 func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
-	var (
-		name     string
-		repoPath string
-		repoFS   *safeio.SafeFS
-		err      error
-	)
-	if strings.TrimSpace(repoName) == "" {
-		name = "bootstrap"
-		repoPath = scan.ReposDir()
-		if strings.TrimSpace(repoPath) == "" {
-			repoPath = "."
-		}
-		if abs, absErr := filepath.Abs(repoPath); absErr == nil {
-			repoPath = abs
-		}
-		repoFS, err = safeio.NewSafeFS(repoPath)
-		if err != nil {
-			return nil, fmt.Errorf("bootstrap repo fs: %w", err)
-		}
-	} else {
-		name, repoPath, repoFS, err = resolveRepoPaths(repoName)
-		if err != nil {
-			return nil, err
-		}
+	sources, err := resolveRunSources(repoName)
+	if err != nil {
+		return nil, err
 	}
 
 	if sessionID == "" {
 		sessionID = time.Now().Format("20060102-150405")
 	}
-	outDir := filepath.Join("artifacts", name, sessionID)
+	outDir := filepath.Join("artifacts", sources.Name, sessionID)
 	absOutDir, err := filepath.Abs(outDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolve outDir: %w", err)
@@ -117,18 +137,24 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	)
 
 	env := &runner.Env{
-		Repo:       name,
-		RepoRoot:   repoPath,
-		OutDir:     absOutDir,
-		MaxNext:    8,
-		RepoFS:     repoFS,
-		ArtifactFS: artifactFS,
-		ModelSalt:  "gateway|" + reg.DefaultsSalt(),
-		LLM:        llmCli,
-		UIDGen:     utils.NewUIDGenerator(),
+		Repo:        sources.Name,
+		RepoRoot:    sources.PrimaryPath,
+		SourcePaths: append([]string(nil), sources.SourcePaths...),
+		OutDir:      absOutDir,
+		MaxNext:     8,
+		RepoFS:      sources.PrimaryFS,
+		ArtifactFS:  artifactFS,
+		ModelSalt:   "gateway|" + reg.DefaultsSalt(),
+		LLM:         llmCli,
+		UIDGen:      utils.NewUIDGenerator(),
 	}
 
-	env.MCPHost = mcp.Host{RepoRoot: repoPath, ReposRoot: scan.ReposDir(), RepoFS: repoFS, ArtifactFS: artifactFS}
+	env.MCPHost = mcp.Host{
+		RepoRoot:   sources.PrimaryPath,
+		ReposRoot:  scan.ReposDir(),
+		RepoFS:     sources.PrimaryFS,
+		ArtifactFS: artifactFS,
+	}
 	env.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(env.MCP, env.MCPHost)
 
@@ -140,7 +166,7 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 
 	return &RunContext{
 		ID:       sessionID,
-		RepoName: name,
+		RepoName: sources.Name,
 		OutDir:   absOutDir,
 		Env:      env,
 		Cleanup:  func() { llmCli.Close() },

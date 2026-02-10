@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"strings"
 
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
@@ -12,21 +13,40 @@ import (
 	"insightify/internal/wordidx"
 )
 
+// InitContext bundles the interactive bootstrap state that is collected
+// before planning begins. Grouping these avoids scattering four related
+// fields across Env and the many call-sites that set them.
+type InitContext struct {
+	Purpose   string // high-level user intent
+	RepoURL   string // target repository URL
+	UserInput string // latest user reply in the conversation
+	Bootstrap bool   // true when this is the first (bootstrap) turn
+}
+
+// SetPurpose updates Purpose and RepoURL from worker results,
+// skipping blank values so callers don't need guard clauses.
+func (ic *InitContext) SetPurpose(purpose, repoURL string) {
+	if p := strings.TrimSpace(purpose); p != "" {
+		ic.Purpose = p
+	}
+	if r := strings.TrimSpace(repoURL); r != "" {
+		ic.RepoURL = r
+	}
+}
+
 // Env is the shared environment passed to builders/workers.
 type Env struct {
-	Repo       string
-	RepoRoot   string
-	OutDir     string
-	MaxNext    int
-	RepoFS     *safeio.SafeFS
-	ArtifactFS *safeio.SafeFS
-	Resolver   SpecResolver
+	Repo        string
+	RepoRoot    string
+	SourcePaths []string
+	OutDir      string
+	MaxNext     int
+	RepoFS      *safeio.SafeFS
+	ArtifactFS  *safeio.SafeFS
+	Resolver    SpecResolver
 
-	// InitPurpose carries interactive bootstrap context provided before planning.
-	InitPurpose          string
-	InitPurposeRepoURL   string
-	InitPurposeUserInput string
-	InitPurposeBootstrap bool
+	// InitCtx carries interactive bootstrap context provided before planning.
+	InitCtx InitContext
 
 	MCP     *mcp.Registry
 	MCPHost mcp.Host
