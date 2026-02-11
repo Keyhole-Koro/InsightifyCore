@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"strings"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
@@ -13,28 +13,40 @@ import (
 
 // InitRun initializes a run session. Current implementation is a lightweight mock.
 func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
-	sessionID, userID, repoURL := prepareInitRun(req)
+	projectID, userID, repoURL := prepareInitRun(req)
 	var (
 		sess    initSession
 		existed bool
 	)
-	if sessionID != "" {
-		sess, existed = getSession(sessionID)
+	if projectID == "" {
+		if active, ok := getActiveProjectByUser(userID); ok {
+			projectID = active.ProjectID
+		}
+	}
+	if projectID != "" {
+		sess, existed = getSession(projectID)
 	}
 	if !existed {
-		sessionID = fmt.Sprintf("session-%d", time.Now().UnixNano())
+		projectID = strings.TrimSpace(projectID)
+		if projectID == "" {
+			projectID = fmt.Sprintf("project-%d", time.Now().UnixNano())
+		}
 		repoName := ""
-		runCtx, err := NewRunContext(repoName, sessionID)
+		runCtx, err := NewRunContext(repoName, projectID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
 		}
+		projectName := fmt.Sprintf("Project %d", time.Now().Unix()%100000)
 		sess = initSession{
-			SessionID: sessionID,
-			UserID:    userID,
-			RepoURL:   repoURL,
-			Repo:      repoName,
-			RunCtx:    runCtx,
-			Running:   false,
+			SessionID:   projectID,
+			ProjectID:   projectID,
+			ProjectName: projectName,
+			UserID:      userID,
+			RepoURL:     repoURL,
+			Repo:        repoName,
+			RunCtx:      runCtx,
+			Running:     false,
+			IsActive:    true,
 		}
 		if runCtx != nil && runCtx.Env != nil {
 			runCtx.Env.InitCtx.RepoURL = repoURL
@@ -46,9 +58,13 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	if userID != "" {
 		sess.UserID = userID
 	}
-	sess.SessionID = sessionID
+	sess.SessionID = projectID
+	sess.ProjectID = projectID
+	if strings.TrimSpace(sess.ProjectName) == "" {
+		sess.ProjectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
+	}
 	if sess.RunCtx == nil {
-		runCtx, err := NewRunContext(sess.Repo, sessionID)
+		runCtx, err := NewRunContext(sess.Repo, projectID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create run context: %w", err))
 		}
@@ -59,23 +75,16 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	}
 
 	putSession(sess)
+	_, _ = setActiveProjectForUser(sess.UserID, sess.ProjectID)
 	persistSessionStore()
 
-	updated, _ := getSession(sessionID)
+	updated, _ := getSession(projectID)
 
 	res := connect.NewResponse(&insightifyv1.InitRunResponse{
-		SessionId:      sessionID,
+		SessionId:      projectID,
 		RepoName:       updated.Repo,
 		BootstrapRunId: "",
+		ProjectId:      updated.ProjectID,
 	})
-	res.Header().Add("Set-Cookie", (&http.Cookie{
-		Name:     sessionCookieName,
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		// Local development uses plain HTTP; enable Secure in TLS deployments.
-		Secure: false,
-	}).String())
 	return res, nil
 }

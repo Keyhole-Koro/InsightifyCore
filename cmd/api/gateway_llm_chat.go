@@ -131,12 +131,12 @@ func toProtoUINode(node ui.Node) *insightifyv1.UiNode {
 	return ui.ToProtoNode(node)
 }
 
-func mapRunEventToChatEvent(sessionID, runID, conversationID string, ev *insightifyv1.WatchRunResponse) *insightifyv1.ChatEvent {
+func mapRunEventToChatEvent(projectID, runID, conversationID string, ev *insightifyv1.WatchRunResponse) *insightifyv1.ChatEvent {
 	if ev == nil {
 		return nil
 	}
 	chat := &insightifyv1.ChatEvent{
-		SessionId:      sessionID,
+		ProjectId:      projectID,
 		RunId:          runID,
 		ConversationId: conversationID,
 	}
@@ -164,9 +164,6 @@ func mapRunEventToChatEvent(sessionID, runID, conversationID string, ev *insight
 		if pending, ok := getPendingUserInput(runID); ok {
 			chat.WorkerKey = pending.WorkerKey
 			chat.Text = pending.Prompt
-			if chat.SessionId == "" {
-				chat.SessionId = pending.SessionID
-			}
 		}
 		if chat.Text == "" && ev.GetClientView() != nil {
 			chat.Text = strings.TrimSpace(ev.GetClientView().GetLlmResponse())
@@ -217,14 +214,14 @@ func mapRunEventToChatEvent(sessionID, runID, conversationID string, ev *insight
 	}
 }
 
-func publishRunEventToChat(sessionID, runID string, ev *insightifyv1.WatchRunResponse) {
+func publishRunEventToChat(projectID, runID string, ev *insightifyv1.WatchRunResponse) {
 	runID = strings.TrimSpace(runID)
 	if runID == "" || ev == nil {
 		return
 	}
 	conversationID := conversationIDByRun(runID)
 	ensureConversation(runID, conversationID)
-	chat := mapRunEventToChatEvent(sessionID, runID, conversationID, ev)
+	chat := mapRunEventToChatEvent(projectID, runID, conversationID, ev)
 	if chat == nil {
 		return
 	}
@@ -253,13 +250,13 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 		ensureConversation(runID, conversationID)
 	}
 
-	// Resolve session once at the start instead of per-event.
-	sessionID := strings.TrimSpace(req.Msg.GetSessionId())
-	if sessionID == "" && runID != "" {
+	// Resolve project once at the start instead of per-event.
+	projectID := strings.TrimSpace(req.Msg.GetProjectId())
+	if projectID == "" && runID != "" {
 		initRunStore.RLock()
 		for sid, sess := range initRunStore.sessions {
 			if strings.TrimSpace(sess.ActiveRunID) == runID {
-				sessionID = sid
+				projectID = sid
 				break
 			}
 		}
@@ -272,8 +269,8 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 	}
 
 	for _, ev := range snapshot {
-		if strings.TrimSpace(ev.GetSessionId()) == "" && sessionID != "" {
-			ev.SessionId = sessionID
+		if strings.TrimSpace(ev.GetProjectId()) == "" && projectID != "" {
+			ev.ProjectId = projectID
 		}
 		if strings.TrimSpace(ev.GetRunId()) == "" {
 			ev.RunId = runID
@@ -298,8 +295,8 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 			if ev == nil {
 				continue
 			}
-			if strings.TrimSpace(ev.GetSessionId()) == "" && sessionID != "" {
-				ev.SessionId = sessionID
+			if strings.TrimSpace(ev.GetProjectId()) == "" && projectID != "" {
+				ev.ProjectId = projectID
 			}
 			if strings.TrimSpace(ev.GetRunId()) == "" {
 				ev.RunId = runID
@@ -312,7 +309,7 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 }
 
 func (s *apiServer) SendMessage(_ context.Context, req *connect.Request[insightifyv1.SendMessageRequest]) (*connect.Response[insightifyv1.SendMessageResponse], error) {
-	sessionID, runID, interactionID, input, err := prepareSendMessage(req)
+	projectID, runID, interactionID, input, err := prepareSendMessage(req)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +317,7 @@ func (s *apiServer) SendMessage(_ context.Context, req *connect.Request[insighti
 	if conversationID == "" {
 		conversationID = conversationIDByRun(runID)
 	}
-	gotInteractionID, err := submitPendingUserInput(sessionID, runID, interactionID, input)
+	gotInteractionID, err := submitPendingUserInput(projectID, runID, interactionID, input)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}

@@ -74,13 +74,14 @@ func (x WatchRunResponse_EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WatchRunResponse_EventType.Descriptor instead.
 func (WatchRunResponse_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{7, 0}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{14, 0}
 }
 
 type InitRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	RepoUrl       string                 `protobuf:"bytes,2,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -129,11 +130,19 @@ func (x *InitRunRequest) GetRepoUrl() string {
 	return ""
 }
 
+func (x *InitRunRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type InitRunResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	RepoName       string                 `protobuf:"bytes,2,opt,name=repo_name,json=repoName,proto3" json:"repo_name,omitempty"`
 	BootstrapRunId string                 `protobuf:"bytes,3,opt,name=bootstrap_run_id,json=bootstrapRunId,proto3" json:"bootstrap_run_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -189,18 +198,414 @@ func (x *InitRunResponse) GetBootstrapRunId() string {
 	return ""
 }
 
+func (x *InitRunResponse) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type Project struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	RepoUrl       string                 `protobuf:"bytes,4,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
+	Purpose       string                 `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	RepoName      string                 `protobuf:"bytes,6,opt,name=repo_name,json=repoName,proto3" json:"repo_name,omitempty"`
+	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Project) Reset() {
+	*x = Project{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Project) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Project) ProtoMessage() {}
+
+func (x *Project) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Project.ProtoReflect.Descriptor instead.
+func (*Project) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Project) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *Project) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Project) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Project) GetRepoUrl() string {
+	if x != nil {
+		return x.RepoUrl
+	}
+	return ""
+}
+
+func (x *Project) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *Project) GetRepoName() string {
+	if x != nil {
+		return x.RepoName
+	}
+	return ""
+}
+
+func (x *Project) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+type ListProjectsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectsRequest) Reset() {
+	*x = ListProjectsRequest{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectsRequest) ProtoMessage() {}
+
+func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
+func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListProjectsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ListProjectsResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Projects        []*Project             `protobuf:"bytes,1,rep,name=projects,proto3" json:"projects,omitempty"`
+	ActiveProjectId string                 `protobuf:"bytes,2,opt,name=active_project_id,json=activeProjectId,proto3" json:"active_project_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListProjectsResponse) Reset() {
+	*x = ListProjectsResponse{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectsResponse) ProtoMessage() {}
+
+func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
+func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListProjectsResponse) GetProjects() []*Project {
+	if x != nil {
+		return x.Projects
+	}
+	return nil
+}
+
+func (x *ListProjectsResponse) GetActiveProjectId() string {
+	if x != nil {
+		return x.ActiveProjectId
+	}
+	return ""
+}
+
+type CreateProjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	RepoUrl       string                 `protobuf:"bytes,3,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateProjectRequest) Reset() {
+	*x = CreateProjectRequest{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProjectRequest) ProtoMessage() {}
+
+func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
+func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateProjectRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreateProjectRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateProjectRequest) GetRepoUrl() string {
+	if x != nil {
+		return x.RepoUrl
+	}
+	return ""
+}
+
+type CreateProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateProjectResponse) Reset() {
+	*x = CreateProjectResponse{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProjectResponse) ProtoMessage() {}
+
+func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
+func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CreateProjectResponse) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
+type SelectProjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SelectProjectRequest) Reset() {
+	*x = SelectProjectRequest{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectProjectRequest) ProtoMessage() {}
+
+func (x *SelectProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectProjectRequest.ProtoReflect.Descriptor instead.
+func (*SelectProjectRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SelectProjectRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SelectProjectRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type SelectProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *Project               `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SelectProjectResponse) Reset() {
+	*x = SelectProjectResponse{}
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectProjectResponse) ProtoMessage() {}
+
+func (x *SelectProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectProjectResponse.ProtoReflect.Descriptor instead.
+func (*SelectProjectResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SelectProjectResponse) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
 type StartRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	PipelineId    string                 `protobuf:"bytes,2,opt,name=pipeline_id,json=pipelineId,proto3" json:"pipeline_id,omitempty"`
 	Params        map[string]string      `protobuf:"bytes,3,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StartRunRequest) Reset() {
 	*x = StartRunRequest{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[2]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +617,7 @@ func (x *StartRunRequest) String() string {
 func (*StartRunRequest) ProtoMessage() {}
 
 func (x *StartRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[2]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +630,7 @@ func (x *StartRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRunRequest.ProtoReflect.Descriptor instead.
 func (*StartRunRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{2}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *StartRunRequest) GetSessionId() string {
@@ -249,6 +654,13 @@ func (x *StartRunRequest) GetParams() map[string]string {
 	return nil
 }
 
+func (x *StartRunRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type StartRunResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -259,7 +671,7 @@ type StartRunResponse struct {
 
 func (x *StartRunResponse) Reset() {
 	*x = StartRunResponse{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[3]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -271,7 +683,7 @@ func (x *StartRunResponse) String() string {
 func (*StartRunResponse) ProtoMessage() {}
 
 func (x *StartRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[3]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -284,7 +696,7 @@ func (x *StartRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRunResponse.ProtoReflect.Descriptor instead.
 func (*StartRunResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{3}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *StartRunResponse) GetRunId() string {
@@ -306,13 +718,14 @@ type SubmitRunInputRequest struct {
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	RunId         string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	Input         string                 `protobuf:"bytes,3,opt,name=input,proto3" json:"input,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubmitRunInputRequest) Reset() {
 	*x = SubmitRunInputRequest{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[4]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +737,7 @@ func (x *SubmitRunInputRequest) String() string {
 func (*SubmitRunInputRequest) ProtoMessage() {}
 
 func (x *SubmitRunInputRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[4]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +750,7 @@ func (x *SubmitRunInputRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRunInputRequest.ProtoReflect.Descriptor instead.
 func (*SubmitRunInputRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{4}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SubmitRunInputRequest) GetSessionId() string {
@@ -361,6 +774,13 @@ func (x *SubmitRunInputRequest) GetInput() string {
 	return ""
 }
 
+func (x *SubmitRunInputRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type SubmitRunInputResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -370,7 +790,7 @@ type SubmitRunInputResponse struct {
 
 func (x *SubmitRunInputResponse) Reset() {
 	*x = SubmitRunInputResponse{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[5]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -382,7 +802,7 @@ func (x *SubmitRunInputResponse) String() string {
 func (*SubmitRunInputResponse) ProtoMessage() {}
 
 func (x *SubmitRunInputResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[5]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,7 +815,7 @@ func (x *SubmitRunInputResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRunInputResponse.ProtoReflect.Descriptor instead.
 func (*SubmitRunInputResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{5}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SubmitRunInputResponse) GetRunId() string {
@@ -414,7 +834,7 @@ type WatchRunRequest struct {
 
 func (x *WatchRunRequest) Reset() {
 	*x = WatchRunRequest{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[6]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +846,7 @@ func (x *WatchRunRequest) String() string {
 func (*WatchRunRequest) ProtoMessage() {}
 
 func (x *WatchRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[6]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +859,7 @@ func (x *WatchRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRunRequest.ProtoReflect.Descriptor instead.
 func (*WatchRunRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{6}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *WatchRunRequest) GetRunId() string {
@@ -461,7 +881,7 @@ type WatchRunResponse struct {
 
 func (x *WatchRunResponse) Reset() {
 	*x = WatchRunResponse{}
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[7]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -473,7 +893,7 @@ func (x *WatchRunResponse) String() string {
 func (*WatchRunResponse) ProtoMessage() {}
 
 func (x *WatchRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_pipeline_proto_msgTypes[7]
+	mi := &file_insightify_v1_pipeline_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -486,7 +906,7 @@ func (x *WatchRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRunResponse.ProtoReflect.Descriptor instead.
 func (*WatchRunResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{7}
+	return file_insightify_v1_pipeline_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *WatchRunResponse) GetEventType() WatchRunResponse_EventType {
@@ -521,33 +941,67 @@ var File_insightify_v1_pipeline_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_pipeline_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinsightify/v1/pipeline.proto\x12\rinsightify.v1\x1a\x1dpipeline/v1/client_view.proto\"D\n" +
+	"\x1cinsightify/v1/pipeline.proto\x12\rinsightify.v1\x1a\x1dpipeline/v1/client_view.proto\"c\n" +
 	"\x0eInitRunRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
-	"\brepo_url\x18\x02 \x01(\tR\arepoUrl\"w\n" +
+	"\brepo_url\x18\x02 \x01(\tR\arepoUrl\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\"\x96\x01\n" +
 	"\x0fInitRunResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
 	"\trepo_name\x18\x02 \x01(\tR\brepoName\x12(\n" +
-	"\x10bootstrap_run_id\x18\x03 \x01(\tR\x0ebootstrapRunId\"\xd0\x01\n" +
+	"\x10bootstrap_run_id\x18\x03 \x01(\tR\x0ebootstrapRunId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"\xc4\x01\n" +
+	"\aProject\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x19\n" +
+	"\brepo_url\x18\x04 \x01(\tR\arepoUrl\x12\x18\n" +
+	"\apurpose\x18\x05 \x01(\tR\apurpose\x12\x1b\n" +
+	"\trepo_name\x18\x06 \x01(\tR\brepoName\x12\x1b\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\".\n" +
+	"\x13ListProjectsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"v\n" +
+	"\x14ListProjectsResponse\x122\n" +
+	"\bprojects\x18\x01 \x03(\v2\x16.insightify.v1.ProjectR\bprojects\x12*\n" +
+	"\x11active_project_id\x18\x02 \x01(\tR\x0factiveProjectId\"^\n" +
+	"\x14CreateProjectRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
+	"\brepo_url\x18\x03 \x01(\tR\arepoUrl\"I\n" +
+	"\x15CreateProjectResponse\x120\n" +
+	"\aproject\x18\x01 \x01(\v2\x16.insightify.v1.ProjectR\aproject\"N\n" +
+	"\x14SelectProjectRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"I\n" +
+	"\x15SelectProjectResponse\x120\n" +
+	"\aproject\x18\x01 \x01(\v2\x16.insightify.v1.ProjectR\aproject\"\xef\x01\n" +
 	"\x0fStartRunRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
 	"\vpipeline_id\x18\x02 \x01(\tR\n" +
 	"pipelineId\x12B\n" +
-	"\x06params\x18\x03 \x03(\v2*.insightify.v1.StartRunRequest.ParamsEntryR\x06params\x1a9\n" +
+	"\x06params\x18\x03 \x03(\v2*.insightify.v1.StartRunRequest.ParamsEntryR\x06params\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"c\n" +
 	"\x10StartRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x128\n" +
 	"\vclient_view\x18\x02 \x01(\v2\x17.pipeline.v1.ClientViewR\n" +
-	"clientView\"c\n" +
+	"clientView\"\x82\x01\n" +
 	"\x15SubmitRunInputRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x14\n" +
-	"\x05input\x18\x03 \x01(\tR\x05input\"/\n" +
+	"\x05input\x18\x03 \x01(\tR\x05input\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"/\n" +
 	"\x16SubmitRunInputResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"(\n" +
 	"\x0fWatchRunRequest\x12\x15\n" +
@@ -564,9 +1018,12 @@ const file_insightify_v1_pipeline_proto_rawDesc = "" +
 	"\x0eEVENT_TYPE_LOG\x10\x01\x12\x17\n" +
 	"\x13EVENT_TYPE_PROGRESS\x10\x02\x12\x17\n" +
 	"\x13EVENT_TYPE_COMPLETE\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x042\xd5\x02\n" +
+	"\x10EVENT_TYPE_ERROR\x10\x042\xe6\x04\n" +
 	"\x0fPipelineService\x12H\n" +
-	"\aInitRun\x12\x1d.insightify.v1.InitRunRequest\x1a\x1e.insightify.v1.InitRunResponse\x12K\n" +
+	"\aInitRun\x12\x1d.insightify.v1.InitRunRequest\x1a\x1e.insightify.v1.InitRunResponse\x12W\n" +
+	"\fListProjects\x12\".insightify.v1.ListProjectsRequest\x1a#.insightify.v1.ListProjectsResponse\x12Z\n" +
+	"\rCreateProject\x12#.insightify.v1.CreateProjectRequest\x1a$.insightify.v1.CreateProjectResponse\x12Z\n" +
+	"\rSelectProject\x12#.insightify.v1.SelectProjectRequest\x1a$.insightify.v1.SelectProjectResponse\x12K\n" +
 	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponse\x12\\\n" +
 	"\rNeedUserInput\x12$.insightify.v1.SubmitRunInputRequest\x1a%.insightify.v1.SubmitRunInputResponse\x12M\n" +
 	"\bWatchRun\x12\x1e.insightify.v1.WatchRunRequest\x1a\x1f.insightify.v1.WatchRunResponse0\x01B\xa5\x01\n" +
@@ -585,38 +1042,54 @@ func file_insightify_v1_pipeline_proto_rawDescGZIP() []byte {
 }
 
 var file_insightify_v1_pipeline_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_insightify_v1_pipeline_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_insightify_v1_pipeline_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_insightify_v1_pipeline_proto_goTypes = []any{
 	(WatchRunResponse_EventType)(0), // 0: insightify.v1.WatchRunResponse.EventType
 	(*InitRunRequest)(nil),          // 1: insightify.v1.InitRunRequest
 	(*InitRunResponse)(nil),         // 2: insightify.v1.InitRunResponse
-	(*StartRunRequest)(nil),         // 3: insightify.v1.StartRunRequest
-	(*StartRunResponse)(nil),        // 4: insightify.v1.StartRunResponse
-	(*SubmitRunInputRequest)(nil),   // 5: insightify.v1.SubmitRunInputRequest
-	(*SubmitRunInputResponse)(nil),  // 6: insightify.v1.SubmitRunInputResponse
-	(*WatchRunRequest)(nil),         // 7: insightify.v1.WatchRunRequest
-	(*WatchRunResponse)(nil),        // 8: insightify.v1.WatchRunResponse
-	nil,                             // 9: insightify.v1.StartRunRequest.ParamsEntry
-	(*v1.ClientView)(nil),           // 10: pipeline.v1.ClientView
+	(*Project)(nil),                 // 3: insightify.v1.Project
+	(*ListProjectsRequest)(nil),     // 4: insightify.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),    // 5: insightify.v1.ListProjectsResponse
+	(*CreateProjectRequest)(nil),    // 6: insightify.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),   // 7: insightify.v1.CreateProjectResponse
+	(*SelectProjectRequest)(nil),    // 8: insightify.v1.SelectProjectRequest
+	(*SelectProjectResponse)(nil),   // 9: insightify.v1.SelectProjectResponse
+	(*StartRunRequest)(nil),         // 10: insightify.v1.StartRunRequest
+	(*StartRunResponse)(nil),        // 11: insightify.v1.StartRunResponse
+	(*SubmitRunInputRequest)(nil),   // 12: insightify.v1.SubmitRunInputRequest
+	(*SubmitRunInputResponse)(nil),  // 13: insightify.v1.SubmitRunInputResponse
+	(*WatchRunRequest)(nil),         // 14: insightify.v1.WatchRunRequest
+	(*WatchRunResponse)(nil),        // 15: insightify.v1.WatchRunResponse
+	nil,                             // 16: insightify.v1.StartRunRequest.ParamsEntry
+	(*v1.ClientView)(nil),           // 17: pipeline.v1.ClientView
 }
 var file_insightify_v1_pipeline_proto_depIdxs = []int32{
-	9,  // 0: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
-	10, // 1: insightify.v1.StartRunResponse.client_view:type_name -> pipeline.v1.ClientView
-	0,  // 2: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
-	10, // 3: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
-	1,  // 4: insightify.v1.PipelineService.InitRun:input_type -> insightify.v1.InitRunRequest
-	3,  // 5: insightify.v1.PipelineService.StartRun:input_type -> insightify.v1.StartRunRequest
-	5,  // 6: insightify.v1.PipelineService.NeedUserInput:input_type -> insightify.v1.SubmitRunInputRequest
-	7,  // 7: insightify.v1.PipelineService.WatchRun:input_type -> insightify.v1.WatchRunRequest
-	2,  // 8: insightify.v1.PipelineService.InitRun:output_type -> insightify.v1.InitRunResponse
-	4,  // 9: insightify.v1.PipelineService.StartRun:output_type -> insightify.v1.StartRunResponse
-	6,  // 10: insightify.v1.PipelineService.NeedUserInput:output_type -> insightify.v1.SubmitRunInputResponse
-	8,  // 11: insightify.v1.PipelineService.WatchRun:output_type -> insightify.v1.WatchRunResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	3,  // 0: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
+	3,  // 1: insightify.v1.CreateProjectResponse.project:type_name -> insightify.v1.Project
+	3,  // 2: insightify.v1.SelectProjectResponse.project:type_name -> insightify.v1.Project
+	16, // 3: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
+	17, // 4: insightify.v1.StartRunResponse.client_view:type_name -> pipeline.v1.ClientView
+	0,  // 5: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
+	17, // 6: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
+	1,  // 7: insightify.v1.PipelineService.InitRun:input_type -> insightify.v1.InitRunRequest
+	4,  // 8: insightify.v1.PipelineService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
+	6,  // 9: insightify.v1.PipelineService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
+	8,  // 10: insightify.v1.PipelineService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
+	10, // 11: insightify.v1.PipelineService.StartRun:input_type -> insightify.v1.StartRunRequest
+	12, // 12: insightify.v1.PipelineService.NeedUserInput:input_type -> insightify.v1.SubmitRunInputRequest
+	14, // 13: insightify.v1.PipelineService.WatchRun:input_type -> insightify.v1.WatchRunRequest
+	2,  // 14: insightify.v1.PipelineService.InitRun:output_type -> insightify.v1.InitRunResponse
+	5,  // 15: insightify.v1.PipelineService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
+	7,  // 16: insightify.v1.PipelineService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
+	9,  // 17: insightify.v1.PipelineService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
+	11, // 18: insightify.v1.PipelineService.StartRun:output_type -> insightify.v1.StartRunResponse
+	13, // 19: insightify.v1.PipelineService.NeedUserInput:output_type -> insightify.v1.SubmitRunInputResponse
+	15, // 20: insightify.v1.PipelineService.WatchRun:output_type -> insightify.v1.WatchRunResponse
+	14, // [14:21] is the sub-list for method output_type
+	7,  // [7:14] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_pipeline_proto_init() }
@@ -630,7 +1103,7 @@ func file_insightify_v1_pipeline_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_pipeline_proto_rawDesc), len(file_insightify_v1_pipeline_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

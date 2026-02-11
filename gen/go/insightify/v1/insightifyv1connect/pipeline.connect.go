@@ -35,6 +35,15 @@ const (
 const (
 	// PipelineServiceInitRunProcedure is the fully-qualified name of the PipelineService's InitRun RPC.
 	PipelineServiceInitRunProcedure = "/insightify.v1.PipelineService/InitRun"
+	// PipelineServiceListProjectsProcedure is the fully-qualified name of the PipelineService's
+	// ListProjects RPC.
+	PipelineServiceListProjectsProcedure = "/insightify.v1.PipelineService/ListProjects"
+	// PipelineServiceCreateProjectProcedure is the fully-qualified name of the PipelineService's
+	// CreateProject RPC.
+	PipelineServiceCreateProjectProcedure = "/insightify.v1.PipelineService/CreateProject"
+	// PipelineServiceSelectProjectProcedure is the fully-qualified name of the PipelineService's
+	// SelectProject RPC.
+	PipelineServiceSelectProjectProcedure = "/insightify.v1.PipelineService/SelectProject"
 	// PipelineServiceStartRunProcedure is the fully-qualified name of the PipelineService's StartRun
 	// RPC.
 	PipelineServiceStartRunProcedure = "/insightify.v1.PipelineService/StartRun"
@@ -50,6 +59,12 @@ const (
 type PipelineServiceClient interface {
 	// Initialize a run session from frontend-provided context.
 	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
+	// List projects owned by a user.
+	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
+	// Create a new project for a user.
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	// Set an existing project as the active project for a user.
+	SelectProject(context.Context, *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error)
 	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
 	// Respond to a pending user-input request for an interactive run.
@@ -73,6 +88,24 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PipelineServiceInitRunProcedure,
 			connect.WithSchema(pipelineServiceMethods.ByName("InitRun")),
+			connect.WithClientOptions(opts...),
+		),
+		listProjects: connect.NewClient[v1.ListProjectsRequest, v1.ListProjectsResponse](
+			httpClient,
+			baseURL+PipelineServiceListProjectsProcedure,
+			connect.WithSchema(pipelineServiceMethods.ByName("ListProjects")),
+			connect.WithClientOptions(opts...),
+		),
+		createProject: connect.NewClient[v1.CreateProjectRequest, v1.CreateProjectResponse](
+			httpClient,
+			baseURL+PipelineServiceCreateProjectProcedure,
+			connect.WithSchema(pipelineServiceMethods.ByName("CreateProject")),
+			connect.WithClientOptions(opts...),
+		),
+		selectProject: connect.NewClient[v1.SelectProjectRequest, v1.SelectProjectResponse](
+			httpClient,
+			baseURL+PipelineServiceSelectProjectProcedure,
+			connect.WithSchema(pipelineServiceMethods.ByName("SelectProject")),
 			connect.WithClientOptions(opts...),
 		),
 		startRun: connect.NewClient[v1.StartRunRequest, v1.StartRunResponse](
@@ -99,6 +132,9 @@ func NewPipelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 // pipelineServiceClient implements PipelineServiceClient.
 type pipelineServiceClient struct {
 	initRun       *connect.Client[v1.InitRunRequest, v1.InitRunResponse]
+	listProjects  *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	createProject *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	selectProject *connect.Client[v1.SelectProjectRequest, v1.SelectProjectResponse]
 	startRun      *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
 	needUserInput *connect.Client[v1.SubmitRunInputRequest, v1.SubmitRunInputResponse]
 	watchRun      *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
@@ -107,6 +143,21 @@ type pipelineServiceClient struct {
 // InitRun calls insightify.v1.PipelineService.InitRun.
 func (c *pipelineServiceClient) InitRun(ctx context.Context, req *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error) {
 	return c.initRun.CallUnary(ctx, req)
+}
+
+// ListProjects calls insightify.v1.PipelineService.ListProjects.
+func (c *pipelineServiceClient) ListProjects(ctx context.Context, req *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
+	return c.listProjects.CallUnary(ctx, req)
+}
+
+// CreateProject calls insightify.v1.PipelineService.CreateProject.
+func (c *pipelineServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
+	return c.createProject.CallUnary(ctx, req)
+}
+
+// SelectProject calls insightify.v1.PipelineService.SelectProject.
+func (c *pipelineServiceClient) SelectProject(ctx context.Context, req *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error) {
+	return c.selectProject.CallUnary(ctx, req)
 }
 
 // StartRun calls insightify.v1.PipelineService.StartRun.
@@ -128,6 +179,12 @@ func (c *pipelineServiceClient) WatchRun(ctx context.Context, req *connect.Reque
 type PipelineServiceHandler interface {
 	// Initialize a run session from frontend-provided context.
 	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
+	// List projects owned by a user.
+	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
+	// Create a new project for a user.
+	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
+	// Set an existing project as the active project for a user.
+	SelectProject(context.Context, *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error)
 	// Start executing a plan. Returns immediately with a run_id.
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
 	// Respond to a pending user-input request for an interactive run.
@@ -147,6 +204,24 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 		PipelineServiceInitRunProcedure,
 		svc.InitRun,
 		connect.WithSchema(pipelineServiceMethods.ByName("InitRun")),
+		connect.WithHandlerOptions(opts...),
+	)
+	pipelineServiceListProjectsHandler := connect.NewUnaryHandler(
+		PipelineServiceListProjectsProcedure,
+		svc.ListProjects,
+		connect.WithSchema(pipelineServiceMethods.ByName("ListProjects")),
+		connect.WithHandlerOptions(opts...),
+	)
+	pipelineServiceCreateProjectHandler := connect.NewUnaryHandler(
+		PipelineServiceCreateProjectProcedure,
+		svc.CreateProject,
+		connect.WithSchema(pipelineServiceMethods.ByName("CreateProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	pipelineServiceSelectProjectHandler := connect.NewUnaryHandler(
+		PipelineServiceSelectProjectProcedure,
+		svc.SelectProject,
+		connect.WithSchema(pipelineServiceMethods.ByName("SelectProject")),
 		connect.WithHandlerOptions(opts...),
 	)
 	pipelineServiceStartRunHandler := connect.NewUnaryHandler(
@@ -171,6 +246,12 @@ func NewPipelineServiceHandler(svc PipelineServiceHandler, opts ...connect.Handl
 		switch r.URL.Path {
 		case PipelineServiceInitRunProcedure:
 			pipelineServiceInitRunHandler.ServeHTTP(w, r)
+		case PipelineServiceListProjectsProcedure:
+			pipelineServiceListProjectsHandler.ServeHTTP(w, r)
+		case PipelineServiceCreateProjectProcedure:
+			pipelineServiceCreateProjectHandler.ServeHTTP(w, r)
+		case PipelineServiceSelectProjectProcedure:
+			pipelineServiceSelectProjectHandler.ServeHTTP(w, r)
 		case PipelineServiceStartRunProcedure:
 			pipelineServiceStartRunHandler.ServeHTTP(w, r)
 		case PipelineServiceNeedUserInputProcedure:
@@ -188,6 +269,18 @@ type UnimplementedPipelineServiceHandler struct{}
 
 func (UnimplementedPipelineServiceHandler) InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.InitRun is not implemented"))
+}
+
+func (UnimplementedPipelineServiceHandler) ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.ListProjects is not implemented"))
+}
+
+func (UnimplementedPipelineServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.CreateProject is not implemented"))
+}
+
+func (UnimplementedPipelineServiceHandler) SelectProject(context.Context, *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.PipelineService.SelectProject is not implemented"))
 }
 
 func (UnimplementedPipelineServiceHandler) StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {

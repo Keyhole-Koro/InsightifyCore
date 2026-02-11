@@ -249,8 +249,3 @@ func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState 
 func (s *apiServer) launchBootstrapRun(sessionID, userInput string) (string, error) {
 	return s.launchWorkerRun(sessionID, "bootstrap", userInput)
 }
-
-// launchInitPurposeRun is kept as a compatibility alias.
-func (s *apiServer) launchInitPurposeRun(sessionID, userInput string) (string, error) {
-	return s.launchBootstrapRun(sessionID, userInput)
-}

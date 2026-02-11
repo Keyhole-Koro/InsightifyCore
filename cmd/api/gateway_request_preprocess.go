@@ -9,54 +9,48 @@ import (
 	"connectrpc.com/connect"
 )
 
-func prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) (sessionID, userID, repoURL string) {
+func prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) (projectID, userID, repoURL string) {
 	ensureSessionStoreLoaded()
 	userID = strings.TrimSpace(req.Msg.GetUserId())
 	if userID == "" {
 		userID = "demo-user"
 	}
 	repoURL = strings.TrimSpace(req.Msg.GetRepoUrl())
-	// Resolve session from cookie to keep frontend session/cookie alignment on refresh.
-	sessionID = resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
-	return sessionID, userID, repoURL
+	projectID = strings.TrimSpace(req.Msg.GetProjectId())
+	return projectID, userID, repoURL
 }
 
-func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (sessionID, workerKey, userInput string, err error) {
+func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (projectID, workerKey, userInput string, err error) {
 	ensureSessionStoreLoaded()
 	workerKey = req.Msg.GetPipelineId()
-	// Resolve session from request first, then cookie fallback to support browser reconnect flows.
-	sessionID = resolveSessionID(req)
-	if sessionID == "" {
-		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required (request field or cookie)"))
+	projectID = strings.TrimSpace(req.Msg.GetProjectId())
+	if projectID == "" {
+		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("project_id is required"))
 	}
-	if _, ok := getSession(sessionID); !ok {
-		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+	if _, ok := getSession(projectID); !ok {
+		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("project %s not found", projectID))
 	}
-	if _, ensureErr := ensureSessionRunContext(sessionID); ensureErr != nil {
+	if _, ensureErr := ensureSessionRunContext(projectID); ensureErr != nil {
 		return "", "", "", connect.NewError(connect.CodeInternal, ensureErr)
 	}
 	userInput = strings.TrimSpace(req.Msg.GetParams()["user_input"])
-	return sessionID, workerKey, userInput, nil
+	return projectID, workerKey, userInput, nil
 }
 
-func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputRequest]) (sessionID, runID, userInput string, err error) {
+func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputRequest]) (projectID, runID, userInput string, err error) {
 	ensureSessionStoreLoaded()
-	sessionID = strings.TrimSpace(req.Msg.GetSessionId())
-	if sessionID == "" {
-		// Resolve session from cookie fallback when frontend omits session_id.
-		sessionID = resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
-	}
-	if sessionID == "" {
-		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required"))
+	projectID = strings.TrimSpace(req.Msg.GetProjectId())
+	if projectID == "" {
+		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("project_id is required"))
 	}
 	userInput = strings.TrimSpace(req.Msg.GetInput())
 	if userInput == "" {
 		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("input is required"))
 	}
 
-	sess, ok := getSession(sessionID)
+	sess, ok := getSession(projectID)
 	if !ok {
-		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("project %s not found", projectID))
 	}
 	runID = strings.TrimSpace(req.Msg.GetRunId())
 	if runID == "" {
@@ -65,24 +59,20 @@ func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputReques
 	if runID == "" {
 		return "", "", "", connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("run_id is required"))
 	}
-	return sessionID, runID, userInput, nil
+	return projectID, runID, userInput, nil
 }
 
-func prepareSendMessage(req *connect.Request[insightifyv1.SendMessageRequest]) (sessionID, runID, interactionID, input string, err error) {
+func prepareSendMessage(req *connect.Request[insightifyv1.SendMessageRequest]) (projectID, runID, interactionID, input string, err error) {
 	ensureSessionStoreLoaded()
-	sessionID = strings.TrimSpace(req.Msg.GetSessionId())
-	if sessionID == "" {
-		// Resolve session from cookie fallback when chat send omits session_id.
-		sessionID = resolveSessionIDFromCookieHeader(req.Header().Get("Cookie"))
-	}
+	projectID = strings.TrimSpace(req.Msg.GetProjectId())
 	runID = strings.TrimSpace(req.Msg.GetRunId())
 	interactionID = strings.TrimSpace(req.Msg.GetInteractionId())
 	input = strings.TrimSpace(req.Msg.GetInput())
-	if sessionID == "" || runID == "" {
-		return "", "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id and run_id are required"))
+	if projectID == "" || runID == "" {
+		return "", "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("project_id and run_id are required"))
 	}
 	if input == "" {
 		return "", "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("input is required"))
 	}
-	return sessionID, runID, interactionID, input, nil
+	return projectID, runID, interactionID, input, nil
 }

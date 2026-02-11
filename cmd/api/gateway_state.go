@@ -7,8 +7,6 @@ import (
 	insightifyv1 "insightify/gen/go/insightify/v1"
 )
 
-const sessionCookieName = "insightify_session_id"
-
 // runStore holds active runs and their event channels.
 var runStore = struct {
 	sync.RWMutex
@@ -29,10 +27,13 @@ func scheduleRunCleanup(runID string) {
 
 type initSession struct {
 	SessionID   string
+	ProjectID   string
+	ProjectName string
 	UserID      string
 	RepoURL     string
 	Purpose     string
 	Repo        string
+	IsActive    bool
 	RunCtx      *RunContext
 	Running     bool
 	ActiveRunID string

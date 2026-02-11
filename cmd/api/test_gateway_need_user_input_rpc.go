@@ -9,12 +9,12 @@ import (
 )
 
 func (s *apiServer) NeedUserInput(_ context.Context, req *connect.Request[insightifyv1.SubmitRunInputRequest]) (*connect.Response[insightifyv1.SubmitRunInputResponse], error) {
-	sessionID, runID, userInput, err := prepareNeedUserInput(req)
+	projectID, runID, userInput, err := prepareNeedUserInput(req)
 	if err != nil {
 		return nil, err
 	}
 
-	interactionID, err := submitPendingUserInput(sessionID, runID, "", userInput)
+	interactionID, err := submitPendingUserInput(projectID, runID, "", userInput)
 	if err != nil {
 		return nil, err
 	}

@@ -151,8 +151,9 @@ func (h *Handler) SubmitUserInput(sessionID, runID, interactionID, input string)
 	if pending.SessionID != sessionID {
 		return "", fmt.Errorf("run %s does not belong to session %s", runID, sessionID)
 	}
+	// Accept stale interaction IDs from clients and bind to the latest pending interaction.
 	if interactionID != "" && pending.InteractionID != interactionID {
-		return "", fmt.Errorf("interaction_id mismatch for run %s", runID)
+		interactionID = pending.InteractionID
 	}
 
 	select {

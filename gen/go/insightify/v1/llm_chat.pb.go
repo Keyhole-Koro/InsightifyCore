@@ -189,6 +189,7 @@ type WatchChatRequest struct {
 	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
 	FromSeq        int64                  `protobuf:"varint,4,opt,name=from_seq,json=fromSeq,proto3" json:"from_seq,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,5,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -251,6 +252,13 @@ func (x *WatchChatRequest) GetFromSeq() int64 {
 	return 0
 }
 
+func (x *WatchChatRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type SendMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -259,6 +267,7 @@ type SendMessageRequest struct {
 	Input          string                 `protobuf:"bytes,4,opt,name=input,proto3" json:"input,omitempty"`
 	ClientMsgId    string                 `protobuf:"bytes,5,opt,name=client_msg_id,json=clientMsgId,proto3" json:"client_msg_id,omitempty"`
 	ConversationId string                 `protobuf:"bytes,6,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,7,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -335,6 +344,13 @@ func (x *SendMessageRequest) GetConversationId() string {
 	return ""
 }
 
+func (x *SendMessageRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 type SendMessageResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Accepted       bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
@@ -405,6 +421,7 @@ type ChatEvent struct {
 	Seq            int64                  `protobuf:"varint,6,opt,name=seq,proto3" json:"seq,omitempty"`
 	Text           string                 `protobuf:"bytes,7,opt,name=text,proto3" json:"text,omitempty"`
 	ConversationId string                 `protobuf:"bytes,8,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Node           *UiNode                `protobuf:"bytes,20,opt,name=node,proto3" json:"node,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -492,6 +509,13 @@ func (x *ChatEvent) GetText() string {
 func (x *ChatEvent) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *ChatEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -987,13 +1011,15 @@ var File_insightify_v1_llm_chat_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinsightify/v1/llm_chat.proto\x12\rinsightify.v1\"\x8c\x01\n" +
+	"\x1cinsightify/v1/llm_chat.proto\x12\rinsightify.v1\"\xab\x01\n" +
 	"\x10WatchChatRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
 	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x19\n" +
-	"\bfrom_seq\x18\x04 \x01(\x03R\afromSeq\"\xd4\x01\n" +
+	"\bfrom_seq\x18\x04 \x01(\x03R\afromSeq\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x05 \x01(\tR\tprojectId\"\xf3\x01\n" +
 	"\x12SendMessageRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
@@ -1001,11 +1027,13 @@ const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12\x14\n" +
 	"\x05input\x18\x04 \x01(\tR\x05input\x12\"\n" +
 	"\rclient_msg_id\x18\x05 \x01(\tR\vclientMsgId\x12'\n" +
-	"\x0fconversation_id\x18\x06 \x01(\tR\x0econversationId\"\x81\x01\n" +
+	"\x0fconversation_id\x18\x06 \x01(\tR\x0econversationId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\a \x01(\tR\tprojectId\"\x81\x01\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"\xf8\x03\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"\x97\x04\n" +
 	"\tChatEvent\x12A\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\".insightify.v1.ChatEvent.EventTypeR\teventType\x12\x1d\n" +
@@ -1017,7 +1045,9 @@ const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\x0einteraction_id\x18\x05 \x01(\tR\rinteractionId\x12\x10\n" +
 	"\x03seq\x18\x06 \x01(\x03R\x03seq\x12\x12\n" +
 	"\x04text\x18\a \x01(\tR\x04text\x12'\n" +
-	"\x0fconversation_id\x18\b \x01(\tR\x0econversationId\x12)\n" +
+	"\x0fconversation_id\x18\b \x01(\tR\x0econversationId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\t \x01(\tR\tprojectId\x12)\n" +
 	"\x04node\x18\x14 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\xb1\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1e\n" +

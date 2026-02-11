@@ -9,12 +9,19 @@ import (
 	"sync"
 )
 
+func isProjectID(id string) bool {
+	return strings.HasPrefix(strings.TrimSpace(id), "project-")
+}
+
 type persistedSession struct {
-	SessionID string `json:"session_id"`
-	UserID    string `json:"user_id"`
-	RepoURL   string `json:"repo_url"`
-	Purpose   string `json:"purpose"`
-	Repo      string `json:"repo"`
+	SessionID   string `json:"session_id"`
+	ProjectID   string `json:"project_id,omitempty"`
+	ProjectName string `json:"project_name,omitempty"`
+	UserID      string `json:"user_id"`
+	RepoURL     string `json:"repo_url"`
+	Purpose     string `json:"purpose"`
+	Repo        string `json:"repo"`
+	IsActive    bool   `json:"is_active,omitempty"`
 }
 
 var sessionStoreLoadOnce sync.Once
@@ -39,14 +46,25 @@ func ensureSessionStoreLoaded() {
 			if row.SessionID == "" {
 				continue
 			}
+			projectID := strings.TrimSpace(row.ProjectID)
+			if projectID == "" {
+				projectID = row.SessionID
+			}
+			projectName := strings.TrimSpace(row.ProjectName)
+			if projectName == "" {
+				projectName = "Project"
+			}
 			initRunStore.sessions[row.SessionID] = initSession{
-				SessionID: row.SessionID,
-				UserID:    row.UserID,
-				RepoURL:   row.RepoURL,
-				Purpose:   row.Purpose,
-				Repo:      row.Repo,
-				RunCtx:    nil, // lazily recreated when needed
-				Running:   false,
+				SessionID:   row.SessionID,
+				ProjectID:   projectID,
+				ProjectName: projectName,
+				UserID:      row.UserID,
+				RepoURL:     row.RepoURL,
+				Purpose:     row.Purpose,
+				Repo:        row.Repo,
+				IsActive:    row.IsActive,
+				RunCtx:      nil, // lazily recreated when needed
+				Running:     false,
 			}
 		}
 	})
@@ -57,11 +75,14 @@ func persistSessionStore() {
 	rows := make([]persistedSession, 0, len(initRunStore.sessions))
 	for sid, sess := range initRunStore.sessions {
 		rows = append(rows, persistedSession{
-			SessionID: sid,
-			UserID:    sess.UserID,
-			RepoURL:   sess.RepoURL,
-			Purpose:   sess.Purpose,
-			Repo:      sess.Repo,
+			SessionID:   sid,
+			ProjectID:   sess.ProjectID,
+			ProjectName: sess.ProjectName,
+			UserID:      sess.UserID,
+			RepoURL:     sess.RepoURL,
+			Purpose:     sess.Purpose,
+			Repo:        sess.Repo,
+			IsActive:    sess.IsActive,
 		})
 	}
 	initRunStore.RUnlock()
@@ -86,6 +107,12 @@ func putSession(sess initSession) {
 	if strings.TrimSpace(sess.SessionID) == "" {
 		return
 	}
+	if strings.TrimSpace(sess.ProjectID) == "" {
+		sess.ProjectID = sess.SessionID
+	}
+	if strings.TrimSpace(sess.ProjectName) == "" {
+		sess.ProjectName = "Project"
+	}
 	initRunStore.Lock()
 	initRunStore.sessions[sess.SessionID] = sess
 	initRunStore.Unlock()
@@ -100,8 +127,82 @@ func updateSession(sessionID string, update func(*initSession)) (initSession, bo
 	}
 	update(&sess)
 	sess.SessionID = sessionID
+	if strings.TrimSpace(sess.ProjectID) == "" {
+		sess.ProjectID = sessionID
+	}
+	if strings.TrimSpace(sess.ProjectName) == "" {
+		sess.ProjectName = "Project"
+	}
 	initRunStore.sessions[sessionID] = sess
 	return sess, true
+}
+
+func listProjectsByUser(userID string) []initSession {
+	userID = strings.TrimSpace(userID)
+	initRunStore.RLock()
+	defer initRunStore.RUnlock()
+	projects := make([]initSession, 0, len(initRunStore.sessions))
+	for _, sess := range initRunStore.sessions {
+		if !isProjectID(sess.ProjectID) {
+			continue
+		}
+		if userID != "" && strings.TrimSpace(sess.UserID) != userID {
+			continue
+		}
+		projects = append(projects, sess)
+	}
+	return projects
+}
+
+func getActiveProjectByUser(userID string) (initSession, bool) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return initSession{}, false
+	}
+	initRunStore.RLock()
+	defer initRunStore.RUnlock()
+	for _, sess := range initRunStore.sessions {
+		if !isProjectID(sess.ProjectID) {
+			continue
+		}
+		if strings.TrimSpace(sess.UserID) != userID {
+			continue
+		}
+		if sess.IsActive {
+			return sess, true
+		}
+	}
+	return initSession{}, false
+}
+
+func setActiveProjectForUser(userID, projectID string) (initSession, bool) {
+	userID = strings.TrimSpace(userID)
+	projectID = strings.TrimSpace(projectID)
+	if userID == "" || projectID == "" {
+		return initSession{}, false
+	}
+
+	initRunStore.Lock()
+	defer initRunStore.Unlock()
+	var selected initSession
+	var found bool
+	for key, sess := range initRunStore.sessions {
+		if !isProjectID(sess.ProjectID) {
+			continue
+		}
+		if strings.TrimSpace(sess.UserID) != userID {
+			continue
+		}
+		if strings.TrimSpace(sess.ProjectID) == projectID || key == projectID {
+			sess.IsActive = true
+			selected = sess
+			found = true
+		} else {
+			sess.IsActive = false
+		}
+		initRunStore.sessions[key] = sess
+	}
+	return selected, found
 }
 
 func ensureSessionRunContext(sessionID string) (initSession, error) {
@@ -131,7 +232,6 @@ func hasRequiredWorkers(runCtx *RunContext) bool {
 	if runCtx == nil || runCtx.Env == nil || runCtx.Env.Resolver == nil {
 		return false
 	}
-	// Keep session run context forward-compatible across worker-key migrations.
 	_, hasBootstrap := runCtx.Env.Resolver.Get("bootstrap")
 	_, hasTestLLM := runCtx.Env.Resolver.Get("testllmChar")
 	return hasBootstrap && hasTestLLM
