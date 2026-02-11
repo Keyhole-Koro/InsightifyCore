@@ -14,7 +14,7 @@
     "XDG_CACHE_HOME": "/workspaces/${localWorkspaceFolderBasename}/.gocache/xdg"
   },
   "mounts": [],
-  "postCreateCommand": "bash -lc 'mkdir -p .gocache/mod .gocache/build .gocache/xdg && if [ -f go.mod ]; then go mod download; fi && go install github.com/go-delve/delve/cmd/dlv@latest'",
+  "postCreateCommand": "bash -lc 'mkdir -p .gocache/mod .gocache/build .gocache/xdg && if [ -f go.mod ]; then go mod download; fi && go install github.com/go-delve/delve/cmd/dlv@latest && go install github.com/air-verse/air@latest'",
   "postStartCommand": "bash -lc 'mkdir -p .gocache/mod .gocache/build .gocache/xdg && chown -R vscode:vscode .gocache'",
   "customizations": {
     "vscode": {

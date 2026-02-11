@@ -63,8 +63,6 @@ var initPurposeNeedInputPolicy = llmtool.NeedInputPolicy{
 	PreferFollowupAsMessage: true,
 	RequireAssistantMessage: true,
 	RequireFollowupQuestion: true,
-	DefaultAssistantMessage: "Thanks. Could you share a bit more detail about your goal or the repository URL?",
-	DefaultFollowupQuestion: "Could you share the repository URL or describe your learning goal more specifically?",
 }
 
 var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
@@ -82,8 +80,6 @@ var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Rules: []string{
 		"Use detected_repo_url and scout_explanation as hints, but prioritize user_input.",
 		"If intent is still ambiguous, set need_more_input=true.",
-		"If assistant_message would otherwise be empty, use: Thanks. Could you share a bit more detail about your goal or the repository URL?",
-		"If followup_question would otherwise be empty, use: Could you share the repository URL or describe your learning goal more specifically?",
 	},
 	Assumptions:  []string{"If both repo_url and purpose are empty, more input is required."},
 	OutputFormat: "JSON only.",
