@@ -44,3 +44,29 @@ func TestBuildLLMChatNodeEmptyRunID(t *testing.T) {
 		t.Fatalf("expected no node for empty run id")
 	}
 }
+
+func TestNeedUserInputAndFollowup(t *testing.T) {
+	history := []ChatMessage{{ID: "u1", Role: RoleUser, Content: "I want to learn Go internals"}}
+
+	waiting, ok := NeedUserInput("init-purpose-node", "bootstrap", "Low", "Could you share a GitHub URL?", history)
+	if !ok || waiting.LLMChat == nil {
+		t.Fatalf("expected waiting node")
+	}
+	if !waiting.LLMChat.SendLocked {
+		t.Fatalf("expected send locked on need user input")
+	}
+	if waiting.LLMChat.SendLockHint == "" {
+		t.Fatalf("expected non-empty send lock hint")
+	}
+
+	followup, ok := Followup("init-purpose-node", "bootstrap", "Low", "Great, let's inspect that repo.", false, "", history)
+	if !ok || followup.LLMChat == nil {
+		t.Fatalf("expected followup node")
+	}
+	if followup.LLMChat.SendLocked {
+		t.Fatalf("expected send unlocked on non-interactive followup")
+	}
+	if len(followup.LLMChat.Messages) < 2 {
+		t.Fatalf("expected history + assistant followup messages")
+	}
+}

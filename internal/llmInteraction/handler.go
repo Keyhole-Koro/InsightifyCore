@@ -2,6 +2,7 @@ package llminteraction
 
 import (
 	"fmt"
+	insightifyv1 "insightify/gen/go/insightify/v1"
 	"strings"
 	"sync"
 	"time"
@@ -39,16 +40,28 @@ type Service interface {
 	SubmitUserInput(sessionID, runID, interactionID, input string) (string, error)
 	Clear(runID string)
 	GetPending(runID string) (PendingView, bool)
+	EnsureConversation(runID, conversationID string) string
+	ConversationIDByRun(runID string) string
+	RunIDByConversation(conversationID string) string
+	AppendChatEvent(runID, conversationID string, ev *insightifyv1.ChatEvent)
+	SubscribeConversation(conversationID string, fromSeq int64) ([]*insightifyv1.ChatEvent, <-chan *insightifyv1.ChatEvent, func())
 }
 
 type Handler struct {
-	mu    sync.RWMutex
-	byRun map[string]*pendingInput
+	mu            sync.RWMutex
+	byRun         map[string]*pendingInput
+	convMu        sync.RWMutex
+	conversations map[string]*chatConversation
+	runToConv     map[string]string
+	convToRun     map[string]string
 }
 
 func NewHandler() *Handler {
 	return &Handler{
-		byRun: make(map[string]*pendingInput),
+		byRun:         make(map[string]*pendingInput),
+		conversations: make(map[string]*chatConversation),
+		runToConv:     make(map[string]string),
+		convToRun:     make(map[string]string),
 	}
 }
 

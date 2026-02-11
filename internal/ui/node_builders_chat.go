@@ -5,6 +5,54 @@ import (
 	"strings"
 )
 
+func BuildChatNode(id, title, model string, messages []ChatMessage, isResponding, sendLocked bool, sendLockHint string) (Node, bool) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return Node{}, false
+	}
+	title = strings.TrimSpace(title)
+	if title == "" {
+		title = "LLM Chat"
+	}
+	model = strings.TrimSpace(model)
+	sendLockHint = strings.TrimSpace(sendLockHint)
+	filtered := make([]ChatMessage, 0, len(messages))
+	for _, m := range messages {
+		content := strings.TrimSpace(m.Content)
+		if content == "" {
+			continue
+		}
+		role := m.Role
+		if role != RoleUser && role != RoleAssistant {
+			continue
+		}
+		messageID := strings.TrimSpace(m.ID)
+		if messageID == "" {
+			messageID = fmt.Sprintf("%s-%s-%d", id, role, len(filtered)+1)
+		}
+		filtered = append(filtered, ChatMessage{
+			ID:      messageID,
+			Role:    role,
+			Content: content,
+		})
+	}
+
+	return Node{
+		ID:   id,
+		Type: NodeTypeLLMChat,
+		Meta: Meta{
+			Title: title,
+		},
+		LLMChat: &LLMChatState{
+			Model:        model,
+			IsResponding: isResponding,
+			SendLocked:   sendLocked,
+			SendLockHint: sendLockHint,
+			Messages:     filtered,
+		},
+	}, true
+}
+
 func BuildLLMChatNode(runID, workerKey, text string, seq int64, isResponding bool, sendLocked bool, sendLockHint string) (Node, bool) {
 	runID = strings.TrimSpace(runID)
 	if runID == "" {

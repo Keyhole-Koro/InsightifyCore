@@ -20,7 +20,6 @@ type InitContext struct {
 	Purpose   string // high-level user intent
 	RepoURL   string // target repository URL
 	UserInput string // latest user reply in the conversation
-	Bootstrap bool   // true when this is the first (bootstrap) turn
 }
 
 // SetPurpose updates Purpose and RepoURL from worker results,

@@ -16,6 +16,7 @@ import (
 )
 
 const inputRequiredPrefix = "INPUT_REQUIRED:"
+const nodeReadyPrefix = "NODE_READY"
 
 var llmInteractionHandler llminteraction.Service = llminteraction.NewHandler()
 var runNodeStore = struct {
@@ -23,6 +24,26 @@ var runNodeStore = struct {
 	nodes map[string]*insightifyv1.UiNode
 }{
 	nodes: make(map[string]*insightifyv1.UiNode),
+}
+
+func ensureConversation(runID, conversationID string) string {
+	return llmInteractionHandler.EnsureConversation(runID, conversationID)
+}
+
+func conversationIDByRun(runID string) string {
+	return llmInteractionHandler.ConversationIDByRun(runID)
+}
+
+func runIDByConversation(conversationID string) string {
+	return llmInteractionHandler.RunIDByConversation(conversationID)
+}
+
+func appendChatEvent(runID, conversationID string, ev *insightifyv1.ChatEvent) {
+	llmInteractionHandler.AppendChatEvent(runID, conversationID, ev)
+}
+
+func subscribeConversation(conversationID string, fromSeq int64) ([]*insightifyv1.ChatEvent, <-chan *insightifyv1.ChatEvent, func()) {
+	return llmInteractionHandler.SubscribeConversation(conversationID, fromSeq)
 }
 
 func registerPendingUserInput(sessionID, runID, workerKey, prompt string) (string, error) {
@@ -91,6 +112,10 @@ func parseInputRequiredMessage(message string) string {
 	return strings.TrimSpace(strings.TrimPrefix(trimmed, inputRequiredPrefix))
 }
 
+func isNodeReadyMessage(message string) bool {
+	return strings.TrimSpace(message) == nodeReadyPrefix
+}
+
 func buildLlmChatNode(runID, workerKey, text string, seq int64, isResponding bool, sendLocked bool, sendLockHint string) *insightifyv1.UiNode {
 	node, ok := ui.BuildLLMChatNode(runID, workerKey, text, seq, isResponding, sendLocked, sendLockHint)
 	if !ok {
@@ -106,14 +131,14 @@ func toProtoUINode(node ui.Node) *insightifyv1.UiNode {
 	return ui.ToProtoNode(node)
 }
 
-func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1.WatchRunResponse) *insightifyv1.ChatEvent {
+func mapRunEventToChatEvent(sessionID, runID, conversationID string, ev *insightifyv1.WatchRunResponse) *insightifyv1.ChatEvent {
 	if ev == nil {
 		return nil
 	}
 	chat := &insightifyv1.ChatEvent{
-		SessionId: sessionID,
-		RunId:     runID,
-		Seq:       seq,
+		SessionId:      sessionID,
+		RunId:          runID,
+		ConversationId: conversationID,
 	}
 	switch ev.GetEventType() {
 	case insightifyv1.WatchRunResponse_EVENT_TYPE_LOG:
@@ -121,10 +146,15 @@ func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1
 		chat.Text = ev.GetMessage()
 		chat.Node = getRunNode(runID)
 		if chat.Node == nil {
-			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, seq, true, false, "")
+			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, 0, true, false, "")
 		}
 		return chat
 	case insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS:
+		if isNodeReadyMessage(ev.GetMessage()) {
+			chat.EventType = insightifyv1.ChatEvent_EVENT_TYPE_ASSISTANT_CHUNK
+			chat.Node = getRunNode(runID)
+			return chat
+		}
 		interactionID := parseInputRequiredMessage(ev.GetMessage())
 		if interactionID == "" {
 			return nil
@@ -143,7 +173,7 @@ func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1
 		}
 		chat.Node = getRunNode(runID)
 		if chat.Node == nil {
-			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, seq, false, false, "")
+			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, 0, false, false, "")
 		}
 		if state := chat.Node.GetLlmChat(); state != nil {
 			state.SendLocked = true
@@ -156,7 +186,7 @@ func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1
 		chat.Text = ev.GetMessage()
 		chat.Node = getRunNode(runID)
 		if chat.Node == nil {
-			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, seq, false, true, chat.Text)
+			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, 0, false, true, chat.Text)
 		}
 		if state := chat.Node.GetLlmChat(); state != nil {
 			state.IsResponding = false
@@ -174,7 +204,7 @@ func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1
 		}
 		chat.Node = getRunNode(runID)
 		if chat.Node == nil {
-			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, seq, false, false, "")
+			chat.Node = buildLlmChatNode(runID, chat.WorkerKey, chat.Text, 0, false, false, "")
 		}
 		if state := chat.Node.GetLlmChat(); state != nil {
 			state.IsResponding = false
@@ -187,23 +217,45 @@ func mapRunEventToChatEvent(sessionID, runID string, seq int64, ev *insightifyv1
 	}
 }
 
+func publishRunEventToChat(sessionID, runID string, ev *insightifyv1.WatchRunResponse) {
+	runID = strings.TrimSpace(runID)
+	if runID == "" || ev == nil {
+		return
+	}
+	conversationID := conversationIDByRun(runID)
+	ensureConversation(runID, conversationID)
+	chat := mapRunEventToChatEvent(sessionID, runID, conversationID, ev)
+	if chat == nil {
+		return
+	}
+	appendChatEvent(runID, conversationID, chat)
+}
+
 func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insightifyv1.WatchChatRequest], stream *connect.ServerStream[insightifyv1.ChatEvent]) error {
 	ensureSessionStoreLoaded()
-	runID := strings.TrimSpace(req.Msg.GetRunId())
-	if runID == "" {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("run_id is required"))
-	}
 
-	runStore.RLock()
-	eventCh, ok := runStore.runs[runID]
-	runStore.RUnlock()
-	if !ok {
-		return connect.NewError(connect.CodeNotFound, fmt.Errorf("run %s not found", runID))
+	runID := strings.TrimSpace(req.Msg.GetRunId())
+	conversationID := strings.TrimSpace(req.Msg.GetConversationId())
+	fromSeq := req.Msg.GetFromSeq()
+	if runID == "" && conversationID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("run_id or conversation_id is required"))
+	}
+	if conversationID == "" {
+		conversationID = conversationIDByRun(runID)
+	}
+	if runID == "" {
+		runID = runIDByConversation(conversationID)
+	}
+	if strings.TrimSpace(conversationID) == "" {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("conversation_id could not be resolved"))
+	}
+	if strings.TrimSpace(runID) != "" {
+		ensureConversation(runID, conversationID)
 	}
 
 	// Resolve session once at the start instead of per-event.
 	sessionID := strings.TrimSpace(req.Msg.GetSessionId())
-	if sessionID == "" {
+	if sessionID == "" && runID != "" {
 		initRunStore.RLock()
 		for sid, sess := range initRunStore.sessions {
 			if strings.TrimSpace(sess.ActiveRunID) == runID {
@@ -214,25 +266,46 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 		initRunStore.RUnlock()
 	}
 
-	var seq int64
+	snapshot, sub, cancel := subscribeConversation(conversationID, fromSeq)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	for _, ev := range snapshot {
+		if strings.TrimSpace(ev.GetSessionId()) == "" && sessionID != "" {
+			ev.SessionId = sessionID
+		}
+		if strings.TrimSpace(ev.GetRunId()) == "" {
+			ev.RunId = runID
+		}
+		if err := stream.Send(ev); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to send chat snapshot event: %w", err))
+		}
+	}
+
+	if sub == nil {
+		return nil
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case ev, ok := <-eventCh:
+		case ev, ok := <-sub:
 			if !ok {
 				return nil
 			}
-			seq++
-			chat := mapRunEventToChatEvent(sessionID, runID, seq, ev)
-			if chat == nil {
+			if ev == nil {
 				continue
 			}
-			if err := stream.Send(chat); err != nil {
-				return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to send chat event: %w", err))
+			if strings.TrimSpace(ev.GetSessionId()) == "" && sessionID != "" {
+				ev.SessionId = sessionID
 			}
-			if chat.EventType == insightifyv1.ChatEvent_EVENT_TYPE_COMPLETE || chat.EventType == insightifyv1.ChatEvent_EVENT_TYPE_ERROR {
-				return nil
+			if strings.TrimSpace(ev.GetRunId()) == "" {
+				ev.RunId = runID
+			}
+			if err := stream.Send(ev); err != nil {
+				return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to send chat event: %w", err))
 			}
 		}
 	}
@@ -243,12 +316,17 @@ func (s *apiServer) SendMessage(_ context.Context, req *connect.Request[insighti
 	if err != nil {
 		return nil, err
 	}
+	conversationID := strings.TrimSpace(req.Msg.GetConversationId())
+	if conversationID == "" {
+		conversationID = conversationIDByRun(runID)
+	}
 	gotInteractionID, err := submitPendingUserInput(sessionID, runID, interactionID, input)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&insightifyv1.SendMessageResponse{
-		Accepted:      true,
-		InteractionId: gotInteractionID,
+		Accepted:       true,
+		InteractionId:  gotInteractionID,
+		ConversationId: conversationID,
 	}), nil
 }

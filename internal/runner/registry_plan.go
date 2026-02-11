@@ -13,64 +13,18 @@ import (
 func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 
-	reg["plan_source_scout"] = WorkerSpec{
-		Key:         "plan_source_scout",
-		Description: "Extracts or recommends a GitHub repository URL from user intent.",
-		LLMRole:     llm.ModelRoleWorker,
-		LLMLevel:    llm.ModelLevelMiddle,
-		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			ic := deps.Env().InitCtx
-			input := strings.TrimSpace(ic.UserInput)
-			isBootstrap := ic.Bootstrap
-			if input == "" && !isBootstrap {
-				isBootstrap = true
-			}
-			return artifact.PlanSourceScoutIn{
-				UserInput:   input,
-				IsBootstrap: isBootstrap,
-			}, nil
-		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "plan_source_scout")
-			p := plan.SourceScout{LLM: env.LLM}
-			out, err := p.Run(ctx, in.(artifact.PlanSourceScoutIn))
-			if err != nil {
-				return WorkerOutput{}, err
-			}
-			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
-		},
-		Fingerprint: func(in any, env *Env) string {
-			return JSONFingerprint(struct {
-				In   artifact.PlanSourceScoutIn
-				Salt string
-			}{in.(artifact.PlanSourceScoutIn), env.ModelSalt})
-		},
-		Strategy: jsonStrategy{},
-	}
-
 	// bootstrap: preferred key for interactive bootstrap flow.
 	// Keep init_purpose as a compatibility alias.
 	reg["bootstrap"] = WorkerSpec{
 		Key:         "bootstrap",
-		Requires:    []string{"plan_source_scout"},
 		Description: "Interactive intent bootstrap worker: collects user intent and repository context.",
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			ic := deps.Env().InitCtx
 			input := strings.TrimSpace(ic.UserInput)
-			isBootstrap := ic.Bootstrap
-			if input == "" && !isBootstrap {
-				isBootstrap = true
-			}
-			var scout artifact.PlanSourceScoutOut
-			if err := deps.Artifact("plan_source_scout", &scout); err != nil {
-				return nil, err
-			}
 			return plan.BootstrapIn{
-				UserInput:   input,
-				IsBootstrap: isBootstrap,
-				Scout:       scout,
+				UserInput: input,
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -98,25 +52,14 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	// init_purpose legacy alias kept for compatibility.
 	reg["init_purpose"] = WorkerSpec{
 		Key:         "init_purpose",
-		Requires:    []string{"plan_source_scout"},
 		Description: "Legacy alias of bootstrap.",
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			ic := deps.Env().InitCtx
 			input := strings.TrimSpace(ic.UserInput)
-			isBootstrap := ic.Bootstrap
-			if input == "" && !isBootstrap {
-				isBootstrap = true
-			}
-			var scout artifact.PlanSourceScoutOut
-			if err := deps.Artifact("plan_source_scout", &scout); err != nil {
-				return nil, err
-			}
 			return plan.BootstrapIn{
-				UserInput:   input,
-				IsBootstrap: isBootstrap,
-				Scout:       scout,
+				UserInput: input,
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -144,25 +87,14 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	// plan_pipeline legacy alias kept for compatibility. It delegates to init_purpose behavior.
 	reg["plan_pipeline"] = WorkerSpec{
 		Key:         "plan_pipeline",
-		Requires:    []string{"plan_source_scout"},
 		Description: "Legacy alias of init_purpose.",
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			ic := deps.Env().InitCtx
 			input := strings.TrimSpace(ic.UserInput)
-			isBootstrap := ic.Bootstrap
-			if input == "" && !isBootstrap {
-				isBootstrap = true
-			}
-			var scout artifact.PlanSourceScoutOut
-			if err := deps.Artifact("plan_source_scout", &scout); err != nil {
-				return nil, err
-			}
 			return plan.BootstrapIn{
-				UserInput:   input,
-				IsBootstrap: isBootstrap,
-				Scout:       scout,
+				UserInput: input,
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
@@ -204,13 +136,13 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 				}
 			}
 
-			initPurposeDesc := "Interactive intent bootstrap worker: collects user intent and repository context."
+			bootstrapDesc := "Interactive intent bootstrap worker: collects user intent and repository context."
 			if purpose := strings.TrimSpace(deps.Env().InitCtx.Purpose); purpose != "" {
-				initPurposeDesc = purpose
+				bootstrapDesc = purpose
 			}
-			workersByKey["init_purpose"] = artifact.WorkerMeta{
-				Key:         "init_purpose",
-				Description: initPurposeDesc,
+			workersByKey["bootstrap"] = artifact.WorkerMeta{
+				Key:         "bootstrap",
+				Description: bootstrapDesc,
 			}
 
 			workerDAG := workersByKey["worker_DAG"]
@@ -218,8 +150,8 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			if strings.TrimSpace(workerDAG.Description) == "" {
 				workerDAG.Description = "Generates an execution plan based on the provided graph spec."
 			}
-			if !containsWorkerKey(workerDAG.Requires, "init_purpose") {
-				workerDAG.Requires = append(workerDAG.Requires, "init_purpose")
+			if !containsWorkerKey(workerDAG.Requires, "bootstrap") {
+				workerDAG.Requires = append(workerDAG.Requires, "bootstrap")
 			}
 			workersByKey["worker_DAG"] = workerDAG
 

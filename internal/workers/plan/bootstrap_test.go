@@ -8,8 +8,7 @@ import (
 func TestBootstrapRunCreatesInitialAndFinalNode(t *testing.T) {
 	p := &BootstrapPipeline{}
 	out, err := p.Run(context.Background(), BootstrapIn{
-		IsBootstrap: true,
-		UserInput:   "",
+		UserInput: "",
 	})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -19,6 +18,9 @@ func TestBootstrapRunCreatesInitialAndFinalNode(t *testing.T) {
 	}
 	if out.UINode.LLMChat == nil {
 		t.Fatalf("expected llm chat state")
+	}
+	if out.UINode.Meta.Title != "bootstrap" {
+		t.Fatalf("expected bootstrap node title, got %q", out.UINode.Meta.Title)
 	}
 	if len(out.UINode.LLMChat.Messages) == 0 {
 		t.Fatalf("expected assistant greeting message in final node")

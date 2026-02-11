@@ -7,7 +7,7 @@ import (
 	"insightify/internal/artifact"
 )
 
-func TestPlanRegistryBuildInputInjectsInitPurposeWorker(t *testing.T) {
+func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	env := &Env{
 		InitCtx: InitContext{Purpose: "Goのランタイムを理解したい"},
 		Resolver: MergeRegistries(map[string]WorkerSpec{
@@ -35,30 +35,30 @@ func TestPlanRegistryBuildInputInjectsInitPurposeWorker(t *testing.T) {
 		workers[w.Key] = w
 	}
 
-	planWorker, ok := workers["init_purpose"]
+	planWorker, ok := workers["bootstrap"]
 	if !ok {
-		t.Fatalf("expected init_purpose worker to be present")
+		t.Fatalf("expected bootstrap worker to be present")
 	}
 	if planWorker.Description != env.InitCtx.Purpose {
-		t.Fatalf("expected init_purpose description %q, got %q", env.InitCtx.Purpose, planWorker.Description)
+		t.Fatalf("expected bootstrap description %q, got %q", env.InitCtx.Purpose, planWorker.Description)
 	}
 
 	workerDAG, ok := workers["worker_DAG"]
 	if !ok {
 		t.Fatalf("expected worker_DAG to be present")
 	}
-	if !containsWorkerKey(workerDAG.Requires, "init_purpose") {
-		t.Fatalf("expected worker_DAG to require init_purpose, got %v", workerDAG.Requires)
+	if !containsWorkerKey(workerDAG.Requires, "bootstrap") {
+		t.Fatalf("expected worker_DAG to require bootstrap, got %v", workerDAG.Requires)
 	}
 }
 
-func TestPlanRegistryIncludesInitPurposeSpec(t *testing.T) {
+func TestPlanRegistryIncludesBootstrapAndCompatibilitySpecs(t *testing.T) {
 	env := &Env{}
 	reg := BuildRegistryPlan(env)
+	if _, ok := reg["bootstrap"]; !ok {
+		t.Fatalf("expected bootstrap worker spec in plan registry")
+	}
 	if _, ok := reg["init_purpose"]; !ok {
 		t.Fatalf("expected init_purpose worker spec in plan registry")
-	}
-	if _, ok := reg["plan_source_scout"]; !ok {
-		t.Fatalf("expected plan_source_scout worker spec in plan registry")
 	}
 }

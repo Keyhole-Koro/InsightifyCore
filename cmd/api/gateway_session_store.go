@@ -109,7 +109,7 @@ func ensureSessionRunContext(sessionID string) (initSession, error) {
 	if !ok {
 		return initSession{}, fmt.Errorf("session %s not found", sessionID)
 	}
-	if sess.RunCtx != nil {
+	if sess.RunCtx != nil && hasRequiredWorkers(sess.RunCtx) {
 		return sess, nil
 	}
 
@@ -125,4 +125,14 @@ func ensureSessionRunContext(sessionID string) (initSession, error) {
 		cur.RunCtx = runCtx
 	})
 	return updated, nil
+}
+
+func hasRequiredWorkers(runCtx *RunContext) bool {
+	if runCtx == nil || runCtx.Env == nil || runCtx.Env.Resolver == nil {
+		return false
+	}
+	// Keep session run context forward-compatible across worker-key migrations.
+	_, hasBootstrap := runCtx.Env.Resolver.Get("bootstrap")
+	_, hasTestLLM := runCtx.Env.Resolver.Get("testllmChar")
+	return hasBootstrap && hasTestLLM
 }

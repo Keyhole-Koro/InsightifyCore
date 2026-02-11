@@ -16,9 +16,7 @@ import (
 
 // BootstrapIn is the input for the bootstrap pipeline.
 type BootstrapIn struct {
-	UserInput   string                      `json:"user_input"`
-	IsBootstrap bool                        `json:"is_bootstrap"`
-	Scout       artifact.PlanSourceScoutOut `json:"scout"`
+	UserInput string `json:"user_input"`
 }
 
 // BootstrapOut is the output of the bootstrap pipeline.
@@ -94,6 +92,30 @@ var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 
 const bootstrapGreetingMessage = "Would you like to explore how computers work, or dive into real OSS code to deepen your understanding? Share a topic you're curious about or paste a GitHub repository URL."
 
+type bootstrapScoutResult struct {
+	RecommendedRepoURL string `json:"recommended_repo_url"`
+	Explanation        string `json:"explanation"`
+}
+
+var bootstrapScoutPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
+	Purpose:      "Recommend a suitable GitHub repository for the user's learning intent when possible.",
+	Background:   "This stage extracts or proposes a concrete repository URL before the bootstrap planning response.",
+	OutputFields: llmtool.MustFieldsFromStruct(bootstrapScoutResult{}),
+	Constraints: []string{
+		"Extract a concrete GitHub repository URL from user_input when present, even if surrounded by extra text.",
+		"If user_input already includes a GitHub repository URL, return that same URL in recommended_repo_url.",
+		"If no concrete repository should be recommended, return an empty recommended_repo_url.",
+		"Keep explanation concise and practical.",
+	},
+	Rules: []string{
+		"Prefer concrete and popular repositories when recommendation is appropriate.",
+		"Do not invent non-existent repository URLs.",
+	},
+	Assumptions:  []string{"When user intent is conceptual, recommendation may be omitted."},
+	OutputFormat: "JSON only.",
+	Language:     "English",
+}, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
+
 // Run executes the bootstrap pipeline.
 func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapOut, error) {
 	if p == nil {
@@ -102,8 +124,9 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 
 	out := BootstrapOut{
 		// Create the chat node at bootstrap start so callers can always rely on node presence.
-		UINode: buildInitialUINode(),
+		UINode: buildInitialUINode(in.UserInput),
 	}
+	ui.SendUpsertNode(ctx, out.UINode)
 
 	result, err := p.runBootstrap(ctx, in)
 	if err != nil {
@@ -112,13 +135,14 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 
 	out.Result = result
 	out.ClientView = buildClientView(result)
-	out.UINode = buildUINode(result)
+	out.UINode = buildUINode(in.UserInput, result)
+	ui.SendUpsertNode(ctx, out.UINode)
 	return out, nil
 }
 
 func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (artifact.InitPurposeOut, error) {
-	// Initial greeting when no user input yet
-	if in.IsBootstrap && strings.TrimSpace(in.UserInput) == "" {
+	// Initial greeting when no user input yet.
+	if strings.TrimSpace(in.UserInput) == "" {
 		p.emitChunk(bootstrapGreetingMessage)
 		return artifact.InitPurposeOut{
 			AssistantMessage: bootstrapGreetingMessage,
@@ -135,8 +159,9 @@ func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (a
 	}
 
 	ctx = llm.WithWorker(ctx, "bootstrap")
-	extractedRepo := strings.TrimSpace(in.Scout.RecommendedRepoURL)
-	scoutExplanation := strings.TrimSpace(in.Scout.Explanation)
+	scout := p.resolveScout(ctx, input)
+	extractedRepo := strings.TrimSpace(scout.RecommendedRepoURL)
+	scoutExplanation := strings.TrimSpace(scout.Explanation)
 
 	// Run the main bootstrap LLM call
 	result, err := p.runBootstrapLLM(ctx, input, extractedRepo, scoutExplanation)
@@ -144,6 +169,17 @@ func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (a
 		return artifact.InitPurposeOut{}, err
 	}
 	return result, nil
+}
+
+func (p *BootstrapPipeline) resolveScout(ctx context.Context, input string) bootstrapScoutResult {
+	if strings.TrimSpace(input) == "" || p == nil || p.LLM == nil {
+		return bootstrapScoutResult{}
+	}
+	scout, err := p.runScoutLLM(ctx, input)
+	if err != nil {
+		return bootstrapScoutResult{}
+	}
+	return scout
 }
 
 func (p *BootstrapPipeline) emitChunk(chunk string) {
@@ -180,6 +216,31 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 	return out, nil
 }
 
+func (p *BootstrapPipeline) runScoutLLM(ctx context.Context, userInput string) (bootstrapScoutResult, error) {
+	if p.LLM == nil {
+		return bootstrapScoutResult{}, fmt.Errorf("bootstrap: llm client is nil")
+	}
+	payload := map[string]any{
+		"user_input": strings.TrimSpace(userInput),
+	}
+	llmCtx := llm.WithModelSelection(llm.WithWorker(ctx, "source_scout"), llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "")
+	prompt, err := llmtool.StructuredPromptBuilder(bootstrapScoutPromptSpec)(llmCtx, &llmtool.ToolState{Input: payload}, nil)
+	if err != nil {
+		return bootstrapScoutResult{}, err
+	}
+	raw, err := p.LLM.GenerateJSON(llmCtx, prompt, payload)
+	if err != nil {
+		return bootstrapScoutResult{}, err
+	}
+	var out bootstrapScoutResult
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return bootstrapScoutResult{}, fmt.Errorf("bootstrap scout json invalid: %w", err)
+	}
+	out.RecommendedRepoURL = strings.TrimSpace(out.RecommendedRepoURL)
+	out.Explanation = strings.TrimSpace(out.Explanation)
+	return out, nil
+}
+
 func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
 	return &pipelinev1.ClientView{
 		Phase:   "bootstrap",
@@ -187,43 +248,67 @@ func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
 	}
 }
 
-func buildInitialUINode() ui.Node {
-	return ui.Node{
-		ID:   "init-purpose-node",
-		Type: ui.NodeTypeLLMChat,
-		Meta: ui.Meta{
-			Title: "init_purpose",
-		},
-		LLMChat: &ui.LLMChatState{
-			Model:        "Low",
-			IsResponding: true,
-			SendLocked:   true,
-		},
+func buildInitialUINode(userInput string) ui.Node {
+	messages := buildUserMessage(userInput)
+	node, ok := ui.BuildChatNode(
+		"init-purpose-node",
+		"bootstrap",
+		"Low",
+		messages,
+		true,
+		true,
+		"",
+	)
+	if !ok {
+		return ui.Node{}
 	}
+	return node
 }
 
-func buildUINode(result artifact.InitPurposeOut) ui.Node {
-	msg := strings.TrimSpace(result.AssistantMessage)
-	messages := []ui.ChatMessage{}
-	if msg != "" {
-		messages = append(messages, ui.ChatMessage{
-			ID:      "init-purpose-assistant",
-			Role:    ui.RoleAssistant,
-			Content: msg,
-		})
+func buildUINode(userInput string, result artifact.InitPurposeOut) ui.Node {
+	history := buildUserMessage(userInput)
+	if result.NeedMoreInput {
+		prompt := strings.TrimSpace(result.FollowupQuestion)
+		if prompt == "" {
+			prompt = strings.TrimSpace(result.AssistantMessage)
+		}
+		node, ok := ui.NeedUserInput(
+			"init-purpose-node",
+			"bootstrap",
+			"Low",
+			prompt,
+			history,
+		)
+		if !ok {
+			return ui.Node{}
+		}
+		return node
 	}
-	return ui.Node{
-		ID:   "init-purpose-node",
-		Type: ui.NodeTypeLLMChat,
-		Meta: ui.Meta{
-			Title: "init_purpose",
-		},
-		LLMChat: &ui.LLMChatState{
-			Model:        "Low",
-			IsResponding: false,
-			SendLocked:   result.NeedMoreInput,
-			SendLockHint: strings.TrimSpace(result.FollowupQuestion),
-			Messages:     messages,
+	node, ok := ui.Followup(
+		"init-purpose-node",
+		"bootstrap",
+		"Low",
+		result.AssistantMessage,
+		false,
+		result.FollowupQuestion,
+		history,
+	)
+	if !ok {
+		return ui.Node{}
+	}
+	return node
+}
+
+func buildUserMessage(userInput string) []ui.ChatMessage {
+	input := strings.TrimSpace(userInput)
+	if input == "" {
+		return nil
+	}
+	return []ui.ChatMessage{
+		{
+			ID:      "init-purpose-user",
+			Role:    ui.RoleUser,
+			Content: input,
 		},
 	}
 }

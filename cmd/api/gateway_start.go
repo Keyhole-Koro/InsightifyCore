@@ -11,12 +11,12 @@ import (
 
 // StartRun executes a single worker and returns the result.
 func (s *apiServer) StartRun(ctx context.Context, req *connect.Request[insightifyv1.StartRunRequest]) (*connect.Response[insightifyv1.StartRunResponse], error) {
-	sessionID, workerKey, userInput, isBootstrap, err := prepareStartRun(req)
+	sessionID, workerKey, userInput, err := prepareStartRun(req)
 	if err != nil {
 		return nil, err
 	}
 
-	runID, err := s.launchWorkerRun(sessionID, workerKey, userInput, isBootstrap)
+	runID, err := s.launchWorkerRun(sessionID, workerKey, userInput)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start %s: %w", workerKey, err))
 	}

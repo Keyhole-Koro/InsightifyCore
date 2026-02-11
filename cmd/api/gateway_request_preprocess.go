@@ -21,33 +21,22 @@ func prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) (sessionI
 	return sessionID, userID, repoURL
 }
 
-func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (sessionID, workerKey, userInput string, isBootstrap bool, err error) {
+func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (sessionID, workerKey, userInput string, err error) {
 	ensureSessionStoreLoaded()
 	workerKey = req.Msg.GetPipelineId()
 	// Resolve session from request first, then cookie fallback to support browser reconnect flows.
 	sessionID = resolveSessionID(req)
 	if sessionID == "" {
-		return "", "", "", false, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required (request field or cookie)"))
+		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("session_id is required (request field or cookie)"))
 	}
 	if _, ok := getSession(sessionID); !ok {
-		return "", "", "", false, connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
+		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("session %s not found", sessionID))
 	}
 	if _, ensureErr := ensureSessionRunContext(sessionID); ensureErr != nil {
-		return "", "", "", false, connect.NewError(connect.CodeInternal, ensureErr)
+		return "", "", "", connect.NewError(connect.CodeInternal, ensureErr)
 	}
-	params := req.Msg.GetParams()
-	userInput = strings.TrimSpace(params["user_input"])
-	isBootstrap = parseBootstrapFlag(params["is_bootstrap"])
-	return sessionID, workerKey, userInput, isBootstrap, nil
-}
-
-func parseBootstrapFlag(raw string) bool {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "1", "t", "true", "y", "yes":
-		return true
-	default:
-		return false
-	}
+	userInput = strings.TrimSpace(req.Msg.GetParams()["user_input"])
+	return sessionID, workerKey, userInput, nil
 }
 
 func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputRequest]) (sessionID, runID, userInput string, err error) {

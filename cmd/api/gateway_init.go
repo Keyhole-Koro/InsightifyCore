@@ -61,29 +61,12 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 	putSession(sess)
 	persistSessionStore()
 
-	var (
-		bootstrapRunID string
-		updated        initSession
-	)
-	current, _ := getSession(sessionID)
-	if current.ActiveRunID != "" {
-		bootstrapRunID = current.ActiveRunID
-		updated = current
-	} else {
-		var err error
-		bootstrapRunID, err = s.launchBootstrapRun(sessionID, "", true)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap worker: %w", err))
-		}
-		updated, _ = updateSession(sessionID, func(cur *initSession) {
-			cur.ActiveRunID = bootstrapRunID
-		})
-	}
+	updated, _ := getSession(sessionID)
 
 	res := connect.NewResponse(&insightifyv1.InitRunResponse{
 		SessionId:      sessionID,
 		RepoName:       updated.Repo,
-		BootstrapRunId: bootstrapRunID,
+		BootstrapRunId: "",
 	})
 	res.Header().Add("Set-Cookie", (&http.Cookie{
 		Name:     sessionCookieName,

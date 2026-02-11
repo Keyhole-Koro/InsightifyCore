@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	"insightify/internal/workers/plan"
 )
@@ -21,14 +20,8 @@ func BuildRegistryTest(env *Env) map[string]WorkerSpec {
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			ic := deps.Env().InitCtx
 			input := strings.TrimSpace(ic.UserInput)
-			isBootstrap := ic.Bootstrap
-			if input == "" && !isBootstrap {
-				isBootstrap = true
-			}
 			return plan.BootstrapIn{
-				UserInput:   input,
-				IsBootstrap: isBootstrap,
-				Scout:       artifact.PlanSourceScoutOut{},
+				UserInput: input,
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
