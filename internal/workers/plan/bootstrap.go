@@ -11,7 +11,7 @@ import (
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/utils"
+	"insightify/internal/ui"
 )
 
 // BootstrapIn is the input for the bootstrap pipeline.
@@ -25,6 +25,7 @@ type BootstrapIn struct {
 type BootstrapOut struct {
 	Result     artifact.InitPurposeOut `json:"result"`
 	ClientView *pipelinev1.ClientView  `json:"client_view,omitempty"`
+	UINode     ui.Node                 `json:"ui_node,omitempty"`
 }
 
 // NeedMoreInput returns true if more user input is required.
@@ -91,13 +92,18 @@ var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Language:     "English",
 }, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
 
+const bootstrapGreetingMessage = "Would you like to explore how computers work, or dive into real OSS code to deepen your understanding? Share a topic you're curious about or paste a GitHub repository URL."
+
 // Run executes the bootstrap pipeline.
 func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapOut, error) {
 	if p == nil {
 		return BootstrapOut{}, fmt.Errorf("bootstrap: pipeline is nil")
 	}
 
-	var out BootstrapOut
+	out := BootstrapOut{
+		// Create the chat node at bootstrap start so callers can always rely on node presence.
+		UINode: buildInitialUINode(),
+	}
 
 	result, err := p.runBootstrap(ctx, in)
 	if err != nil {
@@ -106,16 +112,16 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 
 	out.Result = result
 	out.ClientView = buildClientView(result)
+	out.UINode = buildUINode(result)
 	return out, nil
 }
 
 func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (artifact.InitPurposeOut, error) {
 	// Initial greeting when no user input yet
 	if in.IsBootstrap && strings.TrimSpace(in.UserInput) == "" {
-		msg := "Would you like to explore how computers work, or dive into real OSS code to deepen your understanding? Share a topic you're curious about or paste a GitHub repository URL."
-		p.emitChunk(msg)
+		p.emitChunk(bootstrapGreetingMessage)
 		return artifact.InitPurposeOut{
-			AssistantMessage: msg,
+			AssistantMessage: bootstrapGreetingMessage,
 			NeedMoreInput:    true,
 		}, nil
 	}
@@ -175,13 +181,49 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 }
 
 func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
-	view := &pipelinev1.ClientView{
+	return &pipelinev1.ClientView{
 		Phase:   "bootstrap",
 		Content: &pipelinev1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.AssistantMessage)},
 	}
-	if view.GetGraph() != nil {
-		// Keep compatibility with graph-based workers if content kind changes in future.
-		utils.AssignGraphNodeUIDs(view)
+}
+
+func buildInitialUINode() ui.Node {
+	return ui.Node{
+		ID:   "init-purpose-node",
+		Type: ui.NodeTypeLLMChat,
+		Meta: ui.Meta{
+			Title: "init_purpose",
+		},
+		LLMChat: &ui.LLMChatState{
+			Model:        "Low",
+			IsResponding: true,
+			SendLocked:   true,
+		},
 	}
-	return view
+}
+
+func buildUINode(result artifact.InitPurposeOut) ui.Node {
+	msg := strings.TrimSpace(result.AssistantMessage)
+	messages := []ui.ChatMessage{}
+	if msg != "" {
+		messages = append(messages, ui.ChatMessage{
+			ID:      "init-purpose-assistant",
+			Role:    ui.RoleAssistant,
+			Content: msg,
+		})
+	}
+	return ui.Node{
+		ID:   "init-purpose-node",
+		Type: ui.NodeTypeLLMChat,
+		Meta: ui.Meta{
+			Title: "init_purpose",
+		},
+		LLMChat: &ui.LLMChatState{
+			Model:        "Low",
+			IsResponding: false,
+			SendLocked:   result.NeedMoreInput,
+			SendLockHint: strings.TrimSpace(result.FollowupQuestion),
+			Messages:     messages,
+		},
+	}
 }

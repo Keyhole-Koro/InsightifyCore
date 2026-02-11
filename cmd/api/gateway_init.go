@@ -66,14 +66,14 @@ func (s *apiServer) InitRun(_ context.Context, req *connect.Request[insightifyv1
 		updated        initSession
 	)
 	current, _ := getSession(sessionID)
-	if current.Running && current.ActiveRunID != "" {
+	if current.ActiveRunID != "" {
 		bootstrapRunID = current.ActiveRunID
 		updated = current
 	} else {
 		var err error
-		bootstrapRunID, err = s.launchInitPurposeRun(sessionID, "", true)
+		bootstrapRunID, err = s.launchBootstrapRun(sessionID, "", true)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap init_purpose: %w", err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to bootstrap worker: %w", err))
 		}
 		updated, _ = updateSession(sessionID, func(cur *initSession) {
 			cur.ActiveRunID = bootstrapRunID

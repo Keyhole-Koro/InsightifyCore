@@ -16,6 +16,7 @@ func newAPIServer() *apiServer {
 func buildMux(s *apiServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle(insightifyv1connect.NewPipelineServiceHandler(s))
+	mux.Handle(insightifyv1connect.NewLlmChatServiceHandler(s))
 
 	// SSE endpoint for watching runs
 	mux.HandleFunc("/api/watch/", s.handleWatchSSE)

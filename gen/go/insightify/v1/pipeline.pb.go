@@ -564,11 +564,11 @@ const file_insightify_v1_pipeline_proto_rawDesc = "" +
 	"\x0eEVENT_TYPE_LOG\x10\x01\x12\x17\n" +
 	"\x13EVENT_TYPE_PROGRESS\x10\x02\x12\x17\n" +
 	"\x13EVENT_TYPE_COMPLETE\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x042\xd6\x02\n" +
+	"\x10EVENT_TYPE_ERROR\x10\x042\xd5\x02\n" +
 	"\x0fPipelineService\x12H\n" +
 	"\aInitRun\x12\x1d.insightify.v1.InitRunRequest\x1a\x1e.insightify.v1.InitRunResponse\x12K\n" +
-	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponse\x12]\n" +
-	"\x0eSubmitRunInput\x12$.insightify.v1.SubmitRunInputRequest\x1a%.insightify.v1.SubmitRunInputResponse\x12M\n" +
+	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponse\x12\\\n" +
+	"\rNeedUserInput\x12$.insightify.v1.SubmitRunInputRequest\x1a%.insightify.v1.SubmitRunInputResponse\x12M\n" +
 	"\bWatchRun\x12\x1e.insightify.v1.WatchRunRequest\x1a\x1f.insightify.v1.WatchRunResponse0\x01B\xa5\x01\n" +
 	"\x11com.insightify.v1B\rPipelineProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
@@ -606,11 +606,11 @@ var file_insightify_v1_pipeline_proto_depIdxs = []int32{
 	10, // 3: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
 	1,  // 4: insightify.v1.PipelineService.InitRun:input_type -> insightify.v1.InitRunRequest
 	3,  // 5: insightify.v1.PipelineService.StartRun:input_type -> insightify.v1.StartRunRequest
-	5,  // 6: insightify.v1.PipelineService.SubmitRunInput:input_type -> insightify.v1.SubmitRunInputRequest
+	5,  // 6: insightify.v1.PipelineService.NeedUserInput:input_type -> insightify.v1.SubmitRunInputRequest
 	7,  // 7: insightify.v1.PipelineService.WatchRun:input_type -> insightify.v1.WatchRunRequest
 	2,  // 8: insightify.v1.PipelineService.InitRun:output_type -> insightify.v1.InitRunResponse
 	4,  // 9: insightify.v1.PipelineService.StartRun:output_type -> insightify.v1.StartRunResponse
-	6,  // 10: insightify.v1.PipelineService.SubmitRunInput:output_type -> insightify.v1.SubmitRunInputResponse
+	6,  // 10: insightify.v1.PipelineService.NeedUserInput:output_type -> insightify.v1.SubmitRunInputResponse
 	8,  // 11: insightify.v1.PipelineService.WatchRun:output_type -> insightify.v1.WatchRunResponse
 	8,  // [8:12] is the sub-list for method output_type
 	4,  // [4:8] is the sub-list for method input_type

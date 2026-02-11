@@ -19,9 +19,6 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string, isBo
 	if !ok || sess.RunCtx == nil {
 		return "", fmt.Errorf("session %s not found", sessionID)
 	}
-	if sess.Running {
-		return "", fmt.Errorf("session %s already has an active run", sessionID)
-	}
 	runID := fmt.Sprintf("%s-%d", workerKey, time.Now().UnixNano())
 	sess, ok = updateSession(sessionID, func(cur *initSession) {
 		cur.Running = true
@@ -39,11 +36,13 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string, isBo
 	go func() {
 		defer func() {
 			clearPendingUserInput(runID)
+			clearRunNode(runID)
 			_, _ = updateSession(sessionID, func(current *initSession) {
-				current.Running = false
 				if current.ActiveRunID == runID {
 					current.ActiveRunID = ""
 				}
+				// Running reflects whether this session still has a designated active run.
+				current.Running = strings.TrimSpace(current.ActiveRunID) != ""
 			})
 			close(eventCh)
 			scheduleRunCleanup(runID)
@@ -100,6 +99,7 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 
 		finalView := extractWorkerClientView(out.ClientView, out.RuntimeState)
 		if outBootstrap, ok := out.RuntimeState.(plan.BootstrapOut); ok && outBootstrap.NeedMoreInput() {
+			setRunNode(runID, toProtoUINode(outBootstrap.UINode))
 			prompt := strings.TrimSpace(outBootstrap.Result.FollowupQuestion)
 			if prompt == "" {
 				prompt = strings.TrimSpace(outBootstrap.Result.AssistantMessage)
@@ -129,6 +129,9 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 			nextInput = reply
 			nextBootstrap = false
 			continue
+		}
+		if outBootstrap, ok := out.RuntimeState.(plan.BootstrapOut); ok {
+			setRunNode(runID, toProtoUINode(outBootstrap.UINode))
 		}
 
 		eventCh <- &insightifyv1.WatchRunResponse{
@@ -201,7 +204,12 @@ func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState 
 	}
 }
 
-// launchInitPurposeRun is a convenience wrapper for launching the init_purpose worker.
+// launchBootstrapRun is a convenience wrapper for launching the bootstrap worker.
+func (s *apiServer) launchBootstrapRun(sessionID, userInput string, isBootstrap bool) (string, error) {
+	return s.launchWorkerRun(sessionID, "bootstrap", userInput, isBootstrap)
+}
+
+// launchInitPurposeRun is kept as a compatibility alias.
 func (s *apiServer) launchInitPurposeRun(sessionID, userInput string, isBootstrap bool) (string, error) {
-	return s.launchWorkerRun(sessionID, "init_purpose", userInput, isBootstrap)
+	return s.launchBootstrapRun(sessionID, userInput, isBootstrap)
 }

@@ -48,9 +48,10 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		Strategy: jsonStrategy{},
 	}
 
-	// init_purpose: interactive bootstrap flow
-	reg["init_purpose"] = WorkerSpec{
-		Key:         "init_purpose",
+	// bootstrap: preferred key for interactive bootstrap flow.
+	// Keep init_purpose as a compatibility alias.
+	reg["bootstrap"] = WorkerSpec{
+		Key:         "bootstrap",
 		Requires:    []string{"plan_source_scout"},
 		Description: "Interactive intent bootstrap worker: collects user intent and repository context.",
 		LLMRole:     llm.ModelRoleWorker,
@@ -73,7 +74,53 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "init_purpose")
+			ctx = llm.WithWorker(ctx, "bootstrap")
+			p := plan.BootstrapPipeline{
+				LLM:     env.LLM,
+				Emitter: EmitterFrom(ctx),
+			}
+			out, err := p.Run(ctx, in.(plan.BootstrapIn))
+			if err != nil {
+				return WorkerOutput{}, err
+			}
+			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
+			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+		},
+		Fingerprint: func(in any, env *Env) string {
+			return JSONFingerprint(struct {
+				In   plan.BootstrapIn
+				Salt string
+			}{in.(plan.BootstrapIn), env.ModelSalt})
+		},
+		Strategy: versionedStrategy{},
+	}
+
+	// init_purpose legacy alias kept for compatibility.
+	reg["init_purpose"] = WorkerSpec{
+		Key:         "init_purpose",
+		Requires:    []string{"plan_source_scout"},
+		Description: "Legacy alias of bootstrap.",
+		LLMRole:     llm.ModelRoleWorker,
+		LLMLevel:    llm.ModelLevelLow,
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			ic := deps.Env().InitCtx
+			input := strings.TrimSpace(ic.UserInput)
+			isBootstrap := ic.Bootstrap
+			if input == "" && !isBootstrap {
+				isBootstrap = true
+			}
+			var scout artifact.PlanSourceScoutOut
+			if err := deps.Artifact("plan_source_scout", &scout); err != nil {
+				return nil, err
+			}
+			return plan.BootstrapIn{
+				UserInput:   input,
+				IsBootstrap: isBootstrap,
+				Scout:       scout,
+			}, nil
+		},
+		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "bootstrap")
 			p := plan.BootstrapPipeline{
 				LLM:     env.LLM,
 				Emitter: EmitterFrom(ctx),

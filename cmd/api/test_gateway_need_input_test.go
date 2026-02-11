@@ -21,7 +21,7 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 		t.Fatalf("expected request id")
 	}
 
-	gotRequestID, err := submitPendingUserInput(sessionID, runID, "hello")
+	gotRequestID, err := submitPendingUserInput(sessionID, runID, "", "hello")
 	if err != nil {
 		t.Fatalf("submit pending: %v", err)
 	}

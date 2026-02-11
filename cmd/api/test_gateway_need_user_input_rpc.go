@@ -14,9 +14,10 @@ func (s *apiServer) NeedUserInput(_ context.Context, req *connect.Request[insigh
 		return nil, err
 	}
 
-	_, err = submitPendingUserInput(sessionID, runID, userInput)
+	interactionID, err := submitPendingUserInput(sessionID, runID, "", userInput)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, err
 	}
+	_ = interactionID
 	return connect.NewResponse(&insightifyv1.SubmitRunInputResponse{RunId: runID}), nil
 }
