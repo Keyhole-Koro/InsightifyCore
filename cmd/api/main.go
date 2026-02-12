@@ -2,19 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"insightify/internal/safeio"
-	"insightify/internal/scan"
+	"insightify/internal/gateway/handler"
 )
 
 func main() {
@@ -23,12 +19,12 @@ func main() {
 
 	_ = godotenv.Load()
 
-	server := newAPIServer()
-	mux := buildMux(server)
+	svc := handler.NewService(handler.DefaultApp())
+	mux := handler.BuildMux(svc)
 
 	// Simple CORS middleware
-	handler := http.Handler(mux)
-	handler = func(h http.Handler) http.Handler {
+	h := http.Handler(mux)
+	h = func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := strings.TrimSpace(r.Header.Get("Origin"))
 			// Credentials mode requires a concrete origin, not "*".
@@ -45,35 +41,10 @@ func main() {
 			if r.Method == "OPTIONS" {
 				return
 			}
-			h.ServeHTTP(w, r)
+			next.ServeHTTP(w, r)
 		})
-	}(handler)
+	}(h)
 
 	log.Printf("Starting API server on %s", *port)
-	log.Fatal(http.ListenAndServe(*port, h2c.NewHandler(handler, &http2.Server{})))
-}
-
-// Helpers duplicated from archflow/main.go for standalone compilation
-func resolveRepoPaths(repo string) (string, string, *safeio.SafeFS, error) {
-	repoName := strings.TrimSpace(repo)
-	if repoName == "" {
-		return "", "", nil, fmt.Errorf("--repo is required")
-	}
-	reposRoot := strings.TrimSpace(os.Getenv("REPOS_ROOT"))
-	if reposRoot == "" {
-		return "", "", nil, fmt.Errorf("REPOS_ROOT must be set")
-	}
-	if abs, err := filepath.Abs(reposRoot); err == nil {
-		reposRoot = abs
-	}
-	scan.SetReposDir(reposRoot)
-	repoPath, err := scan.ResolveRepo(repoName)
-	if err != nil {
-		return "", "", nil, err
-	}
-	sfs, err := safeio.NewSafeFS(repoPath)
-	if err != nil {
-		return "", "", nil, err
-	}
-	return repoName, repoPath, sfs, nil
+	log.Fatal(http.ListenAndServe(*port, h2c.NewHandler(h, &http2.Server{})))
 }

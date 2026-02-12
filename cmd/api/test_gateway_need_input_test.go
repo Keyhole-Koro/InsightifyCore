@@ -11,9 +11,9 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 		runID     = "r1"
 		workerKey = "init_purpose"
 	)
-	clearPendingUserInput(runID)
+	gatewayApp.ClearUserInput(runID)
 
-	requestID, err := registerPendingUserInput(projectID, runID, workerKey, "question")
+	requestID, err := gatewayApp.RegisterNeedInput(projectID, runID, workerKey, "question")
 	if err != nil {
 		t.Fatalf("register pending: %v", err)
 	}
@@ -21,7 +21,7 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 		t.Fatalf("expected request id")
 	}
 
-	gotRequestID, err := submitPendingUserInput(projectID, runID, "", "hello")
+	gotRequestID, err := gatewayApp.SubmitUserInput(projectID, runID, "", "hello")
 	if err != nil {
 		t.Fatalf("submit pending: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 		t.Fatalf("request id mismatch: got %q want %q", gotRequestID, requestID)
 	}
 
-	value, err := waitPendingUserInput(runID, time.Second)
+	value, err := gatewayApp.WaitUserInput(runID, time.Second)
 	if err != nil {
 		t.Fatalf("wait pending: %v", err)
 	}
@@ -44,13 +44,13 @@ func TestPendingUserInputTimeout(t *testing.T) {
 		runID     = "r2"
 		workerKey = "init_purpose"
 	)
-	clearPendingUserInput(runID)
+	gatewayApp.ClearUserInput(runID)
 
-	if _, err := registerPendingUserInput(projectID, runID, workerKey, "question"); err != nil {
+	if _, err := gatewayApp.RegisterNeedInput(projectID, runID, workerKey, "question"); err != nil {
 		t.Fatalf("register pending: %v", err)
 	}
 
-	_, err := waitPendingUserInput(runID, 10*time.Millisecond)
+	_, err := gatewayApp.WaitUserInput(runID, 10*time.Millisecond)
 	if err == nil {
 		t.Fatalf("expected timeout error")
 	}
