@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"insightify/internal/gateway/runtime"
 	"insightify/internal/globalctx"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
@@ -27,6 +28,12 @@ type RunContext struct {
 	Cleanup  func()
 }
 
+// Compile-time interface check.
+var _ runtime.RunEnvironment = (*RunContext)(nil)
+
+func (r *RunContext) GetEnv() *runner.Env { return r.Env }
+func (r *RunContext) GetOutDir() string   { return r.OutDir }
+func (r *RunContext) GetID() string       { return r.ID }
 type resolvedSources struct {
 	Name        string
 	SourcePaths []string

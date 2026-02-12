@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"insightify/internal/gateway/runtime"
 )
 
 type Session struct {
@@ -14,7 +15,7 @@ type Session struct {
 	UserID      string
 	Repo        string
 	IsActive    bool
-	RunCtx      any
+	RunCtx      runtime.RunEnvironment
 }
 
 type Deps struct {
@@ -25,8 +26,8 @@ type Deps struct {
 	ListByUser         func(userID string) []Session
 	GetActiveByUser    func(userID string) (Session, bool)
 	SetActiveForUser   func(userID, projectID string) (Session, bool)
-	NewRunContext      func(repo, projectID string) (any, error)
-	HasRequiredWorkers func(runCtx any) bool
+	NewRunContext      func(repo, projectID string) (runtime.RunEnvironment, error)
+	HasRequiredWorkers func(runCtx runtime.RunEnvironment) bool
 }
 
 func List(userID string, deps Deps) ([]Session, error) {
@@ -57,7 +58,7 @@ func Create(userID, projectName string, now time.Time, deps Deps) (Session, erro
 	}
 	projectID := fmt.Sprintf("project-%d", now.UnixNano())
 
-	var runCtx any
+	var runCtx runtime.RunEnvironment
 	if deps.NewRunContext != nil {
 		ctx, err := deps.NewRunContext("", projectID)
 		if err != nil {
@@ -150,7 +151,7 @@ func InitRun(in InitRunInput, now time.Time, deps Deps) (Session, error) {
 			projectID = fmt.Sprintf("project-%d", now.UnixNano())
 		}
 		projectName := fmt.Sprintf("Project %d", now.Unix()%100000)
-		var runCtx any
+		var runCtx runtime.RunEnvironment
 		if deps.NewRunContext != nil {
 			ctx, err := deps.NewRunContext("", projectID)
 			if err != nil {

@@ -77,8 +77,8 @@ func (s *Service) InitRun(_ context.Context, req *connect.Request[insightifyv1.I
 
 func (s *Service) projectDeps() projectuc.Deps {
 	return projectuc.Deps{
-		EnsureLoaded: s.app.EnsureProjectStoreLoaded,
-		Persist:      s.app.PersistProjectStore,
+		EnsureLoaded: s.app.ProjectStore().EnsureLoaded,
+		Persist:      s.app.ProjectStore().Save,
 		GetState: func(projectID string) (projectuc.Session, bool) {
 			p, ok := s.app.GetProject(projectID)
 			if !ok {
@@ -111,13 +111,10 @@ func (s *Service) projectDeps() projectuc.Deps {
 			}
 			return projectStateToSession(ps), true
 		},
-		NewRunContext: func(repo, projectID string) (any, error) {
+		NewRunContext: func(repo, projectID string) (runtime.RunEnvironment, error) {
 			return NewRunContext(repo, projectID)
 		},
-		HasRequiredWorkers: func(runCtx any) bool {
-			ctx, _ := runCtx.(*RunContext)
-			return hasRequiredWorkers(ctx)
-		},
+		HasRequiredWorkers: hasRequiredWorkersEnv,
 	}
 }
 
@@ -135,7 +132,7 @@ func (s *Service) getProjectState(projectID string) (projectState, bool) {
 	if !ok {
 		return projectState{}, false
 	}
-	runCtx, _ := p.RunCtx.(*RunContext)
+	runCtx, _ := p.RunCtx.(*RunContext) // handler-specific downcast
 	return projectState{State: p.State, RunCtx: runCtx}, true
 }
 
@@ -143,7 +140,7 @@ func (s *Service) putProjectState(ps projectState) {
 	if strings.TrimSpace(ps.ProjectID) == "" {
 		return
 	}
-	s.app.PutProject(runtime.Project{State: ps.State, RunCtx: ps.RunCtx})
+	s.app.PutProject(runtime.Project{State: ps.State, RunCtx: ps.RunCtx}) // *RunContext implements RunEnvironment
 }
 
 func (s *Service) updateProjectState(projectID string, update func(*projectState)) (projectState, bool) {
@@ -163,7 +160,7 @@ func (s *Service) listProjectsByUser(userID string) []projectState {
 		if !isProjectID(r.State.ProjectID) {
 			continue
 		}
-		runCtx, _ := r.RunCtx.(*RunContext)
+		runCtx, _ := r.RunCtx.(*RunContext) // handler-specific downcast
 		projects = append(projects, projectState{State: r.State, RunCtx: runCtx})
 	}
 	return projects
@@ -186,7 +183,7 @@ func (s *Service) setActiveProjectForUser(userID, projectID string) (projectStat
 	if !isProjectID(r.State.ProjectID) {
 		return projectState{}, false
 	}
-	runCtx, _ := r.RunCtx.(*RunContext)
+	runCtx, _ := r.RunCtx.(*RunContext) // handler-specific downcast
 	return projectState{State: r.State, RunCtx: runCtx}, true
 }
 
@@ -215,6 +212,17 @@ func hasRequiredWorkers(runCtx *RunContext) bool {
 	return hasBootstrap && hasTestLLM
 }
 
+// hasRequiredWorkersEnv checks via the runtime.RunEnvironment interface,
+// used by usecase Deps that don't know about *RunContext.
+func hasRequiredWorkersEnv(env runtime.RunEnvironment) bool {
+	if env == nil || env.GetEnv() == nil || env.GetEnv().Resolver == nil {
+		return false
+	}
+	_, hasBootstrap := env.GetEnv().Resolver.Get("bootstrap")
+	_, hasTestLLM := env.GetEnv().Resolver.Get("testllmChar")
+	return hasBootstrap && hasTestLLM
+}
+
 // ---------------------------------------------------------------------------
 // proto / usecase conversion helpers
 // ---------------------------------------------------------------------------
@@ -231,6 +239,7 @@ func projectToSession(p runtime.Project) projectuc.Session {
 }
 
 func sessionToProject(sess projectuc.Session) runtime.Project {
+	runEnv, _ := sess.RunCtx.(runtime.RunEnvironment)
 	return runtime.Project{
 		State: projectstore.State{
 			ProjectID:   strings.TrimSpace(sess.ProjectID),
@@ -239,7 +248,7 @@ func sessionToProject(sess projectuc.Session) runtime.Project {
 			Repo:        strings.TrimSpace(sess.Repo),
 			IsActive:    sess.IsActive,
 		},
-		RunCtx: sess.RunCtx,
+		RunCtx: runEnv,
 	}
 }
 

@@ -13,18 +13,18 @@ import (
 )
 
 func (s *Service) WatchChat(ctx context.Context, req *connect.Request[insightifyv1.WatchChatRequest], stream *connect.ServerStream[insightifyv1.ChatEvent]) error {
-	s.app.EnsureProjectStoreLoaded()
+	s.app.ProjectStore().EnsureLoaded()
 	prepared, err := chatuc.PrepareWatch(
 		req.Msg.GetProjectId(),
 		req.Msg.GetRunId(),
 		req.Msg.GetConversationId(),
 		req.Msg.GetFromSeq(),
 		chatuc.WatchDeps{
-			ConversationIDByRun:   s.app.ConversationIDByRun,
-			RunIDByConversation:   s.app.RunIDByConversation,
-			EnsureConversation:    s.app.EnsureConversation,
-			ProjectIDByRun:        s.app.ProjectIDByRun,
-			SubscribeConversation: s.app.SubscribeConversation,
+			ConversationIDByRun:   s.app.Interaction().ConversationIDByRun,
+			RunIDByConversation:   s.app.Interaction().RunIDByConversation,
+			EnsureConversation:    s.app.Interaction().EnsureConversation,
+			ProjectIDByRun:        s.app.Interaction().ProjectIDByRun,
+			SubscribeConversation: s.app.Interaction().SubscribeConversation,
 		},
 	)
 	if err != nil {
@@ -68,9 +68,9 @@ func (s *Service) SendMessage(_ context.Context, req *connect.Request[insightify
 	}
 	conversationID := strings.TrimSpace(req.Msg.GetConversationId())
 	if conversationID == "" {
-		conversationID = s.app.ConversationIDByRun(runID)
+		conversationID = s.app.Interaction().ConversationIDByRun(runID)
 	}
-	gotInteractionID, err := s.app.SubmitUserInput(projectID, runID, interactionID, input)
+	gotInteractionID, err := s.app.Interaction().SubmitUserInput(projectID, runID, interactionID, input)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
@@ -105,15 +105,15 @@ func (s *Service) publishRunEventToChat(projectID, runID string, ev *insightifyv
 	if runID == "" || ev == nil {
 		return
 	}
-	conversationID := s.app.ConversationIDByRun(runID)
-	s.app.EnsureConversation(runID, conversationID)
+	conversationID := s.app.Interaction().ConversationIDByRun(runID)
+	s.app.Interaction().EnsureConversation(runID, conversationID)
 	chat := chatuc.MapRunEventToChatEvent(projectID, runID, conversationID, ev, chatuc.EventMapperDeps{
 		GetRunNode: s.app.GetRunNode,
 		BuildNode:  buildLlmChatNode,
-		GetPending: s.app.GetPending,
+		GetPending: s.app.Interaction().GetPending,
 	})
 	if chat == nil {
 		return
 	}
-	s.app.AppendChatEvent(runID, conversationID, chat)
+	s.app.Interaction().AppendChatEvent(runID, conversationID, chat)
 }

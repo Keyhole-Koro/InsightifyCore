@@ -10,12 +10,12 @@ import (
 )
 
 func (s *Service) prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) projectuc.InitRunInput {
-	s.app.EnsureProjectStoreLoaded()
+	s.app.ProjectStore().EnsureLoaded()
 	return projectuc.PrepareInitRun(req.Msg.GetUserId(), req.Msg.GetRepoUrl(), req.Msg.GetProjectId())
 }
 
 func (s *Service) prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (projectID, workerKey, userInput string, err error) {
-	s.app.EnsureProjectStoreLoaded()
+	s.app.ProjectStore().EnsureLoaded()
 	in, err := runuc.PrepareStartRun(
 		req.Msg.GetProjectId(),
 		req.Msg.GetPipelineId(),
@@ -38,12 +38,12 @@ func (s *Service) prepareStartRun(req *connect.Request[insightifyv1.StartRunRequ
 }
 
 func (s *Service) prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputRequest]) (projectID, runID, userInput string, err error) {
-	s.app.EnsureProjectStoreLoaded()
+	s.app.ProjectStore().EnsureLoaded()
 	in, err := needinput.PrepareSubmitRunInput(
 		req.Msg.GetProjectId(),
 		req.Msg.GetRunId(),
 		req.Msg.GetInput(),
-		s.app.ActiveRunID,
+		s.app.Interaction().ActiveRunID,
 	)
 	if err != nil {
 		return "", "", "", err
@@ -52,7 +52,7 @@ func (s *Service) prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitR
 }
 
 func (s *Service) prepareSendMessage(req *connect.Request[insightifyv1.SendMessageRequest]) (projectID, runID, interactionID, input string, err error) {
-	s.app.EnsureProjectStoreLoaded()
+	s.app.ProjectStore().EnsureLoaded()
 	in, err := needinput.PrepareSendMessage(
 		req.Msg.GetProjectId(),
 		req.Msg.GetRunId(),

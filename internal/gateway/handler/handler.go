@@ -33,12 +33,11 @@ func DefaultApp() *runtime.App {
 	return runtime.New(projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json")))
 }
 
-// BuildMux registers all RPC handlers and the SSE endpoint on a new ServeMux.
+// BuildMux registers all RPC handlers on a new ServeMux.
 func BuildMux(s *Service) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle(insightifyv1connect.NewPipelineServiceHandler(s))
 	mux.Handle(insightifyv1connect.NewLlmChatServiceHandler(s))
-	mux.HandleFunc("/api/watch/", s.HandleWatchSSE)
 	return mux
 }
 

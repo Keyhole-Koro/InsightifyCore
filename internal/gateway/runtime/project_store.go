@@ -2,20 +2,6 @@ package runtime
 
 import "strings"
 
-func (a *App) EnsureProjectStoreLoaded() {
-	if a == nil || a.projectStore == nil {
-		return
-	}
-	a.projectStore.EnsureLoaded()
-}
-
-func (a *App) PersistProjectStore() {
-	if a == nil || a.projectStore == nil {
-		return
-	}
-	a.projectStore.Save()
-}
-
 func (a *App) GetProject(projectID string) (Project, bool) {
 	if a == nil || a.projectStore == nil {
 		return Project{}, false
