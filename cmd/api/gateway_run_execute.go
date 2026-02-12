@@ -13,20 +13,20 @@ import (
 	"insightify/internal/workers/plan"
 )
 
-// launchWorkerRun launches a worker execution for the given session.
+// launchWorkerRun launches a worker execution for the given project.
 // This is a generic handler that can run any registered worker.
-func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string) (string, error) {
-	sess, ok := getSession(sessionID)
+func (s *apiServer) launchWorkerRun(projectID, workerKey, userInput string) (string, error) {
+	sess, ok := getProjectState(projectID)
 	if !ok || sess.RunCtx == nil {
-		return "", fmt.Errorf("session %s not found", sessionID)
+		return "", fmt.Errorf("project %s not found", projectID)
 	}
 	runID := fmt.Sprintf("%s-%d", workerKey, time.Now().UnixNano())
-	sess, ok = updateSession(sessionID, func(cur *initSession) {
+	sess, ok = updateProjectState(projectID, func(cur *projectState) {
 		cur.Running = true
 		cur.ActiveRunID = runID
 	})
 	if !ok {
-		return "", fmt.Errorf("session %s not found", sessionID)
+		return "", fmt.Errorf("project %s not found", projectID)
 	}
 
 	eventCh := make(chan *insightifyv1.WatchRunResponse, 128)
@@ -38,11 +38,11 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string) (str
 		defer func() {
 			clearPendingUserInput(runID)
 			clearRunNode(runID)
-			_, _ = updateSession(sessionID, func(current *initSession) {
+			_, _ = updateProjectState(projectID, func(current *projectState) {
 				if current.ActiveRunID == runID {
 					current.ActiveRunID = ""
 				}
-				// Running reflects whether this session still has a designated active run.
+				// Running reflects whether this project still has a designated active run.
 				current.Running = strings.TrimSpace(current.ActiveRunID) != ""
 			})
 			close(eventCh)
@@ -55,9 +55,9 @@ func (s *apiServer) launchWorkerRun(sessionID, workerKey, userInput string) (str
 	return runID, nil
 }
 
-func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInput string, eventCh chan<- *insightifyv1.WatchRunResponse) {
+func (s *apiServer) executeWorkerRun(sess projectState, runID, workerKey, userInput string, eventCh chan<- *insightifyv1.WatchRunResponse) {
 	if sess.RunCtx == nil || sess.RunCtx.Env == nil || sess.RunCtx.Env.Resolver == nil {
-		emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+		emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 			Message:   fmt.Sprintf("%s: run context is not configured", workerKey),
 		})
@@ -66,7 +66,7 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 	runCtx := sess.RunCtx
 	spec, ok := runCtx.Env.Resolver.Get(workerKey)
 	if !ok {
-		emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+		emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 			Message:   fmt.Sprintf("%s worker is not registered", workerKey),
 		})
@@ -76,47 +76,42 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 	nextInput := strings.TrimSpace(userInput)
 
 	for {
-		runCtx.Env.InitCtx.UserInput = nextInput
-
 		internalCh := make(chan runner.RunEvent, 100)
 		emitter := &runner.ChannelEmitter{Ch: internalCh, Worker: workerKey}
-		go bridgeRunnerEvents(sess.SessionID, runID, eventCh, internalCh)
+		go bridgeRunnerEvents(sess.ProjectID, runID, eventCh, internalCh)
 		uiEmitter := &runUIEmitter{
-			sessionID: sess.SessionID,
+			projectID: sess.ProjectID,
 			runID:     runID,
 			eventCh:   eventCh,
 		}
 
-		execCtx := ui.WithEmitter(runner.WithEmitter(context.Background(), emitter), uiEmitter)
+		baseCtx := runner.WithUserInput(context.Background(), nextInput)
+		execCtx := ui.WithEmitter(runner.WithEmitter(baseCtx, emitter), uiEmitter)
 		out, err := runner.ExecuteWorkerWithResult(execCtx, spec, runCtx.Env)
 		close(internalCh)
 		if err != nil {
-			emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+			emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 				EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 				Message:   err.Error(),
 			})
 			return
 		}
 
-		// Update session from result (worker-specific logic)
-		updateSessionFromResult(sess.SessionID, runCtx, out.RuntimeState)
-
-		finalView := extractWorkerClientView(out.ClientView, out.RuntimeState)
+		finalView := extractWorkerClientView(out.ClientView)
 		if outBootstrap, ok := out.RuntimeState.(plan.BootstrapOut); ok && outBootstrap.NeedMoreInput() {
-			setRunNode(runID, toProtoUINode(outBootstrap.UINode))
 			prompt := strings.TrimSpace(outBootstrap.Result.FollowupQuestion)
 			if prompt == "" {
 				prompt = strings.TrimSpace(outBootstrap.Result.AssistantMessage)
 			}
-			requestID, err := registerPendingUserInput(sess.SessionID, runID, workerKey, prompt)
+			requestID, err := registerPendingUserInput(sess.ProjectID, runID, workerKey, prompt)
 			if err != nil {
-				emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+				emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 					EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 					Message:   err.Error(),
 				})
 				return
 			}
-			emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+			emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 				EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS,
 				Message:    fmt.Sprintf("INPUT_REQUIRED:%s", requestID),
 				ClientView: finalView,
@@ -124,7 +119,7 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 
 			reply, err := waitPendingUserInput(runID, 10*time.Minute)
 			if err != nil {
-				emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+				emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 					EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_ERROR,
 					Message:   err.Error(),
 				})
@@ -133,11 +128,8 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 			nextInput = reply
 			continue
 		}
-		if outBootstrap, ok := out.RuntimeState.(plan.BootstrapOut); ok {
-			setRunNode(runID, toProtoUINode(outBootstrap.UINode))
-		}
 
-		emitRunEvent(sess.SessionID, runID, eventCh, &insightifyv1.WatchRunResponse{
+		emitRunEvent(sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
 			EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_COMPLETE,
 			Message:    "COMPLETE",
 			ClientView: finalView,
@@ -147,7 +139,7 @@ func (s *apiServer) executeWorkerRun(sess initSession, runID, workerKey, userInp
 }
 
 type runUIEmitter struct {
-	sessionID string
+	projectID string
 	runID     string
 	eventCh   chan<- *insightifyv1.WatchRunResponse
 }
@@ -164,7 +156,7 @@ func (e *runUIEmitter) EmitUIEvent(event ui.Event) {
 		}
 		setRunNode(e.runID, node)
 		if e.eventCh != nil {
-			emitRunEvent(e.sessionID, e.runID, e.eventCh, &insightifyv1.WatchRunResponse{
+			emitRunEvent(e.projectID, e.runID, e.eventCh, &insightifyv1.WatchRunResponse{
 				EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS,
 				Message:   nodeReadyPrefix,
 			})
@@ -175,7 +167,7 @@ func (e *runUIEmitter) EmitUIEvent(event ui.Event) {
 }
 
 // bridgeRunnerEvents converts runner events to proto events.
-func bridgeRunnerEvents(sessionID, runID string, eventCh chan<- *insightifyv1.WatchRunResponse, internalCh <-chan runner.RunEvent) {
+func bridgeRunnerEvents(projectID, runID string, eventCh chan<- *insightifyv1.WatchRunResponse, internalCh <-chan runner.RunEvent) {
 	for ev := range internalCh {
 		protoEvent := &insightifyv1.WatchRunResponse{
 			Message:         ev.Message,
@@ -192,60 +184,29 @@ func bridgeRunnerEvents(sessionID, runID string, eventCh chan<- *insightifyv1.Wa
 		default:
 			continue
 		}
-		emitRunEvent(sessionID, runID, eventCh, protoEvent)
+		emitRunEvent(projectID, runID, eventCh, protoEvent)
 	}
 }
 
-func emitRunEvent(sessionID, runID string, eventCh chan<- *insightifyv1.WatchRunResponse, ev *insightifyv1.WatchRunResponse) {
+func emitRunEvent(projectID, runID string, eventCh chan<- *insightifyv1.WatchRunResponse, ev *insightifyv1.WatchRunResponse) {
 	if ev == nil {
 		return
 	}
 	if eventCh != nil {
 		eventCh <- ev
 	}
-	publishRunEventToChat(sessionID, runID, ev)
+	publishRunEventToChat(projectID, runID, ev)
 }
 
 // extractWorkerClientView extracts the ClientView from worker output.
-func extractWorkerClientView(clientView any, runtimeState any) *pipelinev1.ClientView {
+func extractWorkerClientView(clientView any) *pipelinev1.ClientView {
 	if v, ok := clientView.(*pipelinev1.ClientView); ok && v != nil {
 		return v
-	}
-	// Fallback for BootstrapOut
-	if out, ok := runtimeState.(plan.BootstrapOut); ok {
-		return out.ClientView
 	}
 	return nil
 }
 
-// updateSessionFromResult updates session state based on worker output.
-func updateSessionFromResult(sessionID string, runCtx *RunContext, runtimeState any) {
-	// Handle BootstrapOut
-	if out, ok := runtimeState.(plan.BootstrapOut); ok {
-		trimmedPurpose := strings.TrimSpace(out.Result.Purpose)
-		trimmedRepoURL := strings.TrimSpace(out.Result.RepoURL)
-		if trimmedPurpose == "" && trimmedRepoURL == "" {
-			return
-		}
-
-		_, _ = updateSession(sessionID, func(cur *initSession) {
-			if trimmedPurpose != "" {
-				cur.Purpose = trimmedPurpose
-			}
-			if trimmedRepoURL != "" {
-				cur.RepoURL = trimmedRepoURL
-			}
-			if runCtx != nil && runCtx.Env != nil {
-				runCtx.Env.InitCtx.SetPurpose(trimmedPurpose, trimmedRepoURL)
-			}
-			cur.RunCtx = runCtx
-		})
-
-		persistSessionStore()
-	}
-}
-
 // launchBootstrapRun is a convenience wrapper for launching the bootstrap worker.
-func (s *apiServer) launchBootstrapRun(sessionID, userInput string) (string, error) {
-	return s.launchWorkerRun(sessionID, "bootstrap", userInput)
+func (s *apiServer) launchBootstrapRun(projectID, userInput string) (string, error) {
+	return s.launchWorkerRun(projectID, "bootstrap", userInput)
 }

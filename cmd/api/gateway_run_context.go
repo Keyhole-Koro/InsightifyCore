@@ -85,18 +85,18 @@ func resolveRunSources(repoName string) (resolvedSources, error) {
 	}, nil
 }
 
-// NewRunContext creates a new context bound to the provided session ID.
-// If sessionID is empty, it falls back to a timestamp.
-func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
+// NewRunContext creates a new context bound to the provided project ID.
+// If projectID is empty, it falls back to a timestamp.
+func NewRunContext(repoName string, projectID string) (*RunContext, error) {
 	sources, err := resolveRunSources(repoName)
 	if err != nil {
 		return nil, err
 	}
 
-	if sessionID == "" {
-		sessionID = time.Now().Format("20060102-150405")
+	if projectID == "" {
+		projectID = time.Now().Format("20060102-150405")
 	}
-	outDir := filepath.Join("artifacts", sources.Name, sessionID)
+	outDir := filepath.Join("artifacts", sources.Name, projectID)
 	absOutDir, err := filepath.Abs(outDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolve outDir: %w", err)
@@ -166,7 +166,7 @@ func NewRunContext(repoName string, sessionID string) (*RunContext, error) {
 	env.Resolver = runner.MergeRegistries(architecture, codebase, external, planReg, testReg)
 
 	return &RunContext{
-		ID:       sessionID,
+		ID:       projectID,
 		RepoName: sources.Name,
 		OutDir:   absOutDir,
 		Env:      env,

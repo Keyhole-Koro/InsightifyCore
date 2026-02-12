@@ -46,16 +46,16 @@ func subscribeConversation(conversationID string, fromSeq int64) ([]*insightifyv
 	return llmInteractionHandler.SubscribeConversation(conversationID, fromSeq)
 }
 
-func registerPendingUserInput(sessionID, runID, workerKey, prompt string) (string, error) {
-	return llmInteractionHandler.RegisterNeedInput(sessionID, runID, workerKey, prompt)
+func registerPendingUserInput(projectID, runID, workerKey, prompt string) (string, error) {
+	return llmInteractionHandler.RegisterNeedInput(projectID, runID, workerKey, prompt)
 }
 
 func waitPendingUserInput(runID string, timeout time.Duration) (string, error) {
 	return llmInteractionHandler.WaitUserInput(runID, timeout)
 }
 
-func submitPendingUserInput(sessionID, runID, interactionID, input string) (string, error) {
-	return llmInteractionHandler.SubmitUserInput(sessionID, runID, interactionID, input)
+func submitPendingUserInput(projectID, runID, interactionID, input string) (string, error) {
+	return llmInteractionHandler.SubmitUserInput(projectID, runID, interactionID, input)
 }
 
 func clearPendingUserInput(runID string) {
@@ -229,7 +229,7 @@ func publishRunEventToChat(projectID, runID string, ev *insightifyv1.WatchRunRes
 }
 
 func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insightifyv1.WatchChatRequest], stream *connect.ServerStream[insightifyv1.ChatEvent]) error {
-	ensureSessionStoreLoaded()
+	ensureProjectStoreLoaded()
 
 	runID := strings.TrimSpace(req.Msg.GetRunId())
 	conversationID := strings.TrimSpace(req.Msg.GetConversationId())
@@ -253,14 +253,13 @@ func (s *apiServer) WatchChat(ctx context.Context, req *connect.Request[insighti
 	// Resolve project once at the start instead of per-event.
 	projectID := strings.TrimSpace(req.Msg.GetProjectId())
 	if projectID == "" && runID != "" {
-		initRunStore.RLock()
-		for sid, sess := range initRunStore.sessions {
-			if strings.TrimSpace(sess.ActiveRunID) == runID {
-				projectID = sid
+		projects := listProjectsByUser("")
+		for _, project := range projects {
+			if strings.TrimSpace(project.ActiveRunID) == runID {
+				projectID = strings.TrimSpace(project.ProjectID)
 				break
 			}
 		}
-		initRunStore.RUnlock()
 	}
 
 	snapshot, sub, cancel := subscribeConversation(conversationID, fromSeq)

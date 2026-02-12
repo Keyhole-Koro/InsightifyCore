@@ -10,7 +10,7 @@ import (
 )
 
 func prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) (projectID, userID, repoURL string) {
-	ensureSessionStoreLoaded()
+	ensureProjectStoreLoaded()
 	userID = strings.TrimSpace(req.Msg.GetUserId())
 	if userID == "" {
 		userID = "demo-user"
@@ -21,16 +21,16 @@ func prepareInitRun(req *connect.Request[insightifyv1.InitRunRequest]) (projectI
 }
 
 func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (projectID, workerKey, userInput string, err error) {
-	ensureSessionStoreLoaded()
+	ensureProjectStoreLoaded()
 	workerKey = req.Msg.GetPipelineId()
 	projectID = strings.TrimSpace(req.Msg.GetProjectId())
 	if projectID == "" {
 		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("project_id is required"))
 	}
-	if _, ok := getSession(projectID); !ok {
+	if _, ok := getProjectState(projectID); !ok {
 		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("project %s not found", projectID))
 	}
-	if _, ensureErr := ensureSessionRunContext(projectID); ensureErr != nil {
+	if _, ensureErr := ensureProjectRunContext(projectID); ensureErr != nil {
 		return "", "", "", connect.NewError(connect.CodeInternal, ensureErr)
 	}
 	userInput = strings.TrimSpace(req.Msg.GetParams()["user_input"])
@@ -38,7 +38,7 @@ func prepareStartRun(req *connect.Request[insightifyv1.StartRunRequest]) (projec
 }
 
 func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputRequest]) (projectID, runID, userInput string, err error) {
-	ensureSessionStoreLoaded()
+	ensureProjectStoreLoaded()
 	projectID = strings.TrimSpace(req.Msg.GetProjectId())
 	if projectID == "" {
 		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("project_id is required"))
@@ -48,7 +48,7 @@ func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputReques
 		return "", "", "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("input is required"))
 	}
 
-	sess, ok := getSession(projectID)
+	sess, ok := getProjectState(projectID)
 	if !ok {
 		return "", "", "", connect.NewError(connect.CodeNotFound, fmt.Errorf("project %s not found", projectID))
 	}
@@ -63,7 +63,7 @@ func prepareNeedUserInput(req *connect.Request[insightifyv1.SubmitRunInputReques
 }
 
 func prepareSendMessage(req *connect.Request[insightifyv1.SendMessageRequest]) (projectID, runID, interactionID, input string, err error) {
-	ensureSessionStoreLoaded()
+	ensureProjectStoreLoaded()
 	projectID = strings.TrimSpace(req.Msg.GetProjectId())
 	runID = strings.TrimSpace(req.Msg.GetRunId())
 	interactionID = strings.TrimSpace(req.Msg.GetInteractionId())

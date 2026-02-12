@@ -21,8 +21,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			ic := deps.Env().InitCtx
-			input := strings.TrimSpace(ic.UserInput)
+			input := UserInputFromContext(ctx)
 			return plan.BootstrapIn{
 				UserInput: input,
 			}, nil
@@ -37,8 +36,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			if err != nil {
 				return WorkerOutput{}, err
 			}
-			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
-			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+			return bootstrapWorkerOutput(out), nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -56,8 +54,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			ic := deps.Env().InitCtx
-			input := strings.TrimSpace(ic.UserInput)
+			input := UserInputFromContext(ctx)
 			return plan.BootstrapIn{
 				UserInput: input,
 			}, nil
@@ -72,8 +69,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			if err != nil {
 				return WorkerOutput{}, err
 			}
-			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
-			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+			return bootstrapWorkerOutput(out), nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -91,8 +87,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			ic := deps.Env().InitCtx
-			input := strings.TrimSpace(ic.UserInput)
+			input := UserInputFromContext(ctx)
 			return plan.BootstrapIn{
 				UserInput: input,
 			}, nil
@@ -107,8 +102,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			if err != nil {
 				return WorkerOutput{}, err
 			}
-			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
-			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+			return bootstrapWorkerOutput(out), nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {
@@ -122,9 +116,17 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	reg["worker_DAG"] = WorkerSpec{
 		Key:         "worker_DAG",
 		Description: "Generates an execution plan based on the provided graph spec.",
+		Requires:    []string{"bootstrap"},
 		LLMRole:     llm.ModelRolePlanner,
 		LLMLevel:    llm.ModelLevelHigh,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			var bootstrapOut struct {
+				BootstrapContext artifact.BootstrapContext `json:"bootstrap_context"`
+			}
+			if err := deps.Artifact("bootstrap", &bootstrapOut); err != nil {
+				return nil, err
+			}
+			bootstrapCtx := bootstrapOut.BootstrapContext.Normalize()
 			workersByKey := map[string]artifact.WorkerMeta{}
 			if resolver := deps.Env().Resolver; resolver != nil {
 				for _, spec := range resolver.List() {
@@ -137,7 +139,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}
 
 			bootstrapDesc := "Interactive intent bootstrap worker: collects user intent and repository context."
-			if purpose := strings.TrimSpace(deps.Env().InitCtx.Purpose); purpose != "" {
+			if purpose := strings.TrimSpace(bootstrapCtx.Purpose); purpose != "" {
 				bootstrapDesc = purpose
 			}
 			workersByKey["bootstrap"] = artifact.WorkerMeta{
@@ -160,11 +162,10 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 				workers = append(workers, w)
 			}
 
-			ic := deps.Env().InitCtx
 			return artifact.PlanDependenciesIn{
 				RepoPath:    deps.Root(),
-				InitPurpose: strings.TrimSpace(ic.Purpose),
-				InitRepoURL: strings.TrimSpace(ic.RepoURL),
+				InitPurpose: strings.TrimSpace(bootstrapCtx.Purpose),
+				InitRepoURL: strings.TrimSpace(bootstrapCtx.RepoURL),
 				Workers:     workers,
 			}, nil
 		},
@@ -195,4 +196,11 @@ func containsWorkerKey(keys []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func bootstrapWorkerOutput(out plan.BootstrapOut) WorkerOutput {
+	return WorkerOutput{
+		RuntimeState: out,
+		ClientView:   out.ClientView,
+	}
 }

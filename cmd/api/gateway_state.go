@@ -1,10 +1,12 @@
 package main
 
 import (
+	"path/filepath"
 	"sync"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	"insightify/internal/gateway/projectstore"
 )
 
 // runStore holds active runs and their event channels.
@@ -25,23 +27,16 @@ func scheduleRunCleanup(runID string) {
 	})
 }
 
-type initSession struct {
-	SessionID   string
-	ProjectID   string
-	ProjectName string
-	UserID      string
-	RepoURL     string
-	Purpose     string
-	Repo        string
-	IsActive    bool
-	RunCtx      *RunContext
-	Running     bool
-	ActiveRunID string
+type projectState struct {
+	projectstore.State
+	RunCtx *RunContext
 }
 
-var initRunStore = struct {
+var projectStateStore = projectstore.New(filepath.Join("tmp", "project_states.json"))
+
+var runContextStore = struct {
 	sync.RWMutex
-	sessions map[string]initSession
+	byProjectID map[string]*RunContext
 }{
-	sessions: make(map[string]initSession),
+	byProjectID: make(map[string]*RunContext),
 }

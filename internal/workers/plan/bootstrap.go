@@ -21,9 +21,10 @@ type BootstrapIn struct {
 
 // BootstrapOut is the output of the bootstrap pipeline.
 type BootstrapOut struct {
-	Result     artifact.InitPurposeOut `json:"result"`
-	ClientView *pipelinev1.ClientView  `json:"client_view,omitempty"`
-	UINode     ui.Node                 `json:"ui_node,omitempty"`
+	Result           artifact.InitPurposeOut   `json:"result"`
+	BootstrapContext artifact.BootstrapContext `json:"bootstrap_context"`
+	ClientView       *pipelinev1.ClientView    `json:"client_view,omitempty"`
+	UINode           ui.Node                   `json:"ui_node,omitempty"`
 }
 
 // NeedMoreInput returns true if more user input is required.
@@ -130,6 +131,11 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 	}
 
 	out.Result = result
+	out.BootstrapContext = artifact.BootstrapContext{
+		Purpose:   result.Purpose,
+		RepoURL:   result.RepoURL,
+		UserInput: strings.TrimSpace(in.UserInput),
+	}.Normalize()
 	out.ClientView = buildClientView(result)
 	out.UINode = buildUINode(in.UserInput, result)
 	ui.SendUpsertNode(ctx, out.UINode)

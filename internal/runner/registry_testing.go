@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"strings"
 
 	"insightify/internal/llm"
 	"insightify/internal/workers/plan"
@@ -18,8 +17,7 @@ func BuildRegistryTest(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			ic := deps.Env().InitCtx
-			input := strings.TrimSpace(ic.UserInput)
+			input := UserInputFromContext(ctx)
 			return plan.BootstrapIn{
 				UserInput: input,
 			}, nil
@@ -35,8 +33,7 @@ func BuildRegistryTest(env *Env) map[string]WorkerSpec {
 			if err != nil {
 				return WorkerOutput{}, err
 			}
-			env.InitCtx.SetPurpose(out.Result.Purpose, out.Result.RepoURL)
-			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
+			return bootstrapWorkerOutput(out), nil
 		},
 		Fingerprint: func(in any, env *Env) string {
 			return JSONFingerprint(struct {

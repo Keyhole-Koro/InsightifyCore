@@ -10,7 +10,7 @@ import (
 
 type pendingInput struct {
 	InteractionID string
-	SessionID     string
+	ProjectID     string
 	RunID         string
 	WorkerKey     string
 	Prompt        string
@@ -27,7 +27,7 @@ func (p *pendingInput) closeDone() {
 
 type PendingView struct {
 	InteractionID string
-	SessionID     string
+	ProjectID     string
 	RunID         string
 	WorkerKey     string
 	Prompt        string
@@ -35,9 +35,9 @@ type PendingView struct {
 
 // Service defines the llm interaction contract used by gateway handlers.
 type Service interface {
-	RegisterNeedInput(sessionID, runID, workerKey, prompt string) (string, error)
+	RegisterNeedInput(projectID, runID, workerKey, prompt string) (string, error)
 	WaitUserInput(runID string, timeout time.Duration) (string, error)
-	SubmitUserInput(sessionID, runID, interactionID, input string) (string, error)
+	SubmitUserInput(projectID, runID, interactionID, input string) (string, error)
 	Clear(runID string)
 	GetPending(runID string) (PendingView, bool)
 	EnsureConversation(runID, conversationID string) string
@@ -65,14 +65,14 @@ func NewHandler() *Handler {
 	}
 }
 
-func (h *Handler) RegisterNeedInput(sessionID, runID, workerKey, prompt string) (string, error) {
+func (h *Handler) RegisterNeedInput(projectID, runID, workerKey, prompt string) (string, error) {
 	if h == nil {
 		return "", fmt.Errorf("llmInteraction handler is nil")
 	}
-	sessionID = strings.TrimSpace(sessionID)
+	projectID = strings.TrimSpace(projectID)
 	runID = strings.TrimSpace(runID)
 	workerKey = strings.TrimSpace(workerKey)
-	if sessionID == "" || runID == "" || workerKey == "" {
+	if projectID == "" || runID == "" || workerKey == "" {
 		return "", fmt.Errorf("invalid pending input registration")
 	}
 
@@ -86,7 +86,7 @@ func (h *Handler) RegisterNeedInput(sessionID, runID, workerKey, prompt string) 
 	interactionID := fmt.Sprintf("input-%d", time.Now().UnixNano())
 	h.byRun[runID] = &pendingInput{
 		InteractionID: interactionID,
-		SessionID:     sessionID,
+		ProjectID:     projectID,
 		RunID:         runID,
 		WorkerKey:     workerKey,
 		Prompt:        strings.TrimSpace(prompt),
@@ -127,16 +127,16 @@ func (h *Handler) WaitUserInput(runID string, timeout time.Duration) (string, er
 	}
 }
 
-func (h *Handler) SubmitUserInput(sessionID, runID, interactionID, input string) (string, error) {
+func (h *Handler) SubmitUserInput(projectID, runID, interactionID, input string) (string, error) {
 	if h == nil {
 		return "", fmt.Errorf("llmInteraction handler is nil")
 	}
-	sessionID = strings.TrimSpace(sessionID)
+	projectID = strings.TrimSpace(projectID)
 	runID = strings.TrimSpace(runID)
 	interactionID = strings.TrimSpace(interactionID)
 	input = strings.TrimSpace(input)
-	if sessionID == "" || runID == "" {
-		return "", fmt.Errorf("session_id and run_id are required")
+	if projectID == "" || runID == "" {
+		return "", fmt.Errorf("project_id and run_id are required")
 	}
 	if input == "" {
 		return "", fmt.Errorf("input is required")
@@ -148,8 +148,8 @@ func (h *Handler) SubmitUserInput(sessionID, runID, interactionID, input string)
 	if !ok {
 		return "", fmt.Errorf("run %s is not waiting for input", runID)
 	}
-	if pending.SessionID != sessionID {
-		return "", fmt.Errorf("run %s does not belong to session %s", runID, sessionID)
+	if pending.ProjectID != projectID {
+		return "", fmt.Errorf("run %s does not belong to project %s", runID, projectID)
 	}
 	// Accept stale interaction IDs from clients and bind to the latest pending interaction.
 	if interactionID != "" && pending.InteractionID != interactionID {
@@ -204,7 +204,7 @@ func (h *Handler) GetPending(runID string) (PendingView, bool) {
 	}
 	return PendingView{
 		InteractionID: pending.InteractionID,
-		SessionID:     pending.SessionID,
+		ProjectID:     pending.ProjectID,
 		RunID:         pending.RunID,
 		WorkerKey:     pending.WorkerKey,
 		Prompt:        pending.Prompt,

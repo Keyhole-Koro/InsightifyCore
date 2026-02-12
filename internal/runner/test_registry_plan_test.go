@@ -2,14 +2,41 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"insightify/internal/artifact"
+	"insightify/internal/safeio"
+	"insightify/internal/workers/plan"
 )
 
 func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
+	outDir := t.TempDir()
+	artifactFS, err := safeio.NewSafeFS(outDir)
+	if err != nil {
+		t.Fatalf("artifact fs: %v", err)
+	}
+	seed := plan.BootstrapOut{
+		Result: artifact.InitPurposeOut{
+			Purpose: "Goのランタイムを理解したい",
+		},
+		BootstrapContext: artifact.BootstrapContext{
+			Purpose: "Goのランタイムを理解したい",
+		},
+	}
+	raw, err := json.Marshal(seed)
+	if err != nil {
+		t.Fatalf("marshal seed artifact: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "bootstrap.json"), raw, 0o644); err != nil {
+		t.Fatalf("write seed artifact: %v", err)
+	}
+
 	env := &Env{
-		InitCtx: InitContext{Purpose: "Goのランタイムを理解したい"},
+		OutDir:     outDir,
+		ArtifactFS: artifactFS,
 		Resolver: MergeRegistries(map[string]WorkerSpec{
 			"worker_DAG": {
 				Key:         "worker_DAG",
@@ -24,7 +51,7 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	}
 
 	spec := BuildRegistryPlan(env)["worker_DAG"]
-	inAny, err := spec.BuildInput(context.Background(), newDeps(env, spec.Key, nil))
+	inAny, err := spec.BuildInput(context.Background(), newDeps(env, spec.Key, spec.Requires))
 	if err != nil {
 		t.Fatalf("BuildInput() error = %v", err)
 	}
@@ -39,8 +66,8 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected bootstrap worker to be present")
 	}
-	if planWorker.Description != env.InitCtx.Purpose {
-		t.Fatalf("expected bootstrap description %q, got %q", env.InitCtx.Purpose, planWorker.Description)
+	if planWorker.Description != "Goのランタイムを理解したい" {
+		t.Fatalf("expected bootstrap description %q, got %q", "Goのランタイムを理解したい", planWorker.Description)
 	}
 
 	workerDAG, ok := workers["worker_DAG"]

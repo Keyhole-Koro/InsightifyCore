@@ -10,19 +10,19 @@ This document explains what each `gateway_*.go` file does in `cmd/api`, and how 
 - `gateway_state.go`
   - Shared in-memory gateway state.
   - `runStore`: `run_id -> event channel` for `WatchRun`.
-  - `initRunStore`: `session_id -> initSession` for session and run context tracking.
+  - `initRunStore`: `project_id -> initProject` for project and run context tracking.
   - `scheduleRunCleanup`: delayed cleanup of completed runs from `runStore`.
 
-- `gateway_session_store.go`
-  - Session persistence and helper accessors.
-  - JSON persistence file: `tmp/init_sessions.json`.
-  - Helpers: `getSession`, `putSession`, `updateSession`, `ensureSessionRunContext`.
-  - Central place for session load/save and safe updates.
+- `gateway_project_state_store.go`
+  - Project state persistence and helper accessors.
+  - JSON persistence file: `tmp/project_states.json`.
+  - Helpers: `getProjectState`, `putProjectState`, `updateProjectState`, `ensureProjectRunContext`.
+  - Central place for project load/save and safe updates.
 
-- `gateway_session.go`
-  - Session utility functions.
+- `gateway_project.go`
+  - Project state utility functions.
   - `inferRepoName`: normalize repo name from URL.
-  - `resolveSessionID` and `resolveSessionIDFromCookieHeader`: session resolution from request/cookie.
+  - `resolveProjectID` and `resolveProjectIDFromCookieHeader`: project resolution from request/cookie.
 
 - `gateway_run_context.go`
   - Run execution environment creation.
@@ -31,15 +31,15 @@ This document explains what each `gateway_*.go` file does in `cmd/api`, and how 
 
 - `gateway_run_execute.go`
   - Generic worker launch and execution pipeline.
-  - `launchWorkerRun`: allocates run ID, marks session running, creates event channel.
+  - `launchWorkerRun`: allocates run ID, marks project running, creates event channel.
   - `executeWorkerRun`: resolves worker, executes via runner, emits events.
   - `bridgeRunnerEvents`: maps internal runner events to API stream events.
-  - `updateSessionFromResult`: writes back purpose/repo updates from `plan.BootstrapOut`.
+  - `updateProjectStateFromResult`: writes back purpose/repo updates from `plan.BootstrapOut`.
   - `launchPlanPipelineRun`: convenience wrapper for `plan_pipeline`.
 
 - `gateway_init.go`
   - `InitRun` endpoint implementation.
-  - Resolves/creates session, ensures run context, persists session, starts bootstrap run, sets session cookie.
+  - Resolves/creates project, ensures run context, persists project, starts bootstrap run, sets project cookie.
 
 - `gateway_start.go`
   - `StartRun` endpoint implementation.
@@ -50,8 +50,8 @@ This document explains what each `gateway_*.go` file does in `cmd/api`, and how 
 
 - `gateway_submit.go`
   - `SubmitRunInput` endpoint implementation.
-  - Validates `session_id`, `run_id`, and `input`.
-  - Ensures session run context.
+  - Validates `project_id`, `run_id`, and `input`.
+  - Ensures project run context.
   - Validates active run consistency.
   - Launches `plan_pipeline` continuation run.
 
@@ -65,7 +65,7 @@ This document explains what each `gateway_*.go` file does in `cmd/api`, and how 
 
 Gateway runtime state is split into two maps:
 
-- `initRunStore.sessions[session_id]`
+- `projectStateStore.states[project_id]`
   - User/repo/purpose data
   - `RunCtx`
   - run flags (`Running`, `ActiveRunID`)
@@ -90,15 +90,15 @@ sequenceDiagram
     participant WR as runner/workers
 
     FE->>GW: InitRun(user_id, repo_url)
-    GW->>SS: load session store (once)
-    GW->>SS: resolve cookie session or create new session
+    GW->>SS: load project store (once)
+    GW->>SS: resolve cookie project or create new project
     GW->>GW: ensure RunContext (NewRunContext if missing)
-    GW->>SS: persist session metadata
-    GW->>EX: launchPlanPipelineRun(session_id, "", isBootstrap=true)
+    GW->>SS: persist project metadata
+    GW->>EX: launchPlanPipelineRun(project_id, "", isBootstrap=true)
     EX->>SS: set Running=true, ActiveRunID=run_id
     EX->>RS: create event channel for run_id
     EX->>WR: executeWorkerRun(plan_pipeline)
-    GW-->>FE: InitRunResponse(session_id, bootstrap_run_id) + Set-Cookie
+    GW-->>FE: InitRunResponse(project_id, bootstrap_run_id) + Set-Cookie
 ```
 
 ### 2) Interactive Input Flow (`SubmitRunInput`)
@@ -112,14 +112,14 @@ sequenceDiagram
     participant EX as run_execute
     participant WR as runner/workers
 
-    FE->>GW: SubmitRunInput(session_id, run_id?, input)
-    GW->>SS: getSession(session_id)
-    alt session not found
-        GW-->>FE: NotFound(session not found)
+    FE->>GW: SubmitRunInput(project_id, run_id?, input)
+    GW->>SS: getProjectState(project_id)
+    alt project not found
+        GW-->>FE: NotFound(project not found)
     else found
-        GW->>GW: ensureSessionRunContext(session_id)
+        GW->>GW: ensureProjectRunContext(project_id)
         GW->>SS: validate run_id == ActiveRunID (when provided)
-        GW->>EX: launchPlanPipelineRun(session_id, input, false)
+        GW->>EX: launchPlanPipelineRun(project_id, input, false)
         EX->>WR: executeWorkerRun(plan_pipeline)
         GW-->>FE: SubmitRunInputResponse(next_run_id)
     end
@@ -151,10 +151,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[InitRun] --> B[Ensure/Create Session]
+    A[InitRun] --> B[Ensure/Create Project]
     B --> C[Ensure RunContext]
     C --> D[Launch Bootstrap plan_pipeline]
-    D --> E[Return session_id + bootstrap_run_id]
+    D --> E[Return project_id + bootstrap_run_id]
 
     F[StartRun] --> G{pipeline_id}
     G -->|plan_pipeline/init_purpose| H[launchPlanPipelineRun]
@@ -162,7 +162,7 @@ flowchart TD
     G -->|other| J[Resolve worker by key]
     J --> K[Execute via runner]
 
-    L[SubmitRunInput] --> M[Validate session/input]
+    L[SubmitRunInput] --> M[Validate project/input]
     M --> N[Ensure RunContext]
     N --> O[Validate active run relation]
     O --> P[launchPlanPipelineRun]
@@ -177,5 +177,5 @@ flowchart TD
   - Generic direct execution path inside `gateway_start.go`
   - Helper path via `gateway_run_execute.go` (`launchPlanPipelineRun`)
 - `SubmitRunInput` currently routes to `plan_pipeline` by design.
-- Session persistence is best-effort JSON persistence; run channels are in-memory only.
+- Project state persistence is best-effort JSON persistence; run channels are in-memory only.
 - `runStore` cleanup is delayed (`completedRunRetention`) to allow late watchers.

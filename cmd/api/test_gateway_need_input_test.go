@@ -7,13 +7,13 @@ import (
 
 func TestPendingUserInputRoundTrip(t *testing.T) {
 	const (
-		sessionID = "s1"
+		projectID = "s1"
 		runID     = "r1"
 		workerKey = "init_purpose"
 	)
 	clearPendingUserInput(runID)
 
-	requestID, err := registerPendingUserInput(sessionID, runID, workerKey, "question")
+	requestID, err := registerPendingUserInput(projectID, runID, workerKey, "question")
 	if err != nil {
 		t.Fatalf("register pending: %v", err)
 	}
@@ -21,7 +21,7 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 		t.Fatalf("expected request id")
 	}
 
-	gotRequestID, err := submitPendingUserInput(sessionID, runID, "", "hello")
+	gotRequestID, err := submitPendingUserInput(projectID, runID, "", "hello")
 	if err != nil {
 		t.Fatalf("submit pending: %v", err)
 	}
@@ -40,13 +40,13 @@ func TestPendingUserInputRoundTrip(t *testing.T) {
 
 func TestPendingUserInputTimeout(t *testing.T) {
 	const (
-		sessionID = "s2"
+		projectID = "s2"
 		runID     = "r2"
 		workerKey = "init_purpose"
 	)
 	clearPendingUserInput(runID)
 
-	if _, err := registerPendingUserInput(sessionID, runID, workerKey, "question"); err != nil {
+	if _, err := registerPendingUserInput(projectID, runID, workerKey, "question"); err != nil {
 		t.Fatalf("register pending: %v", err)
 	}
 
