@@ -75,11 +75,56 @@ func buildGatewayLLM() (*llm.InMemoryModelRegistry, error) {
 	if err := llm.RegisterFakeModels(reg); err != nil {
 		return nil, err
 	}
+
+	defaultProvider := "fake"
+	defaultsByLevel := map[llm.ModelLevel]string{
+		llm.ModelLevelLow:    llm.FakeModelByLevel(llm.ModelLevelLow),
+		llm.ModelLevelMiddle: llm.FakeModelByLevel(llm.ModelLevelMiddle),
+		llm.ModelLevelHigh:   llm.FakeModelByLevel(llm.ModelLevelHigh),
+		llm.ModelLevelXHigh:  llm.FakeModelByLevel(llm.ModelLevelXHigh),
+	}
+
+	if strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) != "" {
+		tier := strings.TrimSpace(os.Getenv("GEMINI_TIER"))
+		if tier == "" {
+			tier = "free"
+		}
+		if err := llmclient.RegisterGeminiModelsForTier(reg, tier); err != nil {
+			return nil, err
+		}
+		defaultProvider = "gemini"
+		defaultsByLevel = map[llm.ModelLevel]string{
+			llm.ModelLevelLow:    "gemini-2.5-flash",
+			llm.ModelLevelMiddle: "gemini-2.5-flash",
+			llm.ModelLevelHigh:   "gemini-2.5-pro",
+			llm.ModelLevelXHigh:  "gemini-2.5-pro",
+		}
+	} else if strings.TrimSpace(os.Getenv("GROQ_API_KEY")) != "" {
+		tier := strings.TrimSpace(os.Getenv("GROQ_TIER"))
+		if tier == "" {
+			tier = "free"
+		}
+		if err := llmclient.RegisterGroqModelsForTier(reg, tier); err != nil {
+			return nil, err
+		}
+		defaultProvider = "groq"
+		defaultsByLevel = map[llm.ModelLevel]string{
+			llm.ModelLevelLow:    "llama-3.1-8b-instant",
+			llm.ModelLevelMiddle: "llama-3.3-70b-versatile",
+			llm.ModelLevelHigh:   "llama-3.3-70b-versatile",
+			llm.ModelLevelXHigh:  "openai/gpt-oss-120b",
+		}
+	}
+
 	roles := []llm.ModelRole{llm.ModelRoleWorker, llm.ModelRolePlanner}
 	levels := []llm.ModelLevel{llm.ModelLevelLow, llm.ModelLevelMiddle, llm.ModelLevelHigh, llm.ModelLevelXHigh}
 	for _, role := range roles {
 		for _, level := range levels {
-			if err := reg.SetDefault(role, level, "fake", llm.FakeModelByLevel(level)); err != nil {
+			model := strings.TrimSpace(defaultsByLevel[level])
+			if model == "" {
+				model = llm.FakeModelByLevel(level)
+			}
+			if err := reg.SetDefault(role, level, defaultProvider, model); err != nil {
 				return nil, err
 			}
 		}
