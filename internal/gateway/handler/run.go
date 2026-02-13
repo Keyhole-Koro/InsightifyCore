@@ -116,5 +116,4 @@ func (s *Service) emitRunEvent(projectID, runID string, eventCh chan<- *insighti
 	if eventCh != nil {
 		eventCh <- ev
 	}
-	s.publishRunEventToChat(projectID, runID, ev)
 }

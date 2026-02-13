@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	insightifyv1 "insightify/gen/go/insightify/v1"
 	llminteraction "insightify/internal/llmInteraction"
 )
 
@@ -94,19 +93,7 @@ func (m *Manager) RunIDByConversation(conversationID string) string {
 	return m.interaction.RunIDByConversation(conversationID)
 }
 
-func (m *Manager) AppendChatEvent(runID, conversationID string, ev *insightifyv1.ChatEvent) {
-	if m == nil {
-		return
-	}
-	m.interaction.AppendChatEvent(runID, conversationID, ev)
-}
 
-func (m *Manager) SubscribeConversation(conversationID string, fromSeq int64) ([]*insightifyv1.ChatEvent, <-chan *insightifyv1.ChatEvent, func()) {
-	if m == nil {
-		return nil, nil, nil
-	}
-	return m.interaction.SubscribeConversation(conversationID, fromSeq)
-}
 
 func (m *Manager) RegisterNeedInput(projectID, runID, workerKey, prompt string) (string, error) {
 	if m == nil {

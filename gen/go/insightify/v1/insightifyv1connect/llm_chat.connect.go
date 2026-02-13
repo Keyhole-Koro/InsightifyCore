@@ -33,9 +33,6 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// LlmChatServiceWatchChatProcedure is the fully-qualified name of the LlmChatService's WatchChat
-	// RPC.
-	LlmChatServiceWatchChatProcedure = "/insightify.v1.LlmChatService/WatchChat"
 	// LlmChatServiceSendMessageProcedure is the fully-qualified name of the LlmChatService's
 	// SendMessage RPC.
 	LlmChatServiceSendMessageProcedure = "/insightify.v1.LlmChatService/SendMessage"
@@ -43,8 +40,6 @@ const (
 
 // LlmChatServiceClient is a client for the insightify.v1.LlmChatService service.
 type LlmChatServiceClient interface {
-	// Watch chat-level events for a run.
-	WatchChat(context.Context, *connect.Request[v1.WatchChatRequest]) (*connect.ServerStreamForClient[v1.ChatEvent], error)
 	// Send user follow-up input to a waiting interactive run.
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 }
@@ -60,12 +55,6 @@ func NewLlmChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	llmChatServiceMethods := v1.File_insightify_v1_llm_chat_proto.Services().ByName("LlmChatService").Methods()
 	return &llmChatServiceClient{
-		watchChat: connect.NewClient[v1.WatchChatRequest, v1.ChatEvent](
-			httpClient,
-			baseURL+LlmChatServiceWatchChatProcedure,
-			connect.WithSchema(llmChatServiceMethods.ByName("WatchChat")),
-			connect.WithClientOptions(opts...),
-		),
 		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
 			httpClient,
 			baseURL+LlmChatServiceSendMessageProcedure,
@@ -77,13 +66,7 @@ func NewLlmChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // llmChatServiceClient implements LlmChatServiceClient.
 type llmChatServiceClient struct {
-	watchChat   *connect.Client[v1.WatchChatRequest, v1.ChatEvent]
 	sendMessage *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
-}
-
-// WatchChat calls insightify.v1.LlmChatService.WatchChat.
-func (c *llmChatServiceClient) WatchChat(ctx context.Context, req *connect.Request[v1.WatchChatRequest]) (*connect.ServerStreamForClient[v1.ChatEvent], error) {
-	return c.watchChat.CallServerStream(ctx, req)
 }
 
 // SendMessage calls insightify.v1.LlmChatService.SendMessage.
@@ -93,8 +76,6 @@ func (c *llmChatServiceClient) SendMessage(ctx context.Context, req *connect.Req
 
 // LlmChatServiceHandler is an implementation of the insightify.v1.LlmChatService service.
 type LlmChatServiceHandler interface {
-	// Watch chat-level events for a run.
-	WatchChat(context.Context, *connect.Request[v1.WatchChatRequest], *connect.ServerStream[v1.ChatEvent]) error
 	// Send user follow-up input to a waiting interactive run.
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 }
@@ -106,12 +87,6 @@ type LlmChatServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewLlmChatServiceHandler(svc LlmChatServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	llmChatServiceMethods := v1.File_insightify_v1_llm_chat_proto.Services().ByName("LlmChatService").Methods()
-	llmChatServiceWatchChatHandler := connect.NewServerStreamHandler(
-		LlmChatServiceWatchChatProcedure,
-		svc.WatchChat,
-		connect.WithSchema(llmChatServiceMethods.ByName("WatchChat")),
-		connect.WithHandlerOptions(opts...),
-	)
 	llmChatServiceSendMessageHandler := connect.NewUnaryHandler(
 		LlmChatServiceSendMessageProcedure,
 		svc.SendMessage,
@@ -120,8 +95,6 @@ func NewLlmChatServiceHandler(svc LlmChatServiceHandler, opts ...connect.Handler
 	)
 	return "/insightify.v1.LlmChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case LlmChatServiceWatchChatProcedure:
-			llmChatServiceWatchChatHandler.ServeHTTP(w, r)
 		case LlmChatServiceSendMessageProcedure:
 			llmChatServiceSendMessageHandler.ServeHTTP(w, r)
 		default:
@@ -132,10 +105,6 @@ func NewLlmChatServiceHandler(svc LlmChatServiceHandler, opts ...connect.Handler
 
 // UnimplementedLlmChatServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedLlmChatServiceHandler struct{}
-
-func (UnimplementedLlmChatServiceHandler) WatchChat(context.Context, *connect.Request[v1.WatchChatRequest], *connect.ServerStream[v1.ChatEvent]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.LlmChatService.WatchChat is not implemented"))
-}
 
 func (UnimplementedLlmChatServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.LlmChatService.SendMessage is not implemented"))

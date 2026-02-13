@@ -2,7 +2,6 @@ package llminteraction
 
 import (
 	"fmt"
-	insightifyv1 "insightify/gen/go/insightify/v1"
 	"strings"
 	"sync"
 	"time"
@@ -43,8 +42,6 @@ type Service interface {
 	EnsureConversation(runID, conversationID string) string
 	ConversationIDByRun(runID string) string
 	RunIDByConversation(conversationID string) string
-	AppendChatEvent(runID, conversationID string, ev *insightifyv1.ChatEvent)
-	SubscribeConversation(conversationID string, fromSeq int64) ([]*insightifyv1.ChatEvent, <-chan *insightifyv1.ChatEvent, func())
 }
 
 type Handler struct {

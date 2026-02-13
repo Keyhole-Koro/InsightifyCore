@@ -76,64 +76,6 @@ func (UiNodeType) EnumDescriptor() ([]byte, []int) {
 	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{0}
 }
 
-type ChatEvent_EventType int32
-
-const (
-	ChatEvent_EVENT_TYPE_UNSPECIFIED     ChatEvent_EventType = 0
-	ChatEvent_EVENT_TYPE_ASSISTANT_CHUNK ChatEvent_EventType = 1
-	ChatEvent_EVENT_TYPE_ASSISTANT_FINAL ChatEvent_EventType = 2
-	ChatEvent_EVENT_TYPE_NEED_INPUT      ChatEvent_EventType = 3
-	ChatEvent_EVENT_TYPE_ERROR           ChatEvent_EventType = 4
-	ChatEvent_EVENT_TYPE_COMPLETE        ChatEvent_EventType = 5
-)
-
-// Enum value maps for ChatEvent_EventType.
-var (
-	ChatEvent_EventType_name = map[int32]string{
-		0: "EVENT_TYPE_UNSPECIFIED",
-		1: "EVENT_TYPE_ASSISTANT_CHUNK",
-		2: "EVENT_TYPE_ASSISTANT_FINAL",
-		3: "EVENT_TYPE_NEED_INPUT",
-		4: "EVENT_TYPE_ERROR",
-		5: "EVENT_TYPE_COMPLETE",
-	}
-	ChatEvent_EventType_value = map[string]int32{
-		"EVENT_TYPE_UNSPECIFIED":     0,
-		"EVENT_TYPE_ASSISTANT_CHUNK": 1,
-		"EVENT_TYPE_ASSISTANT_FINAL": 2,
-		"EVENT_TYPE_NEED_INPUT":      3,
-		"EVENT_TYPE_ERROR":           4,
-		"EVENT_TYPE_COMPLETE":        5,
-	}
-)
-
-func (x ChatEvent_EventType) Enum() *ChatEvent_EventType {
-	p := new(ChatEvent_EventType)
-	*p = x
-	return p
-}
-
-func (x ChatEvent_EventType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ChatEvent_EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_insightify_v1_llm_chat_proto_enumTypes[1].Descriptor()
-}
-
-func (ChatEvent_EventType) Type() protoreflect.EnumType {
-	return &file_insightify_v1_llm_chat_proto_enumTypes[1]
-}
-
-func (x ChatEvent_EventType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ChatEvent_EventType.Descriptor instead.
-func (ChatEvent_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{3, 0}
-}
-
 type UiChatMessage_Role int32
 
 const (
@@ -167,11 +109,11 @@ func (x UiChatMessage_Role) String() string {
 }
 
 func (UiChatMessage_Role) Descriptor() protoreflect.EnumDescriptor {
-	return file_insightify_v1_llm_chat_proto_enumTypes[2].Descriptor()
+	return file_insightify_v1_llm_chat_proto_enumTypes[1].Descriptor()
 }
 
 func (UiChatMessage_Role) Type() protoreflect.EnumType {
-	return &file_insightify_v1_llm_chat_proto_enumTypes[2]
+	return &file_insightify_v1_llm_chat_proto_enumTypes[1]
 }
 
 func (x UiChatMessage_Role) Number() protoreflect.EnumNumber {
@@ -180,83 +122,7 @@ func (x UiChatMessage_Role) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use UiChatMessage_Role.Descriptor instead.
 func (UiChatMessage_Role) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{5, 0}
-}
-
-type WatchChatRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	FromSeq        int64                  `protobuf:"varint,4,opt,name=from_seq,json=fromSeq,proto3" json:"from_seq,omitempty"`
-	ProjectId      string                 `protobuf:"bytes,5,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *WatchChatRequest) Reset() {
-	*x = WatchChatRequest{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WatchChatRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WatchChatRequest) ProtoMessage() {}
-
-func (x *WatchChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WatchChatRequest.ProtoReflect.Descriptor instead.
-func (*WatchChatRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *WatchChatRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *WatchChatRequest) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *WatchChatRequest) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *WatchChatRequest) GetFromSeq() int64 {
-	if x != nil {
-		return x.FromSeq
-	}
-	return 0
-}
-
-func (x *WatchChatRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{3, 0}
 }
 
 type SendMessageRequest struct {
@@ -274,7 +140,7 @@ type SendMessageRequest struct {
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -286,7 +152,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -299,7 +165,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{1}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *SendMessageRequest) GetSessionId() string {
@@ -362,7 +228,7 @@ type SendMessageResponse struct {
 
 func (x *SendMessageResponse) Reset() {
 	*x = SendMessageResponse{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +240,7 @@ func (x *SendMessageResponse) String() string {
 func (*SendMessageResponse) ProtoMessage() {}
 
 func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +253,7 @@ func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{2}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *SendMessageResponse) GetAccepted() bool {
@@ -411,122 +277,6 @@ func (x *SendMessageResponse) GetConversationId() string {
 	return ""
 }
 
-type ChatEvent struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	EventType      ChatEvent_EventType    `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=insightify.v1.ChatEvent_EventType" json:"event_type,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,3,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	WorkerKey      string                 `protobuf:"bytes,4,opt,name=worker_key,json=workerKey,proto3" json:"worker_key,omitempty"`
-	InteractionId  string                 `protobuf:"bytes,5,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	Seq            int64                  `protobuf:"varint,6,opt,name=seq,proto3" json:"seq,omitempty"`
-	Text           string                 `protobuf:"bytes,7,opt,name=text,proto3" json:"text,omitempty"`
-	ConversationId string                 `protobuf:"bytes,8,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	ProjectId      string                 `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Node           *UiNode                `protobuf:"bytes,20,opt,name=node,proto3" json:"node,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ChatEvent) Reset() {
-	*x = ChatEvent{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ChatEvent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ChatEvent) ProtoMessage() {}
-
-func (x *ChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ChatEvent.ProtoReflect.Descriptor instead.
-func (*ChatEvent) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ChatEvent) GetEventType() ChatEvent_EventType {
-	if x != nil {
-		return x.EventType
-	}
-	return ChatEvent_EVENT_TYPE_UNSPECIFIED
-}
-
-func (x *ChatEvent) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetWorkerKey() string {
-	if x != nil {
-		return x.WorkerKey
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetInteractionId() string {
-	if x != nil {
-		return x.InteractionId
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetSeq() int64 {
-	if x != nil {
-		return x.Seq
-	}
-	return 0
-}
-
-func (x *ChatEvent) GetText() string {
-	if x != nil {
-		return x.Text
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *ChatEvent) GetNode() *UiNode {
-	if x != nil {
-		return x.Node
-	}
-	return nil
-}
-
 type UiNodeMeta struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
@@ -538,7 +288,7 @@ type UiNodeMeta struct {
 
 func (x *UiNodeMeta) Reset() {
 	*x = UiNodeMeta{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +300,7 @@ func (x *UiNodeMeta) String() string {
 func (*UiNodeMeta) ProtoMessage() {}
 
 func (x *UiNodeMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +313,7 @@ func (x *UiNodeMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiNodeMeta.ProtoReflect.Descriptor instead.
 func (*UiNodeMeta) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{4}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UiNodeMeta) GetTitle() string {
@@ -598,7 +348,7 @@ type UiChatMessage struct {
 
 func (x *UiChatMessage) Reset() {
 	*x = UiChatMessage{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -610,7 +360,7 @@ func (x *UiChatMessage) String() string {
 func (*UiChatMessage) ProtoMessage() {}
 
 func (x *UiChatMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -623,7 +373,7 @@ func (x *UiChatMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiChatMessage.ProtoReflect.Descriptor instead.
 func (*UiChatMessage) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{5}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UiChatMessage) GetId() string {
@@ -660,7 +410,7 @@ type UiLlmChatState struct {
 
 func (x *UiLlmChatState) Reset() {
 	*x = UiLlmChatState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +422,7 @@ func (x *UiLlmChatState) String() string {
 func (*UiLlmChatState) ProtoMessage() {}
 
 func (x *UiLlmChatState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +435,7 @@ func (x *UiLlmChatState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiLlmChatState.ProtoReflect.Descriptor instead.
 func (*UiLlmChatState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{6}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *UiLlmChatState) GetModel() string {
@@ -732,7 +482,7 @@ type UiMarkdownState struct {
 
 func (x *UiMarkdownState) Reset() {
 	*x = UiMarkdownState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +494,7 @@ func (x *UiMarkdownState) String() string {
 func (*UiMarkdownState) ProtoMessage() {}
 
 func (x *UiMarkdownState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +507,7 @@ func (x *UiMarkdownState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiMarkdownState.ProtoReflect.Descriptor instead.
 func (*UiMarkdownState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{7}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UiMarkdownState) GetMarkdown() string {
@@ -777,7 +527,7 @@ type UiImageState struct {
 
 func (x *UiImageState) Reset() {
 	*x = UiImageState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[8]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -789,7 +539,7 @@ func (x *UiImageState) String() string {
 func (*UiImageState) ProtoMessage() {}
 
 func (x *UiImageState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[8]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -802,7 +552,7 @@ func (x *UiImageState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiImageState.ProtoReflect.Descriptor instead.
 func (*UiImageState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{8}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UiImageState) GetSrc() string {
@@ -829,7 +579,7 @@ type UiTableState struct {
 
 func (x *UiTableState) Reset() {
 	*x = UiTableState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[9]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +591,7 @@ func (x *UiTableState) String() string {
 func (*UiTableState) ProtoMessage() {}
 
 func (x *UiTableState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[9]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -854,7 +604,7 @@ func (x *UiTableState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiTableState.ProtoReflect.Descriptor instead.
 func (*UiTableState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{9}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UiTableState) GetColumns() []string {
@@ -880,7 +630,7 @@ type UiTableRow struct {
 
 func (x *UiTableRow) Reset() {
 	*x = UiTableRow{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[10]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -892,7 +642,7 @@ func (x *UiTableRow) String() string {
 func (*UiTableRow) ProtoMessage() {}
 
 func (x *UiTableRow) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[10]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -905,7 +655,7 @@ func (x *UiTableRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiTableRow.ProtoReflect.Descriptor instead.
 func (*UiTableRow) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{10}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UiTableRow) GetCells() []string {
@@ -930,7 +680,7 @@ type UiNode struct {
 
 func (x *UiNode) Reset() {
 	*x = UiNode{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[11]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -942,7 +692,7 @@ func (x *UiNode) String() string {
 func (*UiNode) ProtoMessage() {}
 
 func (x *UiNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[11]
+	mi := &file_insightify_v1_llm_chat_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -955,7 +705,7 @@ func (x *UiNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiNode.ProtoReflect.Descriptor instead.
 func (*UiNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{11}
+	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UiNode) GetId() string {
@@ -1011,15 +761,7 @@ var File_insightify_v1_llm_chat_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinsightify/v1/llm_chat.proto\x12\rinsightify.v1\"\xab\x01\n" +
-	"\x10WatchChatRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x19\n" +
-	"\bfrom_seq\x18\x04 \x01(\x03R\afromSeq\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x05 \x01(\tR\tprojectId\"\xf3\x01\n" +
+	"\x1cinsightify/v1/llm_chat.proto\x12\rinsightify.v1\"\xf3\x01\n" +
 	"\x12SendMessageRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
@@ -1033,29 +775,7 @@ const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"\x97\x04\n" +
-	"\tChatEvent\x12A\n" +
-	"\n" +
-	"event_type\x18\x01 \x01(\x0e2\".insightify.v1.ChatEvent.EventTypeR\teventType\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x15\n" +
-	"\x06run_id\x18\x03 \x01(\tR\x05runId\x12\x1d\n" +
-	"\n" +
-	"worker_key\x18\x04 \x01(\tR\tworkerKey\x12%\n" +
-	"\x0einteraction_id\x18\x05 \x01(\tR\rinteractionId\x12\x10\n" +
-	"\x03seq\x18\x06 \x01(\x03R\x03seq\x12\x12\n" +
-	"\x04text\x18\a \x01(\tR\x04text\x12'\n" +
-	"\x0fconversation_id\x18\b \x01(\tR\x0econversationId\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\t \x01(\tR\tprojectId\x12)\n" +
-	"\x04node\x18\x14 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\xb1\x01\n" +
-	"\tEventType\x12\x1a\n" +
-	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1e\n" +
-	"\x1aEVENT_TYPE_ASSISTANT_CHUNK\x10\x01\x12\x1e\n" +
-	"\x1aEVENT_TYPE_ASSISTANT_FINAL\x10\x02\x12\x19\n" +
-	"\x15EVENT_TYPE_NEED_INPUT\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x04\x12\x17\n" +
-	"\x13EVENT_TYPE_COMPLETE\x10\x05\"X\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"X\n" +
 	"\n" +
 	"UiNodeMeta\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
@@ -1102,9 +822,8 @@ const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\x15UI_NODE_TYPE_LLM_CHAT\x10\x01\x12\x19\n" +
 	"\x15UI_NODE_TYPE_MARKDOWN\x10\x02\x12\x16\n" +
 	"\x12UI_NODE_TYPE_IMAGE\x10\x03\x12\x16\n" +
-	"\x12UI_NODE_TYPE_TABLE\x10\x042\xb0\x01\n" +
-	"\x0eLlmChatService\x12H\n" +
-	"\tWatchChat\x12\x1f.insightify.v1.WatchChatRequest\x1a\x18.insightify.v1.ChatEvent0\x01\x12T\n" +
+	"\x12UI_NODE_TYPE_TABLE\x10\x042f\n" +
+	"\x0eLlmChatService\x12T\n" +
 	"\vSendMessage\x12!.insightify.v1.SendMessageRequest\x1a\".insightify.v1.SendMessageResponseB\xa4\x01\n" +
 	"\x11com.insightify.v1B\fLlmChatProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
@@ -1120,46 +839,39 @@ func file_insightify_v1_llm_chat_proto_rawDescGZIP() []byte {
 	return file_insightify_v1_llm_chat_proto_rawDescData
 }
 
-var file_insightify_v1_llm_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_insightify_v1_llm_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_insightify_v1_llm_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_insightify_v1_llm_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_insightify_v1_llm_chat_proto_goTypes = []any{
 	(UiNodeType)(0),             // 0: insightify.v1.UiNodeType
-	(ChatEvent_EventType)(0),    // 1: insightify.v1.ChatEvent.EventType
-	(UiChatMessage_Role)(0),     // 2: insightify.v1.UiChatMessage.Role
-	(*WatchChatRequest)(nil),    // 3: insightify.v1.WatchChatRequest
-	(*SendMessageRequest)(nil),  // 4: insightify.v1.SendMessageRequest
-	(*SendMessageResponse)(nil), // 5: insightify.v1.SendMessageResponse
-	(*ChatEvent)(nil),           // 6: insightify.v1.ChatEvent
-	(*UiNodeMeta)(nil),          // 7: insightify.v1.UiNodeMeta
-	(*UiChatMessage)(nil),       // 8: insightify.v1.UiChatMessage
-	(*UiLlmChatState)(nil),      // 9: insightify.v1.UiLlmChatState
-	(*UiMarkdownState)(nil),     // 10: insightify.v1.UiMarkdownState
-	(*UiImageState)(nil),        // 11: insightify.v1.UiImageState
-	(*UiTableState)(nil),        // 12: insightify.v1.UiTableState
-	(*UiTableRow)(nil),          // 13: insightify.v1.UiTableRow
-	(*UiNode)(nil),              // 14: insightify.v1.UiNode
+	(UiChatMessage_Role)(0),     // 1: insightify.v1.UiChatMessage.Role
+	(*SendMessageRequest)(nil),  // 2: insightify.v1.SendMessageRequest
+	(*SendMessageResponse)(nil), // 3: insightify.v1.SendMessageResponse
+	(*UiNodeMeta)(nil),          // 4: insightify.v1.UiNodeMeta
+	(*UiChatMessage)(nil),       // 5: insightify.v1.UiChatMessage
+	(*UiLlmChatState)(nil),      // 6: insightify.v1.UiLlmChatState
+	(*UiMarkdownState)(nil),     // 7: insightify.v1.UiMarkdownState
+	(*UiImageState)(nil),        // 8: insightify.v1.UiImageState
+	(*UiTableState)(nil),        // 9: insightify.v1.UiTableState
+	(*UiTableRow)(nil),          // 10: insightify.v1.UiTableRow
+	(*UiNode)(nil),              // 11: insightify.v1.UiNode
 }
 var file_insightify_v1_llm_chat_proto_depIdxs = []int32{
-	1,  // 0: insightify.v1.ChatEvent.event_type:type_name -> insightify.v1.ChatEvent.EventType
-	14, // 1: insightify.v1.ChatEvent.node:type_name -> insightify.v1.UiNode
-	2,  // 2: insightify.v1.UiChatMessage.role:type_name -> insightify.v1.UiChatMessage.Role
-	8,  // 3: insightify.v1.UiLlmChatState.messages:type_name -> insightify.v1.UiChatMessage
-	13, // 4: insightify.v1.UiTableState.rows:type_name -> insightify.v1.UiTableRow
-	0,  // 5: insightify.v1.UiNode.type:type_name -> insightify.v1.UiNodeType
-	7,  // 6: insightify.v1.UiNode.meta:type_name -> insightify.v1.UiNodeMeta
-	9,  // 7: insightify.v1.UiNode.llm_chat:type_name -> insightify.v1.UiLlmChatState
-	10, // 8: insightify.v1.UiNode.markdown:type_name -> insightify.v1.UiMarkdownState
-	11, // 9: insightify.v1.UiNode.image:type_name -> insightify.v1.UiImageState
-	12, // 10: insightify.v1.UiNode.table:type_name -> insightify.v1.UiTableState
-	3,  // 11: insightify.v1.LlmChatService.WatchChat:input_type -> insightify.v1.WatchChatRequest
-	4,  // 12: insightify.v1.LlmChatService.SendMessage:input_type -> insightify.v1.SendMessageRequest
-	6,  // 13: insightify.v1.LlmChatService.WatchChat:output_type -> insightify.v1.ChatEvent
-	5,  // 14: insightify.v1.LlmChatService.SendMessage:output_type -> insightify.v1.SendMessageResponse
-	13, // [13:15] is the sub-list for method output_type
-	11, // [11:13] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	1,  // 0: insightify.v1.UiChatMessage.role:type_name -> insightify.v1.UiChatMessage.Role
+	5,  // 1: insightify.v1.UiLlmChatState.messages:type_name -> insightify.v1.UiChatMessage
+	10, // 2: insightify.v1.UiTableState.rows:type_name -> insightify.v1.UiTableRow
+	0,  // 3: insightify.v1.UiNode.type:type_name -> insightify.v1.UiNodeType
+	4,  // 4: insightify.v1.UiNode.meta:type_name -> insightify.v1.UiNodeMeta
+	6,  // 5: insightify.v1.UiNode.llm_chat:type_name -> insightify.v1.UiLlmChatState
+	7,  // 6: insightify.v1.UiNode.markdown:type_name -> insightify.v1.UiMarkdownState
+	8,  // 7: insightify.v1.UiNode.image:type_name -> insightify.v1.UiImageState
+	9,  // 8: insightify.v1.UiNode.table:type_name -> insightify.v1.UiTableState
+	2,  // 9: insightify.v1.LlmChatService.SendMessage:input_type -> insightify.v1.SendMessageRequest
+	3,  // 10: insightify.v1.LlmChatService.SendMessage:output_type -> insightify.v1.SendMessageResponse
+	10, // [10:11] is the sub-list for method output_type
+	9,  // [9:10] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_llm_chat_proto_init() }
@@ -1172,8 +884,8 @@ func file_insightify_v1_llm_chat_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_llm_chat_proto_rawDesc), len(file_insightify_v1_llm_chat_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   12,
+			NumEnums:      2,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

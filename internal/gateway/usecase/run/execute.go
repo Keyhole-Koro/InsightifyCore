@@ -8,7 +8,6 @@ import (
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	pipelinev1 "insightify/gen/go/pipeline/v1"
-	chatuc "insightify/internal/gateway/usecase/chat"
 	"insightify/internal/runner"
 	"insightify/internal/ui"
 	"insightify/internal/workers/plan"
@@ -149,9 +148,9 @@ func ExecuteWorkerRun(sess WorkerSession, runID, workerKey, userInput string, ev
 				return
 			}
 			emit(deps, sess.ProjectID, runID, eventCh, &insightifyv1.WatchRunResponse{
-				EventType:  insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS,
-				Message:    fmt.Sprintf("%s%s", chatuc.InputRequiredPrefix, requestID),
-				ClientView: finalView,
+				EventType:      insightifyv1.WatchRunResponse_EVENT_TYPE_INPUT_REQUIRED,
+				InputRequestId: requestID,
+				ClientView:     finalView,
 			})
 
 			reply, err := deps.WaitPendingUserInput(runID, 10*time.Minute)
@@ -199,8 +198,8 @@ func (e *runUIEmitter) EmitUIEvent(event ui.Event) {
 			e.deps.SetRunNode(e.runID, node)
 		}
 		emit(e.deps, e.projectID, e.runID, e.eventCh, &insightifyv1.WatchRunResponse{
-			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_PROGRESS,
-			Message:   chatuc.NodeReadyPrefix,
+			EventType: insightifyv1.WatchRunResponse_EVENT_TYPE_NODE_READY,
+			Node:      node,
 		})
 	case ui.EventTypeRemoveNode:
 		if e.deps.ClearRunNode != nil {

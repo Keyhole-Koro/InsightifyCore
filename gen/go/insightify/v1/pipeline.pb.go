@@ -25,11 +25,13 @@ const (
 type WatchRunResponse_EventType int32
 
 const (
-	WatchRunResponse_EVENT_TYPE_UNSPECIFIED WatchRunResponse_EventType = 0
-	WatchRunResponse_EVENT_TYPE_LOG         WatchRunResponse_EventType = 1
-	WatchRunResponse_EVENT_TYPE_PROGRESS    WatchRunResponse_EventType = 2
-	WatchRunResponse_EVENT_TYPE_COMPLETE    WatchRunResponse_EventType = 3
-	WatchRunResponse_EVENT_TYPE_ERROR       WatchRunResponse_EventType = 4
+	WatchRunResponse_EVENT_TYPE_UNSPECIFIED    WatchRunResponse_EventType = 0
+	WatchRunResponse_EVENT_TYPE_LOG            WatchRunResponse_EventType = 1
+	WatchRunResponse_EVENT_TYPE_PROGRESS       WatchRunResponse_EventType = 2
+	WatchRunResponse_EVENT_TYPE_COMPLETE       WatchRunResponse_EventType = 3
+	WatchRunResponse_EVENT_TYPE_ERROR          WatchRunResponse_EventType = 4
+	WatchRunResponse_EVENT_TYPE_INPUT_REQUIRED WatchRunResponse_EventType = 5
+	WatchRunResponse_EVENT_TYPE_NODE_READY     WatchRunResponse_EventType = 6
 )
 
 // Enum value maps for WatchRunResponse_EventType.
@@ -40,13 +42,17 @@ var (
 		2: "EVENT_TYPE_PROGRESS",
 		3: "EVENT_TYPE_COMPLETE",
 		4: "EVENT_TYPE_ERROR",
+		5: "EVENT_TYPE_INPUT_REQUIRED",
+		6: "EVENT_TYPE_NODE_READY",
 	}
 	WatchRunResponse_EventType_value = map[string]int32{
-		"EVENT_TYPE_UNSPECIFIED": 0,
-		"EVENT_TYPE_LOG":         1,
-		"EVENT_TYPE_PROGRESS":    2,
-		"EVENT_TYPE_COMPLETE":    3,
-		"EVENT_TYPE_ERROR":       4,
+		"EVENT_TYPE_UNSPECIFIED":    0,
+		"EVENT_TYPE_LOG":            1,
+		"EVENT_TYPE_PROGRESS":       2,
+		"EVENT_TYPE_COMPLETE":       3,
+		"EVENT_TYPE_ERROR":          4,
+		"EVENT_TYPE_INPUT_REQUIRED": 5,
+		"EVENT_TYPE_NODE_READY":     6,
 	}
 )
 
@@ -874,9 +880,13 @@ type WatchRunResponse struct {
 	EventType       WatchRunResponse_EventType `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=insightify.v1.WatchRunResponse_EventType" json:"event_type,omitempty"`
 	Message         string                     `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	ProgressPercent int32                      `protobuf:"varint,3,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
-	ClientView      *v1.ClientView             `protobuf:"bytes,4,opt,name=client_view,json=clientView,proto3" json:"client_view,omitempty"` // Set when event_type is COMPLETE
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	ClientView      *v1.ClientView             `protobuf:"bytes,4,opt,name=client_view,json=clientView,proto3" json:"client_view,omitempty"`
+	// Set when event_type is INPUT_REQUIRED.
+	InputRequestId string `protobuf:"bytes,5,opt,name=input_request_id,json=inputRequestId,proto3" json:"input_request_id,omitempty"`
+	// Set when event_type is NODE_READY.
+	Node          *UiNode `protobuf:"bytes,6,opt,name=node,proto3" json:"node,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WatchRunResponse) Reset() {
@@ -937,11 +947,25 @@ func (x *WatchRunResponse) GetClientView() *v1.ClientView {
 	return nil
 }
 
+func (x *WatchRunResponse) GetInputRequestId() string {
+	if x != nil {
+		return x.InputRequestId
+	}
+	return ""
+}
+
+func (x *WatchRunResponse) GetNode() *UiNode {
+	if x != nil {
+		return x.Node
+	}
+	return nil
+}
+
 var File_insightify_v1_pipeline_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_pipeline_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinsightify/v1/pipeline.proto\x12\rinsightify.v1\x1a\x1dpipeline/v1/client_view.proto\"c\n" +
+	"\x1cinsightify/v1/pipeline.proto\x12\rinsightify.v1\x1a\x1dpipeline/v1/client_view.proto\x1a\x1cinsightify/v1/llm_chat.proto\"c\n" +
 	"\x0eInitRunRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
 	"\brepo_url\x18\x02 \x01(\tR\arepoUrl\x12\x1d\n" +
@@ -1005,20 +1029,24 @@ const file_insightify_v1_pipeline_proto_rawDesc = "" +
 	"\x16SubmitRunInputResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"(\n" +
 	"\x0fWatchRunRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\xe1\x02\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\xf0\x03\n" +
 	"\x10WatchRunResponse\x12H\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2).insightify.v1.WatchRunResponse.EventTypeR\teventType\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12)\n" +
 	"\x10progress_percent\x18\x03 \x01(\x05R\x0fprogressPercent\x128\n" +
 	"\vclient_view\x18\x04 \x01(\v2\x17.pipeline.v1.ClientViewR\n" +
-	"clientView\"\x83\x01\n" +
+	"clientView\x12(\n" +
+	"\x10input_request_id\x18\x05 \x01(\tR\x0einputRequestId\x12)\n" +
+	"\x04node\x18\x06 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\xbd\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eEVENT_TYPE_LOG\x10\x01\x12\x17\n" +
 	"\x13EVENT_TYPE_PROGRESS\x10\x02\x12\x17\n" +
 	"\x13EVENT_TYPE_COMPLETE\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x042\xe6\x04\n" +
+	"\x10EVENT_TYPE_ERROR\x10\x04\x12\x1d\n" +
+	"\x19EVENT_TYPE_INPUT_REQUIRED\x10\x05\x12\x19\n" +
+	"\x15EVENT_TYPE_NODE_READY\x10\x062\xe6\x04\n" +
 	"\x0fPipelineService\x12H\n" +
 	"\aInitRun\x12\x1d.insightify.v1.InitRunRequest\x1a\x1e.insightify.v1.InitRunResponse\x12W\n" +
 	"\fListProjects\x12\".insightify.v1.ListProjectsRequest\x1a#.insightify.v1.ListProjectsResponse\x12Z\n" +
@@ -1062,6 +1090,7 @@ var file_insightify_v1_pipeline_proto_goTypes = []any{
 	(*WatchRunResponse)(nil),        // 15: insightify.v1.WatchRunResponse
 	nil,                             // 16: insightify.v1.StartRunRequest.ParamsEntry
 	(*v1.ClientView)(nil),           // 17: pipeline.v1.ClientView
+	(*UiNode)(nil),                  // 18: insightify.v1.UiNode
 }
 var file_insightify_v1_pipeline_proto_depIdxs = []int32{
 	3,  // 0: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
@@ -1071,25 +1100,26 @@ var file_insightify_v1_pipeline_proto_depIdxs = []int32{
 	17, // 4: insightify.v1.StartRunResponse.client_view:type_name -> pipeline.v1.ClientView
 	0,  // 5: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
 	17, // 6: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
-	1,  // 7: insightify.v1.PipelineService.InitRun:input_type -> insightify.v1.InitRunRequest
-	4,  // 8: insightify.v1.PipelineService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
-	6,  // 9: insightify.v1.PipelineService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
-	8,  // 10: insightify.v1.PipelineService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
-	10, // 11: insightify.v1.PipelineService.StartRun:input_type -> insightify.v1.StartRunRequest
-	12, // 12: insightify.v1.PipelineService.NeedUserInput:input_type -> insightify.v1.SubmitRunInputRequest
-	14, // 13: insightify.v1.PipelineService.WatchRun:input_type -> insightify.v1.WatchRunRequest
-	2,  // 14: insightify.v1.PipelineService.InitRun:output_type -> insightify.v1.InitRunResponse
-	5,  // 15: insightify.v1.PipelineService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
-	7,  // 16: insightify.v1.PipelineService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
-	9,  // 17: insightify.v1.PipelineService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
-	11, // 18: insightify.v1.PipelineService.StartRun:output_type -> insightify.v1.StartRunResponse
-	13, // 19: insightify.v1.PipelineService.NeedUserInput:output_type -> insightify.v1.SubmitRunInputResponse
-	15, // 20: insightify.v1.PipelineService.WatchRun:output_type -> insightify.v1.WatchRunResponse
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	18, // 7: insightify.v1.WatchRunResponse.node:type_name -> insightify.v1.UiNode
+	1,  // 8: insightify.v1.PipelineService.InitRun:input_type -> insightify.v1.InitRunRequest
+	4,  // 9: insightify.v1.PipelineService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
+	6,  // 10: insightify.v1.PipelineService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
+	8,  // 11: insightify.v1.PipelineService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
+	10, // 12: insightify.v1.PipelineService.StartRun:input_type -> insightify.v1.StartRunRequest
+	12, // 13: insightify.v1.PipelineService.NeedUserInput:input_type -> insightify.v1.SubmitRunInputRequest
+	14, // 14: insightify.v1.PipelineService.WatchRun:input_type -> insightify.v1.WatchRunRequest
+	2,  // 15: insightify.v1.PipelineService.InitRun:output_type -> insightify.v1.InitRunResponse
+	5,  // 16: insightify.v1.PipelineService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
+	7,  // 17: insightify.v1.PipelineService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
+	9,  // 18: insightify.v1.PipelineService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
+	11, // 19: insightify.v1.PipelineService.StartRun:output_type -> insightify.v1.StartRunResponse
+	13, // 20: insightify.v1.PipelineService.NeedUserInput:output_type -> insightify.v1.SubmitRunInputResponse
+	15, // 21: insightify.v1.PipelineService.WatchRun:output_type -> insightify.v1.WatchRunResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_pipeline_proto_init() }
@@ -1097,6 +1127,7 @@ func file_insightify_v1_pipeline_proto_init() {
 	if File_insightify_v1_pipeline_proto != nil {
 		return
 	}
+	file_insightify_v1_llm_chat_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
