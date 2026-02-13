@@ -112,7 +112,7 @@ func (s *Service) projectDeps() projectuc.Deps {
 			return projectStateToSession(ps), true
 		},
 		NewRunContext: func(repo, projectID string) (runtime.RunEnvironment, error) {
-			return NewRunContext(repo, projectID)
+			return runtime.NewRunContext(repo, projectID)
 		},
 		HasRequiredWorkers: hasRequiredWorkersEnv,
 	}
@@ -124,7 +124,7 @@ func (s *Service) projectDeps() projectuc.Deps {
 
 type projectState struct {
 	projectstore.State
-	RunCtx *RunContext
+	RunCtx *runtime.RunContext
 }
 
 func (s *Service) getProjectState(projectID string) (projectState, bool) {
@@ -132,7 +132,7 @@ func (s *Service) getProjectState(projectID string) (projectState, bool) {
 	if !ok {
 		return projectState{}, false
 	}
-	runCtx, _ := p.RunCtx.(*RunContext) // handler-specific downcast
+	runCtx, _ := p.RunCtx.(*runtime.RunContext)
 	return projectState{State: p.State, RunCtx: runCtx}, true
 }
 
@@ -160,7 +160,7 @@ func (s *Service) listProjectsByUser(userID string) []projectState {
 		if !isProjectID(r.State.ProjectID) {
 			continue
 		}
-		runCtx, _ := r.RunCtx.(*RunContext) // handler-specific downcast
+		runCtx, _ := r.RunCtx.(*runtime.RunContext)
 		projects = append(projects, projectState{State: r.State, RunCtx: runCtx})
 	}
 	return projects
@@ -183,7 +183,7 @@ func (s *Service) setActiveProjectForUser(userID, projectID string) (projectStat
 	if !isProjectID(r.State.ProjectID) {
 		return projectState{}, false
 	}
-	runCtx, _ := r.RunCtx.(*RunContext) // handler-specific downcast
+	runCtx, _ := r.RunCtx.(*runtime.RunContext)
 	return projectState{State: r.State, RunCtx: runCtx}, true
 }
 
@@ -195,7 +195,7 @@ func (s *Service) ensureProjectRunContext(projectID string) (projectState, error
 	if sess.RunCtx != nil && hasRequiredWorkers(sess.RunCtx) {
 		return sess, nil
 	}
-	runCtx, err := NewRunContext(sess.Repo, projectID)
+	runCtx, err := runtime.NewRunContext(sess.Repo, projectID)
 	if err != nil {
 		return projectState{}, fmt.Errorf("failed to restore run context: %w", err)
 	}
@@ -203,7 +203,7 @@ func (s *Service) ensureProjectRunContext(projectID string) (projectState, error
 	return updated, nil
 }
 
-func hasRequiredWorkers(runCtx *RunContext) bool {
+func hasRequiredWorkers(runCtx *runtime.RunContext) bool {
 	if runCtx == nil || runCtx.Env == nil || runCtx.Env.Resolver == nil {
 		return false
 	}
@@ -213,7 +213,7 @@ func hasRequiredWorkers(runCtx *RunContext) bool {
 }
 
 // hasRequiredWorkersEnv checks via the runtime.RunEnvironment interface,
-// used by usecase Deps that don't know about *RunContext.
+// used by usecase Deps that don't know about *runtime.RunContext.
 func hasRequiredWorkersEnv(env runtime.RunEnvironment) bool {
 	if env == nil || env.GetEnv() == nil || env.GetEnv().Resolver == nil {
 		return false
@@ -264,7 +264,7 @@ func projectStateToSession(ps projectState) projectuc.Session {
 }
 
 func projectStateFromUsecase(sess projectuc.Session) projectState {
-	runCtx, _ := sess.RunCtx.(*RunContext)
+	runCtx, _ := sess.RunCtx.(*runtime.RunContext)
 	return projectState{
 		State: projectstore.State{
 			ProjectID:   strings.TrimSpace(sess.ProjectID),
