@@ -18,6 +18,13 @@ import (
 	"insightify/internal/utils"
 )
 
+// RunEnvironment abstracts the worker execution environment.
+type RunEnvironment interface {
+	GetEnv() *runner.Env
+	GetOutDir() string
+	GetID() string
+}
+
 // RunContext holds the full runtime environment for a single project run.
 type RunContext struct {
 	ID       string

@@ -10,7 +10,10 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"insightify/internal/gateway/handler"
+	"insightify/gen/go/insightify/v1/insightifyv1connect"
+	gatewayproject "insightify/internal/gateway/project"
+	gatewayrun "insightify/internal/gateway/run"
+	"insightify/internal/gateway/ui"
 )
 
 func main() {
@@ -19,15 +22,19 @@ func main() {
 
 	_ = godotenv.Load()
 
-	svc := handler.NewService(handler.DefaultApp())
-	mux := handler.BuildMux(svc)
+	uiStore := ui.NewStore()
+	projectSvc := gatewayproject.New(defaultProjectStore)
+	runSvc := gatewayrun.New(projectSvc.AsProjectReader(), uiStore)
+
+	mux := http.NewServeMux()
+	mux.Handle(insightifyv1connect.NewProjectServiceHandler(projectSvc))
+	mux.Handle(insightifyv1connect.NewRunServiceHandler(runSvc))
 
 	// Simple CORS middleware
 	h := http.Handler(mux)
 	h = func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := strings.TrimSpace(r.Header.Get("Origin"))
-			// Credentials mode requires a concrete origin, not "*".
 			if origin != "" {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
