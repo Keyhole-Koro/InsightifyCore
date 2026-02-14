@@ -25,13 +25,12 @@ const (
 type WatchRunResponse_EventType int32
 
 const (
-	WatchRunResponse_EVENT_TYPE_UNSPECIFIED    WatchRunResponse_EventType = 0
-	WatchRunResponse_EVENT_TYPE_LOG            WatchRunResponse_EventType = 1
-	WatchRunResponse_EVENT_TYPE_PROGRESS       WatchRunResponse_EventType = 2
-	WatchRunResponse_EVENT_TYPE_COMPLETE       WatchRunResponse_EventType = 3
-	WatchRunResponse_EVENT_TYPE_ERROR          WatchRunResponse_EventType = 4
-	WatchRunResponse_EVENT_TYPE_INPUT_REQUIRED WatchRunResponse_EventType = 5
-	WatchRunResponse_EVENT_TYPE_NODE_READY     WatchRunResponse_EventType = 6
+	WatchRunResponse_EVENT_TYPE_UNSPECIFIED WatchRunResponse_EventType = 0
+	WatchRunResponse_EVENT_TYPE_LOG         WatchRunResponse_EventType = 1
+	WatchRunResponse_EVENT_TYPE_PROGRESS    WatchRunResponse_EventType = 2
+	WatchRunResponse_EVENT_TYPE_COMPLETE    WatchRunResponse_EventType = 3
+	WatchRunResponse_EVENT_TYPE_ERROR       WatchRunResponse_EventType = 4
+	WatchRunResponse_EVENT_TYPE_NODE_READY  WatchRunResponse_EventType = 5
 )
 
 // Enum value maps for WatchRunResponse_EventType.
@@ -42,17 +41,15 @@ var (
 		2: "EVENT_TYPE_PROGRESS",
 		3: "EVENT_TYPE_COMPLETE",
 		4: "EVENT_TYPE_ERROR",
-		5: "EVENT_TYPE_INPUT_REQUIRED",
-		6: "EVENT_TYPE_NODE_READY",
+		5: "EVENT_TYPE_NODE_READY",
 	}
 	WatchRunResponse_EventType_value = map[string]int32{
-		"EVENT_TYPE_UNSPECIFIED":    0,
-		"EVENT_TYPE_LOG":            1,
-		"EVENT_TYPE_PROGRESS":       2,
-		"EVENT_TYPE_COMPLETE":       3,
-		"EVENT_TYPE_ERROR":          4,
-		"EVENT_TYPE_INPUT_REQUIRED": 5,
-		"EVENT_TYPE_NODE_READY":     6,
+		"EVENT_TYPE_UNSPECIFIED": 0,
+		"EVENT_TYPE_LOG":         1,
+		"EVENT_TYPE_PROGRESS":    2,
+		"EVENT_TYPE_COMPLETE":    3,
+		"EVENT_TYPE_ERROR":       4,
+		"EVENT_TYPE_NODE_READY":  5,
 	}
 )
 
@@ -253,10 +250,8 @@ type WatchRunResponse struct {
 	Message         string                     `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	ProgressPercent int32                      `protobuf:"varint,3,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
 	ClientView      *v1.ClientView             `protobuf:"bytes,4,opt,name=client_view,json=clientView,proto3" json:"client_view,omitempty"`
-	// Set when event_type is INPUT_REQUIRED.
-	InputRequestId string `protobuf:"bytes,5,opt,name=input_request_id,json=inputRequestId,proto3" json:"input_request_id,omitempty"`
 	// Set when event_type is NODE_READY.
-	Node          *UiNode `protobuf:"bytes,6,opt,name=node,proto3" json:"node,omitempty"`
+	Node          *UiNode `protobuf:"bytes,5,opt,name=node,proto3" json:"node,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -319,13 +314,6 @@ func (x *WatchRunResponse) GetClientView() *v1.ClientView {
 	return nil
 }
 
-func (x *WatchRunResponse) GetInputRequestId() string {
-	if x != nil {
-		return x.InputRequestId
-	}
-	return ""
-}
-
 func (x *WatchRunResponse) GetNode() *UiNode {
 	if x != nil {
 		return x.Node
@@ -333,8 +321,159 @@ func (x *WatchRunResponse) GetNode() *UiNode {
 	return nil
 }
 
-// SubmitInput merges the former NeedUserInput and SendMessage RPCs.
-type SubmitInputRequest struct {
+type WaitForInputRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	TimeoutMs      int32                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WaitForInputRequest) Reset() {
+	*x = WaitForInputRequest{}
+	mi := &file_insightify_v1_run_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WaitForInputRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WaitForInputRequest) ProtoMessage() {}
+
+func (x *WaitForInputRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WaitForInputRequest.ProtoReflect.Descriptor instead.
+func (*WaitForInputRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *WaitForInputRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *WaitForInputRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *WaitForInputRequest) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *WaitForInputRequest) GetTimeoutMs() int32 {
+	if x != nil {
+		return x.TimeoutMs
+	}
+	return 0
+}
+
+type WaitForInputResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Waiting        bool                   `protobuf:"varint,1,opt,name=waiting,proto3" json:"waiting,omitempty"`
+	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	InteractionId  string                 `protobuf:"bytes,3,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,4,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	Prompt         string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Closed         bool                   `protobuf:"varint,6,opt,name=closed,proto3" json:"closed,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WaitForInputResponse) Reset() {
+	*x = WaitForInputResponse{}
+	mi := &file_insightify_v1_run_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WaitForInputResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WaitForInputResponse) ProtoMessage() {}
+
+func (x *WaitForInputResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WaitForInputResponse.ProtoReflect.Descriptor instead.
+func (*WaitForInputResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WaitForInputResponse) GetWaiting() bool {
+	if x != nil {
+		return x.Waiting
+	}
+	return false
+}
+
+func (x *WaitForInputResponse) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *WaitForInputResponse) GetInteractionId() string {
+	if x != nil {
+		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *WaitForInputResponse) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *WaitForInputResponse) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *WaitForInputResponse) GetClosed() bool {
+	if x != nil {
+		return x.Closed
+	}
+	return false
+}
+
+type SendUserMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -345,21 +484,21 @@ type SubmitInputRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *SubmitInputRequest) Reset() {
-	*x = SubmitInputRequest{}
-	mi := &file_insightify_v1_run_proto_msgTypes[4]
+func (x *SendUserMessageRequest) Reset() {
+	*x = SendUserMessageRequest{}
+	mi := &file_insightify_v1_run_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SubmitInputRequest) String() string {
+func (x *SendUserMessageRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SubmitInputRequest) ProtoMessage() {}
+func (*SendUserMessageRequest) ProtoMessage() {}
 
-func (x *SubmitInputRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_run_proto_msgTypes[4]
+func (x *SendUserMessageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,47 +509,47 @@ func (x *SubmitInputRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SubmitInputRequest.ProtoReflect.Descriptor instead.
-func (*SubmitInputRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_run_proto_rawDescGZIP(), []int{4}
+// Deprecated: Use SendUserMessageRequest.ProtoReflect.Descriptor instead.
+func (*SendUserMessageRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SubmitInputRequest) GetProjectId() string {
+func (x *SendUserMessageRequest) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
 	}
 	return ""
 }
 
-func (x *SubmitInputRequest) GetRunId() string {
+func (x *SendUserMessageRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-func (x *SubmitInputRequest) GetInput() string {
+func (x *SendUserMessageRequest) GetInput() string {
 	if x != nil {
 		return x.Input
 	}
 	return ""
 }
 
-func (x *SubmitInputRequest) GetInteractionId() string {
+func (x *SendUserMessageRequest) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
 	}
 	return ""
 }
 
-func (x *SubmitInputRequest) GetConversationId() string {
+func (x *SendUserMessageRequest) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
 	}
 	return ""
 }
 
-type SubmitInputResponse struct {
+type SendUserMessageResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Accepted       bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
 	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -420,21 +559,21 @@ type SubmitInputResponse struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *SubmitInputResponse) Reset() {
-	*x = SubmitInputResponse{}
-	mi := &file_insightify_v1_run_proto_msgTypes[5]
+func (x *SendUserMessageResponse) Reset() {
+	*x = SendUserMessageResponse{}
+	mi := &file_insightify_v1_run_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SubmitInputResponse) String() string {
+func (x *SendUserMessageResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SubmitInputResponse) ProtoMessage() {}
+func (*SendUserMessageResponse) ProtoMessage() {}
 
-func (x *SubmitInputResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_run_proto_msgTypes[5]
+func (x *SendUserMessageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -445,33 +584,297 @@ func (x *SubmitInputResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SubmitInputResponse.ProtoReflect.Descriptor instead.
-func (*SubmitInputResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_run_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use SendUserMessageResponse.ProtoReflect.Descriptor instead.
+func (*SendUserMessageResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *SubmitInputResponse) GetAccepted() bool {
+func (x *SendUserMessageResponse) GetAccepted() bool {
 	if x != nil {
 		return x.Accepted
 	}
 	return false
 }
 
-func (x *SubmitInputResponse) GetRunId() string {
+func (x *SendUserMessageResponse) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-func (x *SubmitInputResponse) GetInteractionId() string {
+func (x *SendUserMessageResponse) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
 	}
 	return ""
 }
 
-func (x *SubmitInputResponse) GetConversationId() string {
+func (x *SendUserMessageResponse) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+type SendServerMessageRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SendServerMessageRequest) Reset() {
+	*x = SendServerMessageRequest{}
+	mi := &file_insightify_v1_run_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendServerMessageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendServerMessageRequest) ProtoMessage() {}
+
+func (x *SendServerMessageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendServerMessageRequest.ProtoReflect.Descriptor instead.
+func (*SendServerMessageRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SendServerMessageRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SendServerMessageRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *SendServerMessageRequest) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+type SendServerMessageResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RunId          string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	InteractionId  string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	Message        string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Terminal       bool                   `protobuf:"varint,5,opt,name=terminal,proto3" json:"terminal,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SendServerMessageResponse) Reset() {
+	*x = SendServerMessageResponse{}
+	mi := &file_insightify_v1_run_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendServerMessageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendServerMessageResponse) ProtoMessage() {}
+
+func (x *SendServerMessageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendServerMessageResponse.ProtoReflect.Descriptor instead.
+func (*SendServerMessageResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SendServerMessageResponse) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *SendServerMessageResponse) GetInteractionId() string {
+	if x != nil {
+		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *SendServerMessageResponse) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *SendServerMessageResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SendServerMessageResponse) GetTerminal() bool {
+	if x != nil {
+		return x.Terminal
+	}
+	return false
+}
+
+type CloseInteractionRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	Reason         string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CloseInteractionRequest) Reset() {
+	*x = CloseInteractionRequest{}
+	mi := &file_insightify_v1_run_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseInteractionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseInteractionRequest) ProtoMessage() {}
+
+func (x *CloseInteractionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseInteractionRequest.ProtoReflect.Descriptor instead.
+func (*CloseInteractionRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CloseInteractionRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CloseInteractionRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *CloseInteractionRequest) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *CloseInteractionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CloseInteractionResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Closed         bool                   `protobuf:"varint,1,opt,name=closed,proto3" json:"closed,omitempty"`
+	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CloseInteractionResponse) Reset() {
+	*x = CloseInteractionResponse{}
+	mi := &file_insightify_v1_run_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseInteractionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseInteractionResponse) ProtoMessage() {}
+
+func (x *CloseInteractionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_run_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseInteractionResponse.ProtoReflect.Descriptor instead.
+func (*CloseInteractionResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_run_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CloseInteractionResponse) GetClosed() bool {
+	if x != nil {
+		return x.Closed
+	}
+	return false
+}
+
+func (x *CloseInteractionResponse) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *CloseInteractionResponse) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
 	}
@@ -499,41 +902,77 @@ const file_insightify_v1_run_proto_rawDesc = "" +
 	"\vclient_view\x18\x02 \x01(\v2\x17.pipeline.v1.ClientViewR\n" +
 	"clientView\"(\n" +
 	"\x0fWatchRunRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\xf0\x03\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\xa7\x03\n" +
 	"\x10WatchRunResponse\x12H\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2).insightify.v1.WatchRunResponse.EventTypeR\teventType\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12)\n" +
 	"\x10progress_percent\x18\x03 \x01(\x05R\x0fprogressPercent\x128\n" +
 	"\vclient_view\x18\x04 \x01(\v2\x17.pipeline.v1.ClientViewR\n" +
-	"clientView\x12(\n" +
-	"\x10input_request_id\x18\x05 \x01(\tR\x0einputRequestId\x12)\n" +
-	"\x04node\x18\x06 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\xbd\x01\n" +
+	"clientView\x12)\n" +
+	"\x04node\x18\x05 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\x9e\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eEVENT_TYPE_LOG\x10\x01\x12\x17\n" +
 	"\x13EVENT_TYPE_PROGRESS\x10\x02\x12\x17\n" +
 	"\x13EVENT_TYPE_COMPLETE\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x04\x12\x1d\n" +
-	"\x19EVENT_TYPE_INPUT_REQUIRED\x10\x05\x12\x19\n" +
-	"\x15EVENT_TYPE_NODE_READY\x10\x06\"\xb0\x01\n" +
-	"\x12SubmitInputRequest\x12\x1d\n" +
+	"\x10EVENT_TYPE_ERROR\x10\x04\x12\x19\n" +
+	"\x15EVENT_TYPE_NODE_READY\x10\x05\"\x93\x01\n" +
+	"\x13WaitForInputRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x1d\n" +
+	"\n" +
+	"timeout_ms\x18\x04 \x01(\x05R\ttimeoutMs\"\xc7\x01\n" +
+	"\x14WaitForInputResponse\x12\x18\n" +
+	"\awaiting\x18\x01 \x01(\bR\awaiting\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12%\n" +
+	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12'\n" +
+	"\x0fconversation_id\x18\x04 \x01(\tR\x0econversationId\x12\x16\n" +
+	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x12\x16\n" +
+	"\x06closed\x18\x06 \x01(\bR\x06closed\"\xb4\x01\n" +
+	"\x16SendUserMessageRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x14\n" +
 	"\x05input\x18\x03 \x01(\tR\x05input\x12%\n" +
 	"\x0einteraction_id\x18\x04 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x05 \x01(\tR\x0econversationId\"\x98\x01\n" +
-	"\x13SubmitInputResponse\x12\x1a\n" +
+	"\x0fconversation_id\x18\x05 \x01(\tR\x0econversationId\"\x9c\x01\n" +
+	"\x17SendUserMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12%\n" +
 	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x04 \x01(\tR\x0econversationId2\xfe\x01\n" +
+	"\x0fconversation_id\x18\x04 \x01(\tR\x0econversationId\"y\n" +
+	"\x18SendServerMessageRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"\xb8\x01\n" +
+	"\x19SendServerMessageResponse\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
+	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1a\n" +
+	"\bterminal\x18\x05 \x01(\bR\bterminal\"\x90\x01\n" +
+	"\x17CloseInteractionRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"r\n" +
+	"\x18CloseInteractionResponse\x12\x16\n" +
+	"\x06closed\x18\x01 \x01(\bR\x06closed\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId2\xb0\x04\n" +
 	"\n" +
 	"RunService\x12K\n" +
 	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponse\x12M\n" +
-	"\bWatchRun\x12\x1e.insightify.v1.WatchRunRequest\x1a\x1f.insightify.v1.WatchRunResponse0\x01\x12T\n" +
-	"\vSubmitInput\x12!.insightify.v1.SubmitInputRequest\x1a\".insightify.v1.SubmitInputResponseB\xa0\x01\n" +
+	"\bWatchRun\x12\x1e.insightify.v1.WatchRunRequest\x1a\x1f.insightify.v1.WatchRunResponse0\x01\x12W\n" +
+	"\fWaitForInput\x12\".insightify.v1.WaitForInputRequest\x1a#.insightify.v1.WaitForInputResponse\x12`\n" +
+	"\x0fSendUserMessage\x12%.insightify.v1.SendUserMessageRequest\x1a&.insightify.v1.SendUserMessageResponse\x12f\n" +
+	"\x11SendServerMessage\x12'.insightify.v1.SendServerMessageRequest\x1a(.insightify.v1.SendServerMessageResponse\x12c\n" +
+	"\x10CloseInteraction\x12&.insightify.v1.CloseInteractionRequest\x1a'.insightify.v1.CloseInteractionResponseB\xa0\x01\n" +
 	"\x11com.insightify.v1B\bRunProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -549,36 +988,48 @@ func file_insightify_v1_run_proto_rawDescGZIP() []byte {
 }
 
 var file_insightify_v1_run_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_insightify_v1_run_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_insightify_v1_run_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_insightify_v1_run_proto_goTypes = []any{
-	(WatchRunResponse_EventType)(0), // 0: insightify.v1.WatchRunResponse.EventType
-	(*StartRunRequest)(nil),         // 1: insightify.v1.StartRunRequest
-	(*StartRunResponse)(nil),        // 2: insightify.v1.StartRunResponse
-	(*WatchRunRequest)(nil),         // 3: insightify.v1.WatchRunRequest
-	(*WatchRunResponse)(nil),        // 4: insightify.v1.WatchRunResponse
-	(*SubmitInputRequest)(nil),      // 5: insightify.v1.SubmitInputRequest
-	(*SubmitInputResponse)(nil),     // 6: insightify.v1.SubmitInputResponse
-	nil,                             // 7: insightify.v1.StartRunRequest.ParamsEntry
-	(*v1.ClientView)(nil),           // 8: pipeline.v1.ClientView
-	(*UiNode)(nil),                  // 9: insightify.v1.UiNode
+	(WatchRunResponse_EventType)(0),   // 0: insightify.v1.WatchRunResponse.EventType
+	(*StartRunRequest)(nil),           // 1: insightify.v1.StartRunRequest
+	(*StartRunResponse)(nil),          // 2: insightify.v1.StartRunResponse
+	(*WatchRunRequest)(nil),           // 3: insightify.v1.WatchRunRequest
+	(*WatchRunResponse)(nil),          // 4: insightify.v1.WatchRunResponse
+	(*WaitForInputRequest)(nil),       // 5: insightify.v1.WaitForInputRequest
+	(*WaitForInputResponse)(nil),      // 6: insightify.v1.WaitForInputResponse
+	(*SendUserMessageRequest)(nil),    // 7: insightify.v1.SendUserMessageRequest
+	(*SendUserMessageResponse)(nil),   // 8: insightify.v1.SendUserMessageResponse
+	(*SendServerMessageRequest)(nil),  // 9: insightify.v1.SendServerMessageRequest
+	(*SendServerMessageResponse)(nil), // 10: insightify.v1.SendServerMessageResponse
+	(*CloseInteractionRequest)(nil),   // 11: insightify.v1.CloseInteractionRequest
+	(*CloseInteractionResponse)(nil),  // 12: insightify.v1.CloseInteractionResponse
+	nil,                               // 13: insightify.v1.StartRunRequest.ParamsEntry
+	(*v1.ClientView)(nil),             // 14: pipeline.v1.ClientView
+	(*UiNode)(nil),                    // 15: insightify.v1.UiNode
 }
 var file_insightify_v1_run_proto_depIdxs = []int32{
-	7, // 0: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
-	8, // 1: insightify.v1.StartRunResponse.client_view:type_name -> pipeline.v1.ClientView
-	0, // 2: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
-	8, // 3: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
-	9, // 4: insightify.v1.WatchRunResponse.node:type_name -> insightify.v1.UiNode
-	1, // 5: insightify.v1.RunService.StartRun:input_type -> insightify.v1.StartRunRequest
-	3, // 6: insightify.v1.RunService.WatchRun:input_type -> insightify.v1.WatchRunRequest
-	5, // 7: insightify.v1.RunService.SubmitInput:input_type -> insightify.v1.SubmitInputRequest
-	2, // 8: insightify.v1.RunService.StartRun:output_type -> insightify.v1.StartRunResponse
-	4, // 9: insightify.v1.RunService.WatchRun:output_type -> insightify.v1.WatchRunResponse
-	6, // 10: insightify.v1.RunService.SubmitInput:output_type -> insightify.v1.SubmitInputResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	13, // 0: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
+	14, // 1: insightify.v1.StartRunResponse.client_view:type_name -> pipeline.v1.ClientView
+	0,  // 2: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
+	14, // 3: insightify.v1.WatchRunResponse.client_view:type_name -> pipeline.v1.ClientView
+	15, // 4: insightify.v1.WatchRunResponse.node:type_name -> insightify.v1.UiNode
+	1,  // 5: insightify.v1.RunService.StartRun:input_type -> insightify.v1.StartRunRequest
+	3,  // 6: insightify.v1.RunService.WatchRun:input_type -> insightify.v1.WatchRunRequest
+	5,  // 7: insightify.v1.RunService.WaitForInput:input_type -> insightify.v1.WaitForInputRequest
+	7,  // 8: insightify.v1.RunService.SendUserMessage:input_type -> insightify.v1.SendUserMessageRequest
+	9,  // 9: insightify.v1.RunService.SendServerMessage:input_type -> insightify.v1.SendServerMessageRequest
+	11, // 10: insightify.v1.RunService.CloseInteraction:input_type -> insightify.v1.CloseInteractionRequest
+	2,  // 11: insightify.v1.RunService.StartRun:output_type -> insightify.v1.StartRunResponse
+	4,  // 12: insightify.v1.RunService.WatchRun:output_type -> insightify.v1.WatchRunResponse
+	6,  // 13: insightify.v1.RunService.WaitForInput:output_type -> insightify.v1.WaitForInputResponse
+	8,  // 14: insightify.v1.RunService.SendUserMessage:output_type -> insightify.v1.SendUserMessageResponse
+	10, // 15: insightify.v1.RunService.SendServerMessage:output_type -> insightify.v1.SendServerMessageResponse
+	12, // 16: insightify.v1.RunService.CloseInteraction:output_type -> insightify.v1.CloseInteractionResponse
+	11, // [11:17] is the sub-list for method output_type
+	5,  // [5:11] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_run_proto_init() }
@@ -593,7 +1044,7 @@ func file_insightify_v1_run_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_run_proto_rawDesc), len(file_insightify_v1_run_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

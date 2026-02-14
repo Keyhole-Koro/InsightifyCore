@@ -37,15 +37,27 @@ const (
 	RunServiceStartRunProcedure = "/insightify.v1.RunService/StartRun"
 	// RunServiceWatchRunProcedure is the fully-qualified name of the RunService's WatchRun RPC.
 	RunServiceWatchRunProcedure = "/insightify.v1.RunService/WatchRun"
-	// RunServiceSubmitInputProcedure is the fully-qualified name of the RunService's SubmitInput RPC.
-	RunServiceSubmitInputProcedure = "/insightify.v1.RunService/SubmitInput"
+	// RunServiceWaitForInputProcedure is the fully-qualified name of the RunService's WaitForInput RPC.
+	RunServiceWaitForInputProcedure = "/insightify.v1.RunService/WaitForInput"
+	// RunServiceSendUserMessageProcedure is the fully-qualified name of the RunService's
+	// SendUserMessage RPC.
+	RunServiceSendUserMessageProcedure = "/insightify.v1.RunService/SendUserMessage"
+	// RunServiceSendServerMessageProcedure is the fully-qualified name of the RunService's
+	// SendServerMessage RPC.
+	RunServiceSendServerMessageProcedure = "/insightify.v1.RunService/SendServerMessage"
+	// RunServiceCloseInteractionProcedure is the fully-qualified name of the RunService's
+	// CloseInteraction RPC.
+	RunServiceCloseInteractionProcedure = "/insightify.v1.RunService/CloseInteraction"
 )
 
 // RunServiceClient is a client for the insightify.v1.RunService service.
 type RunServiceClient interface {
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
 	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.WatchRunResponse], error)
-	SubmitInput(context.Context, *connect.Request[v1.SubmitInputRequest]) (*connect.Response[v1.SubmitInputResponse], error)
+	WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error)
+	SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error)
+	SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error)
+	CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error)
 }
 
 // NewRunServiceClient constructs a client for the insightify.v1.RunService service. By default, it
@@ -71,10 +83,28 @@ func NewRunServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(runServiceMethods.ByName("WatchRun")),
 			connect.WithClientOptions(opts...),
 		),
-		submitInput: connect.NewClient[v1.SubmitInputRequest, v1.SubmitInputResponse](
+		waitForInput: connect.NewClient[v1.WaitForInputRequest, v1.WaitForInputResponse](
 			httpClient,
-			baseURL+RunServiceSubmitInputProcedure,
-			connect.WithSchema(runServiceMethods.ByName("SubmitInput")),
+			baseURL+RunServiceWaitForInputProcedure,
+			connect.WithSchema(runServiceMethods.ByName("WaitForInput")),
+			connect.WithClientOptions(opts...),
+		),
+		sendUserMessage: connect.NewClient[v1.SendUserMessageRequest, v1.SendUserMessageResponse](
+			httpClient,
+			baseURL+RunServiceSendUserMessageProcedure,
+			connect.WithSchema(runServiceMethods.ByName("SendUserMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		sendServerMessage: connect.NewClient[v1.SendServerMessageRequest, v1.SendServerMessageResponse](
+			httpClient,
+			baseURL+RunServiceSendServerMessageProcedure,
+			connect.WithSchema(runServiceMethods.ByName("SendServerMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		closeInteraction: connect.NewClient[v1.CloseInteractionRequest, v1.CloseInteractionResponse](
+			httpClient,
+			baseURL+RunServiceCloseInteractionProcedure,
+			connect.WithSchema(runServiceMethods.ByName("CloseInteraction")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -82,9 +112,12 @@ func NewRunServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // runServiceClient implements RunServiceClient.
 type runServiceClient struct {
-	startRun    *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
-	watchRun    *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
-	submitInput *connect.Client[v1.SubmitInputRequest, v1.SubmitInputResponse]
+	startRun          *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
+	watchRun          *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
+	waitForInput      *connect.Client[v1.WaitForInputRequest, v1.WaitForInputResponse]
+	sendUserMessage   *connect.Client[v1.SendUserMessageRequest, v1.SendUserMessageResponse]
+	sendServerMessage *connect.Client[v1.SendServerMessageRequest, v1.SendServerMessageResponse]
+	closeInteraction  *connect.Client[v1.CloseInteractionRequest, v1.CloseInteractionResponse]
 }
 
 // StartRun calls insightify.v1.RunService.StartRun.
@@ -97,16 +130,34 @@ func (c *runServiceClient) WatchRun(ctx context.Context, req *connect.Request[v1
 	return c.watchRun.CallServerStream(ctx, req)
 }
 
-// SubmitInput calls insightify.v1.RunService.SubmitInput.
-func (c *runServiceClient) SubmitInput(ctx context.Context, req *connect.Request[v1.SubmitInputRequest]) (*connect.Response[v1.SubmitInputResponse], error) {
-	return c.submitInput.CallUnary(ctx, req)
+// WaitForInput calls insightify.v1.RunService.WaitForInput.
+func (c *runServiceClient) WaitForInput(ctx context.Context, req *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error) {
+	return c.waitForInput.CallUnary(ctx, req)
+}
+
+// SendUserMessage calls insightify.v1.RunService.SendUserMessage.
+func (c *runServiceClient) SendUserMessage(ctx context.Context, req *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error) {
+	return c.sendUserMessage.CallUnary(ctx, req)
+}
+
+// SendServerMessage calls insightify.v1.RunService.SendServerMessage.
+func (c *runServiceClient) SendServerMessage(ctx context.Context, req *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error) {
+	return c.sendServerMessage.CallUnary(ctx, req)
+}
+
+// CloseInteraction calls insightify.v1.RunService.CloseInteraction.
+func (c *runServiceClient) CloseInteraction(ctx context.Context, req *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error) {
+	return c.closeInteraction.CallUnary(ctx, req)
 }
 
 // RunServiceHandler is an implementation of the insightify.v1.RunService service.
 type RunServiceHandler interface {
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
 	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.WatchRunResponse]) error
-	SubmitInput(context.Context, *connect.Request[v1.SubmitInputRequest]) (*connect.Response[v1.SubmitInputResponse], error)
+	WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error)
+	SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error)
+	SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error)
+	CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error)
 }
 
 // NewRunServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -128,10 +179,28 @@ func NewRunServiceHandler(svc RunServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(runServiceMethods.ByName("WatchRun")),
 		connect.WithHandlerOptions(opts...),
 	)
-	runServiceSubmitInputHandler := connect.NewUnaryHandler(
-		RunServiceSubmitInputProcedure,
-		svc.SubmitInput,
-		connect.WithSchema(runServiceMethods.ByName("SubmitInput")),
+	runServiceWaitForInputHandler := connect.NewUnaryHandler(
+		RunServiceWaitForInputProcedure,
+		svc.WaitForInput,
+		connect.WithSchema(runServiceMethods.ByName("WaitForInput")),
+		connect.WithHandlerOptions(opts...),
+	)
+	runServiceSendUserMessageHandler := connect.NewUnaryHandler(
+		RunServiceSendUserMessageProcedure,
+		svc.SendUserMessage,
+		connect.WithSchema(runServiceMethods.ByName("SendUserMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	runServiceSendServerMessageHandler := connect.NewUnaryHandler(
+		RunServiceSendServerMessageProcedure,
+		svc.SendServerMessage,
+		connect.WithSchema(runServiceMethods.ByName("SendServerMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	runServiceCloseInteractionHandler := connect.NewUnaryHandler(
+		RunServiceCloseInteractionProcedure,
+		svc.CloseInteraction,
+		connect.WithSchema(runServiceMethods.ByName("CloseInteraction")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/insightify.v1.RunService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -140,8 +209,14 @@ func NewRunServiceHandler(svc RunServiceHandler, opts ...connect.HandlerOption) 
 			runServiceStartRunHandler.ServeHTTP(w, r)
 		case RunServiceWatchRunProcedure:
 			runServiceWatchRunHandler.ServeHTTP(w, r)
-		case RunServiceSubmitInputProcedure:
-			runServiceSubmitInputHandler.ServeHTTP(w, r)
+		case RunServiceWaitForInputProcedure:
+			runServiceWaitForInputHandler.ServeHTTP(w, r)
+		case RunServiceSendUserMessageProcedure:
+			runServiceSendUserMessageHandler.ServeHTTP(w, r)
+		case RunServiceSendServerMessageProcedure:
+			runServiceSendServerMessageHandler.ServeHTTP(w, r)
+		case RunServiceCloseInteractionProcedure:
+			runServiceCloseInteractionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -159,6 +234,18 @@ func (UnimplementedRunServiceHandler) WatchRun(context.Context, *connect.Request
 	return connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.WatchRun is not implemented"))
 }
 
-func (UnimplementedRunServiceHandler) SubmitInput(context.Context, *connect.Request[v1.SubmitInputRequest]) (*connect.Response[v1.SubmitInputResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.SubmitInput is not implemented"))
+func (UnimplementedRunServiceHandler) WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.WaitForInput is not implemented"))
+}
+
+func (UnimplementedRunServiceHandler) SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.SendUserMessage is not implemented"))
+}
+
+func (UnimplementedRunServiceHandler) SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.SendServerMessage is not implemented"))
+}
+
+func (UnimplementedRunServiceHandler) CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.CloseInteraction is not implemented"))
 }

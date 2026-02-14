@@ -21,16 +21,12 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			input := UserInputFromContext(ctx)
-			return plan.BootstrapIn{
-				UserInput: input,
-			}, nil
+			return plan.BootstrapIn{}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "bootstrap")
 			p := plan.BootstrapPipeline{
-				LLM:     env.LLM,
-				Emitter: EmitterFrom(ctx),
+				LLM: env.LLM,
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
@@ -54,16 +50,12 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			input := UserInputFromContext(ctx)
-			return plan.BootstrapIn{
-				UserInput: input,
-			}, nil
+			return plan.BootstrapIn{}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "bootstrap")
 			p := plan.BootstrapPipeline{
-				LLM:     env.LLM,
-				Emitter: EmitterFrom(ctx),
+				LLM: env.LLM,
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
@@ -87,16 +79,12 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		LLMRole:     llm.ModelRoleWorker,
 		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			input := UserInputFromContext(ctx)
-			return plan.BootstrapIn{
-				UserInput: input,
-			}, nil
+			return plan.BootstrapIn{}, nil
 		},
 		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "init_purpose")
 			p := plan.BootstrapPipeline{
-				LLM:     env.LLM,
-				Emitter: EmitterFrom(ctx),
+				LLM: env.LLM,
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {

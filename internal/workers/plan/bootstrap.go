@@ -43,36 +43,11 @@ type BootstrapPipeline struct {
 	Emitter ChunkEmitter
 }
 
-type initPurposeNeedInputAdapter struct{}
-
-func (initPurposeNeedInputAdapter) Extract(out artifact.InitPurposeOut) llmtool.NeedInputState {
-	return llmtool.NeedInputState{
-		NeedMoreInput:    out.NeedMoreInput,
-		AssistantMessage: strings.TrimSpace(out.AssistantMessage),
-		FollowupQuestion: strings.TrimSpace(out.FollowupQuestion),
-	}
-}
-
-func (initPurposeNeedInputAdapter) Apply(out artifact.InitPurposeOut, state llmtool.NeedInputState) artifact.InitPurposeOut {
-	out.NeedMoreInput = state.NeedMoreInput
-	out.AssistantMessage = strings.TrimSpace(state.AssistantMessage)
-	out.FollowupQuestion = strings.TrimSpace(state.FollowupQuestion)
-	return out
-}
-
-var initPurposeNeedInputPolicy = llmtool.NeedInputPolicy{
-	PreferFollowupAsMessage: true,
-	RequireAssistantMessage: true,
-	RequireFollowupQuestion: true,
-}
-
 var initPurposePromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	Purpose:      "Collect user learning intent and optional repository target, then decide whether more input is needed.",
 	Background:   "This stage returns the assistant response for the planning bootstrap conversation.",
 	OutputFields: llmtool.MustFieldsFromStruct(artifact.InitPurposeOut{}),
 	Constraints: []string{
-		"assistant_message should be concise and practical English.",
-		"assistant_message must never be empty.",
 		"followup_question must never be empty.",
 		"followup_question should be a short single question when need_more_input is true.",
 		"repo_url must be a concrete GitHub URL if present; otherwise empty.",
@@ -119,11 +94,7 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 		return BootstrapOut{}, fmt.Errorf("bootstrap: pipeline is nil")
 	}
 
-	out := BootstrapOut{
-		// Create the chat node at bootstrap start so callers can always rely on node presence.
-		UINode: buildInitialUINode(in.UserInput),
-	}
-	ui.SendUpsertNode(ctx, out.UINode)
+	out := BootstrapOut{}
 
 	result, err := p.runBootstrap(ctx, in)
 	if err != nil {
@@ -137,8 +108,6 @@ func (p *BootstrapPipeline) Run(ctx context.Context, in BootstrapIn) (BootstrapO
 		UserInput: strings.TrimSpace(in.UserInput),
 	}.Normalize()
 	out.ClientView = buildClientView(result)
-	out.UINode = buildUINode(in.UserInput, result)
-	ui.SendUpsertNode(ctx, out.UINode)
 	return out, nil
 }
 
@@ -147,7 +116,7 @@ func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (a
 	if strings.TrimSpace(in.UserInput) == "" {
 		p.emitChunk(bootstrapGreetingMessage)
 		return artifact.InitPurposeOut{
-			AssistantMessage: bootstrapGreetingMessage,
+			FollowupQuestion: bootstrapGreetingMessage,
 			NeedMoreInput:    true,
 		}, nil
 	}
@@ -214,7 +183,6 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return artifact.InitPurposeOut{}, fmt.Errorf("Bootstrap JSON invalid: %w\nraw: %s", err, string(raw))
 	}
-	out = llmtool.NormalizeNeedInput(llmCtx, out, initPurposeNeedInputAdapter{}, initPurposeNeedInputPolicy, nil)
 	return out, nil
 }
 
@@ -246,71 +214,6 @@ func (p *BootstrapPipeline) runScoutLLM(ctx context.Context, userInput string) (
 func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
 	return &pipelinev1.ClientView{
 		Phase:   "bootstrap",
-		Content: &pipelinev1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.AssistantMessage)},
-	}
-}
-
-func buildInitialUINode(userInput string) ui.Node {
-	messages := buildUserMessage(userInput)
-	node, ok := ui.BuildChatNode(
-		"init-purpose-node",
-		"bootstrap",
-		"Low",
-		messages,
-		true,
-		true,
-		"",
-	)
-	if !ok {
-		return ui.Node{}
-	}
-	return node
-}
-
-func buildUINode(userInput string, result artifact.InitPurposeOut) ui.Node {
-	history := buildUserMessage(userInput)
-	if result.NeedMoreInput {
-		prompt := strings.TrimSpace(result.FollowupQuestion)
-		if prompt == "" {
-			prompt = strings.TrimSpace(result.AssistantMessage)
-		}
-		node, ok := ui.NeedUserInput(
-			"init-purpose-node",
-			"bootstrap",
-			"Low",
-			prompt,
-			history,
-		)
-		if !ok {
-			return ui.Node{}
-		}
-		return node
-	}
-	node, ok := ui.Followup(
-		"init-purpose-node",
-		"bootstrap",
-		"Low",
-		result.AssistantMessage,
-		false,
-		result.FollowupQuestion,
-		history,
-	)
-	if !ok {
-		return ui.Node{}
-	}
-	return node
-}
-
-func buildUserMessage(userInput string) []ui.ChatMessage {
-	input := strings.TrimSpace(userInput)
-	if input == "" {
-		return nil
-	}
-	return []ui.ChatMessage{
-		{
-			ID:      "init-purpose-user",
-			Role:    ui.RoleUser,
-			Content: input,
-		},
+		Content: &pipelinev1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.FollowupQuestion)},
 	}
 }

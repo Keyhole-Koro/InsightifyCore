@@ -7,7 +7,6 @@ type InitPurposeIn struct {
 
 // InitPurposeOut is the structured output of init_purpose.
 type InitPurposeOut struct {
-	AssistantMessage string `json:"assistant_message"`
 	Purpose          string `json:"purpose"`
 	RepoURL          string `json:"repo_url"`
 	NeedMoreInput    bool   `json:"need_more_input"`
