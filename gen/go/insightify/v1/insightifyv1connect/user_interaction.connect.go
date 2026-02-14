@@ -33,26 +33,22 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// UserInteractionServiceWaitForInputProcedure is the fully-qualified name of the
-	// UserInteractionService's WaitForInput RPC.
-	UserInteractionServiceWaitForInputProcedure = "/insightify.v1.UserInteractionService/WaitForInput"
-	// UserInteractionServiceSendUserMessageProcedure is the fully-qualified name of the
-	// UserInteractionService's SendUserMessage RPC.
-	UserInteractionServiceSendUserMessageProcedure = "/insightify.v1.UserInteractionService/SendUserMessage"
-	// UserInteractionServiceSendServerMessageProcedure is the fully-qualified name of the
-	// UserInteractionService's SendServerMessage RPC.
-	UserInteractionServiceSendServerMessageProcedure = "/insightify.v1.UserInteractionService/SendServerMessage"
-	// UserInteractionServiceCloseInteractionProcedure is the fully-qualified name of the
-	// UserInteractionService's CloseInteraction RPC.
-	UserInteractionServiceCloseInteractionProcedure = "/insightify.v1.UserInteractionService/CloseInteraction"
+	// UserInteractionServiceWaitProcedure is the fully-qualified name of the UserInteractionService's
+	// Wait RPC.
+	UserInteractionServiceWaitProcedure = "/insightify.v1.UserInteractionService/Wait"
+	// UserInteractionServiceSendProcedure is the fully-qualified name of the UserInteractionService's
+	// Send RPC.
+	UserInteractionServiceSendProcedure = "/insightify.v1.UserInteractionService/Send"
+	// UserInteractionServiceCloseProcedure is the fully-qualified name of the UserInteractionService's
+	// Close RPC.
+	UserInteractionServiceCloseProcedure = "/insightify.v1.UserInteractionService/Close"
 )
 
 // UserInteractionServiceClient is a client for the insightify.v1.UserInteractionService service.
 type UserInteractionServiceClient interface {
-	WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error)
-	SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error)
-	SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error)
-	CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error)
+	Wait(context.Context, *connect.Request[v1.WaitRequest]) (*connect.Response[v1.WaitResponse], error)
+	Send(context.Context, *connect.Request[v1.SendRequest]) (*connect.Response[v1.SendResponse], error)
+	Close(context.Context, *connect.Request[v1.CloseRequest]) (*connect.Response[v1.CloseResponse], error)
 }
 
 // NewUserInteractionServiceClient constructs a client for the insightify.v1.UserInteractionService
@@ -66,28 +62,22 @@ func NewUserInteractionServiceClient(httpClient connect.HTTPClient, baseURL stri
 	baseURL = strings.TrimRight(baseURL, "/")
 	userInteractionServiceMethods := v1.File_insightify_v1_user_interaction_proto.Services().ByName("UserInteractionService").Methods()
 	return &userInteractionServiceClient{
-		waitForInput: connect.NewClient[v1.WaitForInputRequest, v1.WaitForInputResponse](
+		wait: connect.NewClient[v1.WaitRequest, v1.WaitResponse](
 			httpClient,
-			baseURL+UserInteractionServiceWaitForInputProcedure,
-			connect.WithSchema(userInteractionServiceMethods.ByName("WaitForInput")),
+			baseURL+UserInteractionServiceWaitProcedure,
+			connect.WithSchema(userInteractionServiceMethods.ByName("Wait")),
 			connect.WithClientOptions(opts...),
 		),
-		sendUserMessage: connect.NewClient[v1.SendUserMessageRequest, v1.SendUserMessageResponse](
+		send: connect.NewClient[v1.SendRequest, v1.SendResponse](
 			httpClient,
-			baseURL+UserInteractionServiceSendUserMessageProcedure,
-			connect.WithSchema(userInteractionServiceMethods.ByName("SendUserMessage")),
+			baseURL+UserInteractionServiceSendProcedure,
+			connect.WithSchema(userInteractionServiceMethods.ByName("Send")),
 			connect.WithClientOptions(opts...),
 		),
-		sendServerMessage: connect.NewClient[v1.SendServerMessageRequest, v1.SendServerMessageResponse](
+		close: connect.NewClient[v1.CloseRequest, v1.CloseResponse](
 			httpClient,
-			baseURL+UserInteractionServiceSendServerMessageProcedure,
-			connect.WithSchema(userInteractionServiceMethods.ByName("SendServerMessage")),
-			connect.WithClientOptions(opts...),
-		),
-		closeInteraction: connect.NewClient[v1.CloseInteractionRequest, v1.CloseInteractionResponse](
-			httpClient,
-			baseURL+UserInteractionServiceCloseInteractionProcedure,
-			connect.WithSchema(userInteractionServiceMethods.ByName("CloseInteraction")),
+			baseURL+UserInteractionServiceCloseProcedure,
+			connect.WithSchema(userInteractionServiceMethods.ByName("Close")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -95,39 +85,32 @@ func NewUserInteractionServiceClient(httpClient connect.HTTPClient, baseURL stri
 
 // userInteractionServiceClient implements UserInteractionServiceClient.
 type userInteractionServiceClient struct {
-	waitForInput      *connect.Client[v1.WaitForInputRequest, v1.WaitForInputResponse]
-	sendUserMessage   *connect.Client[v1.SendUserMessageRequest, v1.SendUserMessageResponse]
-	sendServerMessage *connect.Client[v1.SendServerMessageRequest, v1.SendServerMessageResponse]
-	closeInteraction  *connect.Client[v1.CloseInteractionRequest, v1.CloseInteractionResponse]
+	wait  *connect.Client[v1.WaitRequest, v1.WaitResponse]
+	send  *connect.Client[v1.SendRequest, v1.SendResponse]
+	close *connect.Client[v1.CloseRequest, v1.CloseResponse]
 }
 
-// WaitForInput calls insightify.v1.UserInteractionService.WaitForInput.
-func (c *userInteractionServiceClient) WaitForInput(ctx context.Context, req *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error) {
-	return c.waitForInput.CallUnary(ctx, req)
+// Wait calls insightify.v1.UserInteractionService.Wait.
+func (c *userInteractionServiceClient) Wait(ctx context.Context, req *connect.Request[v1.WaitRequest]) (*connect.Response[v1.WaitResponse], error) {
+	return c.wait.CallUnary(ctx, req)
 }
 
-// SendUserMessage calls insightify.v1.UserInteractionService.SendUserMessage.
-func (c *userInteractionServiceClient) SendUserMessage(ctx context.Context, req *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error) {
-	return c.sendUserMessage.CallUnary(ctx, req)
+// Send calls insightify.v1.UserInteractionService.Send.
+func (c *userInteractionServiceClient) Send(ctx context.Context, req *connect.Request[v1.SendRequest]) (*connect.Response[v1.SendResponse], error) {
+	return c.send.CallUnary(ctx, req)
 }
 
-// SendServerMessage calls insightify.v1.UserInteractionService.SendServerMessage.
-func (c *userInteractionServiceClient) SendServerMessage(ctx context.Context, req *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error) {
-	return c.sendServerMessage.CallUnary(ctx, req)
-}
-
-// CloseInteraction calls insightify.v1.UserInteractionService.CloseInteraction.
-func (c *userInteractionServiceClient) CloseInteraction(ctx context.Context, req *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error) {
-	return c.closeInteraction.CallUnary(ctx, req)
+// Close calls insightify.v1.UserInteractionService.Close.
+func (c *userInteractionServiceClient) Close(ctx context.Context, req *connect.Request[v1.CloseRequest]) (*connect.Response[v1.CloseResponse], error) {
+	return c.close.CallUnary(ctx, req)
 }
 
 // UserInteractionServiceHandler is an implementation of the insightify.v1.UserInteractionService
 // service.
 type UserInteractionServiceHandler interface {
-	WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error)
-	SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error)
-	SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error)
-	CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error)
+	Wait(context.Context, *connect.Request[v1.WaitRequest]) (*connect.Response[v1.WaitResponse], error)
+	Send(context.Context, *connect.Request[v1.SendRequest]) (*connect.Response[v1.SendResponse], error)
+	Close(context.Context, *connect.Request[v1.CloseRequest]) (*connect.Response[v1.CloseResponse], error)
 }
 
 // NewUserInteractionServiceHandler builds an HTTP handler from the service implementation. It
@@ -137,40 +120,32 @@ type UserInteractionServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewUserInteractionServiceHandler(svc UserInteractionServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	userInteractionServiceMethods := v1.File_insightify_v1_user_interaction_proto.Services().ByName("UserInteractionService").Methods()
-	userInteractionServiceWaitForInputHandler := connect.NewUnaryHandler(
-		UserInteractionServiceWaitForInputProcedure,
-		svc.WaitForInput,
-		connect.WithSchema(userInteractionServiceMethods.ByName("WaitForInput")),
+	userInteractionServiceWaitHandler := connect.NewUnaryHandler(
+		UserInteractionServiceWaitProcedure,
+		svc.Wait,
+		connect.WithSchema(userInteractionServiceMethods.ByName("Wait")),
 		connect.WithHandlerOptions(opts...),
 	)
-	userInteractionServiceSendUserMessageHandler := connect.NewUnaryHandler(
-		UserInteractionServiceSendUserMessageProcedure,
-		svc.SendUserMessage,
-		connect.WithSchema(userInteractionServiceMethods.ByName("SendUserMessage")),
+	userInteractionServiceSendHandler := connect.NewUnaryHandler(
+		UserInteractionServiceSendProcedure,
+		svc.Send,
+		connect.WithSchema(userInteractionServiceMethods.ByName("Send")),
 		connect.WithHandlerOptions(opts...),
 	)
-	userInteractionServiceSendServerMessageHandler := connect.NewUnaryHandler(
-		UserInteractionServiceSendServerMessageProcedure,
-		svc.SendServerMessage,
-		connect.WithSchema(userInteractionServiceMethods.ByName("SendServerMessage")),
-		connect.WithHandlerOptions(opts...),
-	)
-	userInteractionServiceCloseInteractionHandler := connect.NewUnaryHandler(
-		UserInteractionServiceCloseInteractionProcedure,
-		svc.CloseInteraction,
-		connect.WithSchema(userInteractionServiceMethods.ByName("CloseInteraction")),
+	userInteractionServiceCloseHandler := connect.NewUnaryHandler(
+		UserInteractionServiceCloseProcedure,
+		svc.Close,
+		connect.WithSchema(userInteractionServiceMethods.ByName("Close")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/insightify.v1.UserInteractionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case UserInteractionServiceWaitForInputProcedure:
-			userInteractionServiceWaitForInputHandler.ServeHTTP(w, r)
-		case UserInteractionServiceSendUserMessageProcedure:
-			userInteractionServiceSendUserMessageHandler.ServeHTTP(w, r)
-		case UserInteractionServiceSendServerMessageProcedure:
-			userInteractionServiceSendServerMessageHandler.ServeHTTP(w, r)
-		case UserInteractionServiceCloseInteractionProcedure:
-			userInteractionServiceCloseInteractionHandler.ServeHTTP(w, r)
+		case UserInteractionServiceWaitProcedure:
+			userInteractionServiceWaitHandler.ServeHTTP(w, r)
+		case UserInteractionServiceSendProcedure:
+			userInteractionServiceSendHandler.ServeHTTP(w, r)
+		case UserInteractionServiceCloseProcedure:
+			userInteractionServiceCloseHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -180,18 +155,14 @@ func NewUserInteractionServiceHandler(svc UserInteractionServiceHandler, opts ..
 // UnimplementedUserInteractionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedUserInteractionServiceHandler struct{}
 
-func (UnimplementedUserInteractionServiceHandler) WaitForInput(context.Context, *connect.Request[v1.WaitForInputRequest]) (*connect.Response[v1.WaitForInputResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.WaitForInput is not implemented"))
+func (UnimplementedUserInteractionServiceHandler) Wait(context.Context, *connect.Request[v1.WaitRequest]) (*connect.Response[v1.WaitResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.Wait is not implemented"))
 }
 
-func (UnimplementedUserInteractionServiceHandler) SendUserMessage(context.Context, *connect.Request[v1.SendUserMessageRequest]) (*connect.Response[v1.SendUserMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.SendUserMessage is not implemented"))
+func (UnimplementedUserInteractionServiceHandler) Send(context.Context, *connect.Request[v1.SendRequest]) (*connect.Response[v1.SendResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.Send is not implemented"))
 }
 
-func (UnimplementedUserInteractionServiceHandler) SendServerMessage(context.Context, *connect.Request[v1.SendServerMessageRequest]) (*connect.Response[v1.SendServerMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.SendServerMessage is not implemented"))
-}
-
-func (UnimplementedUserInteractionServiceHandler) CloseInteraction(context.Context, *connect.Request[v1.CloseInteractionRequest]) (*connect.Response[v1.CloseInteractionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.CloseInteraction is not implemented"))
+func (UnimplementedUserInteractionServiceHandler) Close(context.Context, *connect.Request[v1.CloseRequest]) (*connect.Response[v1.CloseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UserInteractionService.Close is not implemented"))
 }

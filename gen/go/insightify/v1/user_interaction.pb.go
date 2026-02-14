@@ -21,30 +21,29 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type WaitForInputRequest struct {
+type WaitRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	TimeoutMs      int32                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	RunId          string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	TimeoutMs      int32                  `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *WaitForInputRequest) Reset() {
-	*x = WaitForInputRequest{}
+func (x *WaitRequest) Reset() {
+	*x = WaitRequest{}
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *WaitForInputRequest) String() string {
+func (x *WaitRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*WaitForInputRequest) ProtoMessage() {}
+func (*WaitRequest) ProtoMessage() {}
 
-func (x *WaitForInputRequest) ProtoReflect() protoreflect.Message {
+func (x *WaitRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,65 +55,55 @@ func (x *WaitForInputRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use WaitForInputRequest.ProtoReflect.Descriptor instead.
-func (*WaitForInputRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use WaitRequest.ProtoReflect.Descriptor instead.
+func (*WaitRequest) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *WaitForInputRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *WaitForInputRequest) GetRunId() string {
+func (x *WaitRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-func (x *WaitForInputRequest) GetConversationId() string {
+func (x *WaitRequest) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
 	}
 	return ""
 }
 
-func (x *WaitForInputRequest) GetTimeoutMs() int32 {
+func (x *WaitRequest) GetTimeoutMs() int32 {
 	if x != nil {
 		return x.TimeoutMs
 	}
 	return 0
 }
 
-type WaitForInputResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Waiting        bool                   `protobuf:"varint,1,opt,name=waiting,proto3" json:"waiting,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	InteractionId  string                 `protobuf:"bytes,3,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,4,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	Prompt         string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	Closed         bool                   `protobuf:"varint,6,opt,name=closed,proto3" json:"closed,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type WaitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Waiting       bool                   `protobuf:"varint,1,opt,name=waiting,proto3" json:"waiting,omitempty"`
+	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	Closed        bool                   `protobuf:"varint,3,opt,name=closed,proto3" json:"closed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *WaitForInputResponse) Reset() {
-	*x = WaitForInputResponse{}
+func (x *WaitResponse) Reset() {
+	*x = WaitResponse{}
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *WaitForInputResponse) String() string {
+func (x *WaitResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*WaitForInputResponse) ProtoMessage() {}
+func (*WaitResponse) ProtoMessage() {}
 
-func (x *WaitForInputResponse) ProtoReflect() protoreflect.Message {
+func (x *WaitResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -126,78 +115,55 @@ func (x *WaitForInputResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use WaitForInputResponse.ProtoReflect.Descriptor instead.
-func (*WaitForInputResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use WaitResponse.ProtoReflect.Descriptor instead.
+func (*WaitResponse) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *WaitForInputResponse) GetWaiting() bool {
+func (x *WaitResponse) GetWaiting() bool {
 	if x != nil {
 		return x.Waiting
 	}
 	return false
 }
 
-func (x *WaitForInputResponse) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *WaitForInputResponse) GetInteractionId() string {
+func (x *WaitResponse) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
 	}
 	return ""
 }
 
-func (x *WaitForInputResponse) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *WaitForInputResponse) GetPrompt() string {
-	if x != nil {
-		return x.Prompt
-	}
-	return ""
-}
-
-func (x *WaitForInputResponse) GetClosed() bool {
+func (x *WaitResponse) GetClosed() bool {
 	if x != nil {
 		return x.Closed
 	}
 	return false
 }
 
-type SendUserMessageRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	Input          string                 `protobuf:"bytes,3,opt,name=input,proto3" json:"input,omitempty"`
-	InteractionId  string                 `protobuf:"bytes,4,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,5,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type SendRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	Input         string                 `protobuf:"bytes,3,opt,name=input,proto3" json:"input,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendUserMessageRequest) Reset() {
-	*x = SendUserMessageRequest{}
+func (x *SendRequest) Reset() {
+	*x = SendRequest{}
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendUserMessageRequest) String() string {
+func (x *SendRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendUserMessageRequest) ProtoMessage() {}
+func (*SendRequest) ProtoMessage() {}
 
-func (x *SendUserMessageRequest) ProtoReflect() protoreflect.Message {
+func (x *SendRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -209,70 +175,55 @@ func (x *SendUserMessageRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendUserMessageRequest.ProtoReflect.Descriptor instead.
-func (*SendUserMessageRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendRequest.ProtoReflect.Descriptor instead.
+func (*SendRequest) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SendUserMessageRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *SendUserMessageRequest) GetRunId() string {
+func (x *SendRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-func (x *SendUserMessageRequest) GetInput() string {
+func (x *SendRequest) GetInteractionId() string {
+	if x != nil {
+		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *SendRequest) GetInput() string {
 	if x != nil {
 		return x.Input
 	}
 	return ""
 }
 
-func (x *SendUserMessageRequest) GetInteractionId() string {
-	if x != nil {
-		return x.InteractionId
-	}
-	return ""
-}
-
-func (x *SendUserMessageRequest) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-type SendUserMessageResponse struct {
+type SendResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Accepted       bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	InteractionId  string                 `protobuf:"bytes,3,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,4,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	InteractionId  string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *SendUserMessageResponse) Reset() {
-	*x = SendUserMessageResponse{}
+func (x *SendResponse) Reset() {
+	*x = SendResponse{}
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendUserMessageResponse) String() string {
+func (x *SendResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendUserMessageResponse) ProtoMessage() {}
+func (*SendResponse) ProtoMessage() {}
 
-func (x *SendUserMessageResponse) ProtoReflect() protoreflect.Message {
+func (x *SendResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -284,62 +235,55 @@ func (x *SendUserMessageResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendUserMessageResponse.ProtoReflect.Descriptor instead.
-func (*SendUserMessageResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendResponse.ProtoReflect.Descriptor instead.
+func (*SendResponse) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *SendUserMessageResponse) GetAccepted() bool {
+func (x *SendResponse) GetAccepted() bool {
 	if x != nil {
 		return x.Accepted
 	}
 	return false
 }
 
-func (x *SendUserMessageResponse) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *SendUserMessageResponse) GetInteractionId() string {
+func (x *SendResponse) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
 	}
 	return ""
 }
 
-func (x *SendUserMessageResponse) GetConversationId() string {
+func (x *SendResponse) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
 	}
 	return ""
 }
 
-type SendServerMessageRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type CloseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendServerMessageRequest) Reset() {
-	*x = SendServerMessageRequest{}
+func (x *CloseRequest) Reset() {
+	*x = CloseRequest{}
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendServerMessageRequest) String() string {
+func (x *CloseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendServerMessageRequest) ProtoMessage() {}
+func (*CloseRequest) ProtoMessage() {}
 
-func (x *SendServerMessageRequest) ProtoReflect() protoreflect.Message {
+func (x *CloseRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_user_interaction_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -351,200 +295,54 @@ func (x *SendServerMessageRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendServerMessageRequest.ProtoReflect.Descriptor instead.
-func (*SendServerMessageRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CloseRequest.ProtoReflect.Descriptor instead.
+func (*CloseRequest) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *SendServerMessageRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *SendServerMessageRequest) GetRunId() string {
+func (x *CloseRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-func (x *SendServerMessageRequest) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-type SendServerMessageResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	RunId          string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	InteractionId  string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	Message        string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Terminal       bool                   `protobuf:"varint,5,opt,name=terminal,proto3" json:"terminal,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *SendServerMessageResponse) Reset() {
-	*x = SendServerMessageResponse{}
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SendServerMessageResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendServerMessageResponse) ProtoMessage() {}
-
-func (x *SendServerMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendServerMessageResponse.ProtoReflect.Descriptor instead.
-func (*SendServerMessageResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *SendServerMessageResponse) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *SendServerMessageResponse) GetInteractionId() string {
+func (x *CloseRequest) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
 	}
 	return ""
 }
 
-func (x *SendServerMessageResponse) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *SendServerMessageResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *SendServerMessageResponse) GetTerminal() bool {
-	if x != nil {
-		return x.Terminal
-	}
-	return false
-}
-
-type CloseInteractionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	Reason         string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *CloseInteractionRequest) Reset() {
-	*x = CloseInteractionRequest{}
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CloseInteractionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CloseInteractionRequest) ProtoMessage() {}
-
-func (x *CloseInteractionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CloseInteractionRequest.ProtoReflect.Descriptor instead.
-func (*CloseInteractionRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CloseInteractionRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *CloseInteractionRequest) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *CloseInteractionRequest) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *CloseInteractionRequest) GetReason() string {
+func (x *CloseRequest) GetReason() string {
 	if x != nil {
 		return x.Reason
 	}
 	return ""
 }
 
-type CloseInteractionResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Closed         bool                   `protobuf:"varint,1,opt,name=closed,proto3" json:"closed,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type CloseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Closed        bool                   `protobuf:"varint,1,opt,name=closed,proto3" json:"closed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CloseInteractionResponse) Reset() {
-	*x = CloseInteractionResponse{}
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[7]
+func (x *CloseResponse) Reset() {
+	*x = CloseResponse{}
+	mi := &file_insightify_v1_user_interaction_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CloseInteractionResponse) String() string {
+func (x *CloseResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CloseInteractionResponse) ProtoMessage() {}
+func (*CloseResponse) ProtoMessage() {}
 
-func (x *CloseInteractionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_user_interaction_proto_msgTypes[7]
+func (x *CloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_user_interaction_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -555,89 +353,50 @@ func (x *CloseInteractionResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CloseInteractionResponse.ProtoReflect.Descriptor instead.
-func (*CloseInteractionResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use CloseResponse.ProtoReflect.Descriptor instead.
+func (*CloseResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_user_interaction_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *CloseInteractionResponse) GetClosed() bool {
+func (x *CloseResponse) GetClosed() bool {
 	if x != nil {
 		return x.Closed
 	}
 	return false
 }
 
-func (x *CloseInteractionResponse) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-func (x *CloseInteractionResponse) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
 var File_insightify_v1_user_interaction_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_user_interaction_proto_rawDesc = "" +
 	"\n" +
-	"$insightify/v1/user_interaction.proto\x12\rinsightify.v1\"\x93\x01\n" +
-	"\x13WaitForInputRequest\x12\x1d\n" +
+	"$insightify/v1/user_interaction.proto\x12\rinsightify.v1\"l\n" +
+	"\vWaitRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12'\n" +
+	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x1d\n" +
-	"\n" +
-	"timeout_ms\x18\x04 \x01(\x05R\ttimeoutMs\"\xc7\x01\n" +
-	"\x14WaitForInputResponse\x12\x18\n" +
-	"\awaiting\x18\x01 \x01(\bR\awaiting\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12%\n" +
-	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x04 \x01(\tR\x0econversationId\x12\x16\n" +
-	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x12\x16\n" +
-	"\x06closed\x18\x06 \x01(\bR\x06closed\"\xb4\x01\n" +
-	"\x16SendUserMessageRequest\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x14\n" +
-	"\x05input\x18\x03 \x01(\tR\x05input\x12%\n" +
-	"\x0einteraction_id\x18\x04 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x05 \x01(\tR\x0econversationId\"\x9c\x01\n" +
-	"\x17SendUserMessageResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12%\n" +
-	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x04 \x01(\tR\x0econversationId\"y\n" +
-	"\x18SendServerMessageRequest\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"\xb8\x01\n" +
-	"\x19SendServerMessageResponse\x12\x15\n" +
+	"timeout_ms\x18\x03 \x01(\x05R\ttimeoutMs\"g\n" +
+	"\fWaitResponse\x12\x18\n" +
+	"\awaiting\x18\x01 \x01(\bR\awaiting\x12%\n" +
+	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +
+	"\x06closed\x18\x03 \x01(\bR\x06closed\"a\n" +
+	"\vSendRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
+	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x14\n" +
+	"\x05input\x18\x03 \x01(\tR\x05input\"z\n" +
+	"\fSendResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1a\n" +
-	"\bterminal\x18\x05 \x01(\bR\bterminal\"\x90\x01\n" +
-	"\x17CloseInteractionRequest\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\"r\n" +
-	"\x18CloseInteractionResponse\x12\x16\n" +
-	"\x06closed\x18\x01 \x01(\bR\x06closed\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12'\n" +
-	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId2\xa0\x03\n" +
-	"\x16UserInteractionService\x12W\n" +
-	"\fWaitForInput\x12\".insightify.v1.WaitForInputRequest\x1a#.insightify.v1.WaitForInputResponse\x12`\n" +
-	"\x0fSendUserMessage\x12%.insightify.v1.SendUserMessageRequest\x1a&.insightify.v1.SendUserMessageResponse\x12f\n" +
-	"\x11SendServerMessage\x12'.insightify.v1.SendServerMessageRequest\x1a(.insightify.v1.SendServerMessageResponse\x12c\n" +
-	"\x10CloseInteraction\x12&.insightify.v1.CloseInteractionRequest\x1a'.insightify.v1.CloseInteractionResponseB\xac\x01\n" +
+	"\x0fconversation_id\x18\x03 \x01(\tR\x0econversationId\"d\n" +
+	"\fCloseRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
+	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"'\n" +
+	"\rCloseResponse\x12\x16\n" +
+	"\x06closed\x18\x01 \x01(\bR\x06closed2\xde\x01\n" +
+	"\x16UserInteractionService\x12?\n" +
+	"\x04Wait\x12\x1a.insightify.v1.WaitRequest\x1a\x1b.insightify.v1.WaitResponse\x12?\n" +
+	"\x04Send\x12\x1a.insightify.v1.SendRequest\x1a\x1b.insightify.v1.SendResponse\x12B\n" +
+	"\x05Close\x12\x1b.insightify.v1.CloseRequest\x1a\x1c.insightify.v1.CloseResponseB\xac\x01\n" +
 	"\x11com.insightify.v1B\x14UserInteractionProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -652,28 +411,24 @@ func file_insightify_v1_user_interaction_proto_rawDescGZIP() []byte {
 	return file_insightify_v1_user_interaction_proto_rawDescData
 }
 
-var file_insightify_v1_user_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_insightify_v1_user_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_insightify_v1_user_interaction_proto_goTypes = []any{
-	(*WaitForInputRequest)(nil),       // 0: insightify.v1.WaitForInputRequest
-	(*WaitForInputResponse)(nil),      // 1: insightify.v1.WaitForInputResponse
-	(*SendUserMessageRequest)(nil),    // 2: insightify.v1.SendUserMessageRequest
-	(*SendUserMessageResponse)(nil),   // 3: insightify.v1.SendUserMessageResponse
-	(*SendServerMessageRequest)(nil),  // 4: insightify.v1.SendServerMessageRequest
-	(*SendServerMessageResponse)(nil), // 5: insightify.v1.SendServerMessageResponse
-	(*CloseInteractionRequest)(nil),   // 6: insightify.v1.CloseInteractionRequest
-	(*CloseInteractionResponse)(nil),  // 7: insightify.v1.CloseInteractionResponse
+	(*WaitRequest)(nil),   // 0: insightify.v1.WaitRequest
+	(*WaitResponse)(nil),  // 1: insightify.v1.WaitResponse
+	(*SendRequest)(nil),   // 2: insightify.v1.SendRequest
+	(*SendResponse)(nil),  // 3: insightify.v1.SendResponse
+	(*CloseRequest)(nil),  // 4: insightify.v1.CloseRequest
+	(*CloseResponse)(nil), // 5: insightify.v1.CloseResponse
 }
 var file_insightify_v1_user_interaction_proto_depIdxs = []int32{
-	0, // 0: insightify.v1.UserInteractionService.WaitForInput:input_type -> insightify.v1.WaitForInputRequest
-	2, // 1: insightify.v1.UserInteractionService.SendUserMessage:input_type -> insightify.v1.SendUserMessageRequest
-	4, // 2: insightify.v1.UserInteractionService.SendServerMessage:input_type -> insightify.v1.SendServerMessageRequest
-	6, // 3: insightify.v1.UserInteractionService.CloseInteraction:input_type -> insightify.v1.CloseInteractionRequest
-	1, // 4: insightify.v1.UserInteractionService.WaitForInput:output_type -> insightify.v1.WaitForInputResponse
-	3, // 5: insightify.v1.UserInteractionService.SendUserMessage:output_type -> insightify.v1.SendUserMessageResponse
-	5, // 6: insightify.v1.UserInteractionService.SendServerMessage:output_type -> insightify.v1.SendServerMessageResponse
-	7, // 7: insightify.v1.UserInteractionService.CloseInteraction:output_type -> insightify.v1.CloseInteractionResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	0, // 0: insightify.v1.UserInteractionService.Wait:input_type -> insightify.v1.WaitRequest
+	2, // 1: insightify.v1.UserInteractionService.Send:input_type -> insightify.v1.SendRequest
+	4, // 2: insightify.v1.UserInteractionService.Close:input_type -> insightify.v1.CloseRequest
+	1, // 3: insightify.v1.UserInteractionService.Wait:output_type -> insightify.v1.WaitResponse
+	3, // 4: insightify.v1.UserInteractionService.Send:output_type -> insightify.v1.SendResponse
+	5, // 5: insightify.v1.UserInteractionService.Close:output_type -> insightify.v1.CloseResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -690,7 +445,7 @@ func file_insightify_v1_user_interaction_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_user_interaction_proto_rawDesc), len(file_insightify_v1_user_interaction_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

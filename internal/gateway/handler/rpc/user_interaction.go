@@ -3,33 +3,50 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
-	"insightify/internal/gateway/service/run"
+	userinteraction "insightify/internal/gateway/service/user_interaction"
 
 	"connectrpc.com/connect"
 )
 
 type UserInteractionHandler struct {
-	svc *run.Service
+	svc *userinteraction.Service
 }
 
-func NewUserInteractionHandler(svc *run.Service) *UserInteractionHandler {
+func NewUserInteractionHandler(svc *userinteraction.Service) *UserInteractionHandler {
 	return &UserInteractionHandler{svc: svc}
 }
 
-func (h *UserInteractionHandler) WaitForInput(ctx context.Context, req *connect.Request[insightifyv1.WaitForInputRequest]) (*connect.Response[insightifyv1.WaitForInputResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+func (h *UserInteractionHandler) Wait(ctx context.Context, req *connect.Request[insightifyv1.WaitRequest]) (*connect.Response[insightifyv1.WaitResponse], error) {
+	out, err := h.svc.Wait(ctx, req.Msg)
+	if err != nil {
+		return nil, toInteractionError(err)
+	}
+	return connect.NewResponse(out), nil
 }
 
-func (h *UserInteractionHandler) SendUserMessage(ctx context.Context, req *connect.Request[insightifyv1.SendUserMessageRequest]) (*connect.Response[insightifyv1.SendUserMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+func (h *UserInteractionHandler) Send(ctx context.Context, req *connect.Request[insightifyv1.SendRequest]) (*connect.Response[insightifyv1.SendResponse], error) {
+	out, err := h.svc.Send(ctx, req.Msg)
+	if err != nil {
+		return nil, toInteractionError(err)
+	}
+	return connect.NewResponse(out), nil
 }
 
-func (h *UserInteractionHandler) SendServerMessage(ctx context.Context, req *connect.Request[insightifyv1.SendServerMessageRequest]) (*connect.Response[insightifyv1.SendServerMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+func (h *UserInteractionHandler) Close(ctx context.Context, req *connect.Request[insightifyv1.CloseRequest]) (*connect.Response[insightifyv1.CloseResponse], error) {
+	out, err := h.svc.Close(ctx, req.Msg)
+	if err != nil {
+		return nil, toInteractionError(err)
+	}
+	return connect.NewResponse(out), nil
 }
 
-func (h *UserInteractionHandler) CloseInteraction(ctx context.Context, req *connect.Request[insightifyv1.CloseInteractionRequest]) (*connect.Response[insightifyv1.CloseInteractionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+func toInteractionError(err error) error {
+	msg := strings.ToLower(strings.TrimSpace(err.Error()))
+	if strings.Contains(msg, "required") {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return connect.NewError(connect.CodeInternal, fmt.Errorf("interaction service failed: %w", err))
 }
