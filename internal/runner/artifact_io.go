@@ -13,17 +13,17 @@ import (
 )
 
 // Artifact loads a worker artifact from disk into the target type.
-func Artifact[T any](env *Env, key string) (T, error) {
+func Artifact[T any](runtime Runtime, key string) (T, error) {
 	var zero T
-	if env == nil {
-		return zero, fmt.Errorf("runner: env is nil")
+	if runtime == nil {
+		return zero, fmt.Errorf("runner: runtime is nil")
 	}
 	norm := normalizeKey(key)
 	if norm == "" {
 		return zero, fmt.Errorf("runner: empty worker key")
 	}
-	fs := ensureFS(env.ArtifactFS)
-	path, label, err := resolveArtifactPath(env, key)
+	fs := ensureFS(runtime.GetArtifactFS())
+	path, label, err := resolveArtifactPath(runtime, key)
 	if err != nil {
 		return zero, err
 	}
@@ -39,8 +39,8 @@ func Artifact[T any](env *Env, key string) (T, error) {
 }
 
 // MustArtifact loads an artifact or panics.
-func MustArtifact[T any](env *Env, key string) T {
-	v, err := Artifact[T](env, key)
+func MustArtifact[T any](runtime Runtime, key string) T {
+	v, err := Artifact[T](runtime, key)
 	if err != nil {
 		panic(err)
 	}
@@ -88,9 +88,9 @@ func NextVersion(outDir, key string) int {
 	return max + 1
 }
 
-func resolveArtifactPath(env *Env, key string) (string, string, error) {
-	if env == nil {
-		return "", "", fmt.Errorf("runner: env is nil")
+func resolveArtifactPath(runtime Runtime, key string) (string, string, error) {
+	if runtime == nil {
+		return "", "", fmt.Errorf("runner: runtime is nil")
 	}
 	norm := normalizeKey(key)
 	if norm == "" {
@@ -98,23 +98,23 @@ func resolveArtifactPath(env *Env, key string) (string, string, error) {
 	}
 	filename := norm + ".json"
 	var specKey string
-	if env.Resolver != nil {
-		if s, ok := env.Resolver.Get(key); ok {
+	if runtime.GetResolver() != nil {
+		if s, ok := runtime.GetResolver().Get(key); ok {
 			specKey = strings.TrimSpace(s.Key)
 		}
 	}
 	if specKey != "" {
 		filename = specKey + ".json"
 	}
-	fs := ensureFS(env.ArtifactFS)
+	fs := ensureFS(runtime.GetArtifactFS())
 
-	primary := filepath.Join(env.OutDir, filename)
+	primary := filepath.Join(runtime.GetOutDir(), filename)
 	if FileExists(fs, primary) {
 		return primary, filepath.Base(primary), nil
 	}
 	// Backward-compat: pre-key migration JSON artifacts were stored at <OutDir>/<key>/output.json.
 	if specKey != "" {
-		legacy := filepath.Join(env.OutDir, specKey, "output.json")
+		legacy := filepath.Join(runtime.GetOutDir(), specKey, "output.json")
 		if FileExists(fs, legacy) {
 			return legacy, filepath.Base(legacy), nil
 		}

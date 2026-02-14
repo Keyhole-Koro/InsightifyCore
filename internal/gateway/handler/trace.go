@@ -47,7 +47,7 @@ func (h *TraceHandler) HandleFrontendTrace(w http.ResponseWriter, r *http.Reques
 	if ts := strings.TrimSpace(in.Timestamp); ts != "" {
 		fields["frontend_timestamp"] = ts
 	}
-	h.workerSvc.TraceLogger().Append(runID, "frontend", stage, fields)
+	h.workerSvc.Telemetry().Append(runID, "frontend", stage, fields)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok": true,
@@ -64,7 +64,7 @@ func (h *TraceHandler) HandleRunLogs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "run_id is required", http.StatusBadRequest)
 		return
 	}
-	events, err := h.workerSvc.TraceLogger().Read(runID)
+	events, err := h.workerSvc.Telemetry().Read(runID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

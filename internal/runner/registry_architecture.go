@@ -10,14 +10,13 @@ import (
 
 // BuildRegistryArchitecture defines arch_design.
 // Add/modify phases here without touching main or execution logic.
-func BuildRegistryArchitecture(env *Env) map[string]WorkerSpec {
+func BuildRegistryArchitecture(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 
 	reg["arch_design"] = WorkerSpec{
 		Key:         "arch_design",
 		Requires:    []string{"code_roots"},
 		Description: "LLM drafts initial architecture hypothesis from file index + Markdown docs and proposes next files to open.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var c0prev artifact.CodeRootsOut
 			if err := deps.Artifact("code_roots", &c0prev); err != nil {
@@ -29,20 +28,20 @@ func BuildRegistryArchitecture(env *Env) map[string]WorkerSpec {
 				Hints:        &artifact.ArchDesignHints{},
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "arch_design")
-			p := archpipe.ArchDesign{LLM: env.LLM, Tools: env.MCP}
+			p := archpipe.ArchDesign{LLM: runtime.GetLLM(), Tools: runtime.GetMCP()}
 			out, err := p.Run(ctx, in.(artifact.ArchDesignIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.ArchDesignIn
 				Salt string
-			}{in.(artifact.ArchDesignIn), env.ModelSalt})
+			}{in.(artifact.ArchDesignIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}

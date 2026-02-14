@@ -12,29 +12,28 @@ import (
 
 // BuildRegistryCodebase defines code_roots-code_symbols.
 // code_roots uses versionedStrategy; c1 uses jsonStrategy; etc.
-func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
+func BuildRegistryCodebase(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 	reg["code_roots"] = WorkerSpec{
 		Key:         "code_roots",
 		Description: "Scan repo layout and ask LLM to classify main source roots, library/vendor roots, and config hotspots.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return artifact.CodeRootsIn{Repo: deps.Repo()}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_roots")
-			x := pipelineCodeRoots{LLM: env.LLM, Tools: env.MCP}
+			x := pipelineCodeRoots{LLM: runtime.GetLLM(), Tools: runtime.GetMCP()}
 			out, err := x.Run(ctx, in.(artifact.CodeRootsIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.CodeRootsIn
 				Salt string
-			}{in.(artifact.CodeRootsIn), env.ModelSalt})
+			}{in.(artifact.CodeRootsIn), runtime.GetModelSalt()})
 		},
 		Strategy: versionedStrategy{},
 	}
@@ -43,7 +42,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_specs",
 		Requires:    []string{"code_roots"},
 		Description: "LLM infers language families/import heuristics from extension counts and roots.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeRootsPrev artifact.CodeRootsOut
 			if err := deps.Artifact("code_roots", &codeRootsPrev); err != nil {
@@ -56,21 +54,21 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_specs")
-			x := pipelineCodeSpecs{LLM: env.LLM}
+			x := pipelineCodeSpecs{LLM: runtime.GetLLM()}
 			out, err := x.Run(ctx, in.(artifact.CodeSpecsIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			// Even though versioned, keep a meta fingerprint for traceability.
 			return JSONFingerprint(struct {
 				In   artifact.CodeSpecsIn
 				Salt string
-			}{in.(artifact.CodeSpecsIn), env.ModelSalt})
+			}{in.(artifact.CodeSpecsIn), runtime.GetModelSalt()})
 		},
 		Strategy: versionedStrategy{},
 	}
@@ -79,7 +77,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_imports",
 		Requires:    []string{"code_specs", "code_roots"},
 		Description: "Word-index dependency sweep across source roots to collect possible file-level dependencies.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeSpecsPrev artifact.CodeSpecsOut
 			if err := deps.Artifact("code_specs", &codeSpecsPrev); err != nil {
@@ -97,7 +94,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 			return in, nil
 		},
 
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_imports")
 			x := pipelineCodeImports{}
 			out, err := x.Run(ctx, in.(artifact.CodeImportsIn))
@@ -106,11 +103,11 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.CodeImportsIn
 				Salt string
-			}{in.(artifact.CodeImportsIn), env.ModelSalt})
+			}{in.(artifact.CodeImportsIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -119,7 +116,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_graph",
 		Requires:    []string{"code_imports"},
 		Description: "Normalize dependency hits into a DAG and drop weaker bidirectional edges.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeImportsOut artifact.CodeImportsOut
 			if err := deps.Artifact("code_imports", &codeImportsOut); err != nil {
@@ -130,7 +126,7 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 				Dependencies: codeImportsOut.PossibleDependencies,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_graph")
 			var c3 codepipe.CodeGraph
 			out, err := c3.Run(ctx, in.(artifact.CodeGraphIn))
@@ -139,11 +135,11 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.CodeGraphIn
 				Salt string
-			}{in.(artifact.CodeGraphIn), env.ModelSalt})
+			}{in.(artifact.CodeGraphIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -152,37 +148,36 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_tasks",
 		Requires:    []string{"code_graph"},
 		Description: "Chunk graph nodes into LLM-sized tasks with token estimates per file.",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var graph artifact.CodeGraphOut
 			if err := deps.Artifact("code_graph", &graph); err != nil {
 				return nil, err
 			}
 			capPerChunk := 4096
-			if deps.Env().LLM != nil && deps.Env().LLM.TokenCapacity() > 0 {
-				capPerChunk = deps.Env().LLM.TokenCapacity()
+			if deps.Env().GetLLM() != nil && deps.Env().GetLLM().TokenCapacity() > 0 {
+				capPerChunk = deps.Env().GetLLM().TokenCapacity()
 			}
 			return artifact.CodeTasksIn{
 				Repo:        deps.Repo(),
-				RepoFS:      deps.Env().RepoFS,
+				RepoFS:      deps.Env().GetRepoFS(),
 				Graph:       graph.Graph,
 				CapPerChunk: capPerChunk,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_tasks")
-			x := pipelineCodeTasks{LLM: env.LLM}
+			x := pipelineCodeTasks{LLM: runtime.GetLLM()}
 			out, err := x.Run(ctx, in.(artifact.CodeTasksIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.CodeTasksIn
 				Salt string
-			}{in.(artifact.CodeTasksIn), env.ModelSalt})
+			}{in.(artifact.CodeTasksIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}
@@ -191,7 +186,6 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 		Key:         "code_symbols",
 		Requires:    []string{"code_tasks"},
 		Description: "LLM traverses tasks to build identifier reference maps (outgoing/incoming).",
-		LLMLevel:    llm.ModelLevelMiddle,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var codeTasksOut artifact.CodeTasksOut
 			if err := deps.Artifact("code_tasks", &codeTasksOut); err != nil {
@@ -199,24 +193,24 @@ func BuildRegistryCodebase(env *Env) map[string]WorkerSpec {
 			}
 			return artifact.CodeSymbolsIn{
 				Repo:   deps.Repo(),
-				RepoFS: deps.Env().RepoFS,
+				RepoFS: deps.Env().GetRepoFS(),
 				Tasks:  codeTasksOut,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "code_symbols")
-			x := pipelineCodeSymbols{LLM: env.LLM}
+			x := pipelineCodeSymbols{LLM: runtime.GetLLM()}
 			out, err := x.Run(ctx, in.(artifact.CodeSymbolsIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: nil}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.CodeSymbolsIn
 				Salt string
-			}{in.(artifact.CodeSymbolsIn), env.ModelSalt})
+			}{in.(artifact.CodeSymbolsIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}

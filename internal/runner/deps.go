@@ -3,6 +3,7 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 )
 
@@ -30,24 +31,24 @@ type Deps interface {
 	Root() string
 
 	// Env exposes the raw environment for advanced usage (use sparingly).
-	Env() *Env
+	Env() Runtime
 }
 
 // depsImpl implements Deps and tracks accesses.
 type depsImpl struct {
-	env      *Env
+	runtime  Runtime
 	requires map[string]bool
 	accessed map[string]bool
 	worker   string
 }
 
-func newDeps(env *Env, worker string, requires []string) *depsImpl {
+func newDeps(runtime Runtime, worker string, requires []string) *depsImpl {
 	reqMap := make(map[string]bool, len(requires))
 	for _, r := range requires {
 		reqMap[normalizeKey(r)] = true
 	}
 	return &depsImpl{
-		env:      env,
+		runtime:  runtime,
 		requires: reqMap,
 		accessed: make(map[string]bool),
 		worker:   worker,
@@ -61,8 +62,8 @@ func (d *depsImpl) Artifact(key string, target any) error {
 	}
 	d.accessed[norm] = true
 
-	fs := ensureFS(d.env.ArtifactFS)
-	path, label, err := resolveArtifactPath(d.env, key)
+	fs := ensureFS(d.runtime.GetArtifactFS())
+	path, label, err := resolveArtifactPath(d.runtime, key)
 	if err != nil {
 		return err
 	}
@@ -80,15 +81,25 @@ func (d *depsImpl) Artifact(key string, target any) error {
 }
 
 func (d *depsImpl) Repo() string {
-	return d.env.Repo
+	if d.runtime == nil || d.runtime.GetRepoFS() == nil {
+		return ""
+	}
+	root := filepath.Clean(d.runtime.GetRepoFS().Root())
+	if root == "." || root == "/" {
+		return ""
+	}
+	return filepath.Base(root)
 }
 
 func (d *depsImpl) Root() string {
-	return d.env.RepoRoot
+	if d.runtime == nil || d.runtime.GetRepoFS() == nil {
+		return ""
+	}
+	return d.runtime.GetRepoFS().Root()
 }
 
-func (d *depsImpl) Env() *Env {
-	return d.env
+func (d *depsImpl) Env() Runtime {
+	return d.runtime
 }
 
 // verifyUsage checks for over-fetching (declared but unused).

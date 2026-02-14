@@ -2,8 +2,8 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/api ./cmd/api"
-  bin = "./tmp/api"
+  cmd = "go build -o ./tmp/gateway ./cmd/gateway"
+  bin = "./tmp/gateway"
   delay = 1000
   exclude_dir = ["tmp", "vendor", "gen", "repos"]
   exclude_regex = ["_test\\.go$"]

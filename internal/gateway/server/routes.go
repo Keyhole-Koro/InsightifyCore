@@ -21,10 +21,10 @@ func NewMux(
 	// RPC Handlers
 	mux.Handle(insightifyv1connect.NewProjectServiceHandler(projectHandler))
 	mux.Handle(insightifyv1connect.NewRunServiceHandler(runHandler))
-	mux.Handle(insightifyv1connect.NewUserInteractionServiceHandler(userInteractionHandler))
 	mux.Handle(insightifyv1connect.NewUiServiceHandler(uiHandler))
 
 	// Debug Handlers
+	mux.HandleFunc("/ws/interaction", userInteractionHandler.HandleInteractionWS)
 	mux.HandleFunc("/debug/frontend-trace", traceHandler.HandleFrontendTrace)
 	mux.HandleFunc("/debug/run-logs", traceHandler.HandleRunLogs)
 

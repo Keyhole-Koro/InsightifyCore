@@ -46,7 +46,7 @@ func (h *ProjectHandler) CreateProject(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id is required"))
 	}
 	name := strings.TrimSpace(req.Msg.GetName())
-	
+
 	p, err := h.svc.CreateProject(ctx, userID, name)
 	if err != nil {
 		return nil, err
@@ -70,17 +70,16 @@ func (h *ProjectHandler) SelectProject(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&insightifyv1.SelectProjectResponse{Project: toProtoProject(p)}), nil
 }
 
-func (h *ProjectHandler) InitRun(ctx context.Context, req *connect.Request[insightifyv1.InitRunRequest]) (*connect.Response[insightifyv1.InitRunResponse], error) {
+func (h *ProjectHandler) EnsureProject(ctx context.Context, req *connect.Request[insightifyv1.EnsureProjectRequest]) (*connect.Response[insightifyv1.EnsureProjectResponse], error) {
 	userID := strings.TrimSpace(req.Msg.GetUserId())
 	projectID := strings.TrimSpace(req.Msg.GetProjectId())
-	
-	p, err := h.svc.InitRun(ctx, userID, projectID)
+
+	p, err := h.svc.EnsureProject(ctx, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&insightifyv1.InitRunResponse{
-		RepoName:       p.State.Repo,
-		ProjectId:      p.State.ProjectID,
+	return connect.NewResponse(&insightifyv1.EnsureProjectResponse{
+		ProjectId: p.State.ProjectID,
 	}), nil
 }

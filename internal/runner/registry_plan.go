@@ -10,7 +10,7 @@ import (
 )
 
 // BuildRegistryPlan builds workers for the plan pipeline.
-func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
+func BuildRegistryPlan(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 
 	// bootstrap: preferred key for interactive bootstrap flow.
@@ -18,15 +18,13 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	reg["bootstrap"] = WorkerSpec{
 		Key:         "bootstrap",
 		Description: "Interactive intent bootstrap worker: collects user intent and repository context.",
-		LLMRole:     llm.ModelRoleWorker,
-		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return plan.BootstrapIn{}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "bootstrap")
 			p := plan.BootstrapPipeline{
-				LLM: env.LLM,
+				LLM: runtime.GetLLM(),
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
@@ -34,11 +32,11 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}
 			return bootstrapWorkerOutput(out), nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   plan.BootstrapIn
 				Salt string
-			}{in.(plan.BootstrapIn), env.ModelSalt})
+			}{in.(plan.BootstrapIn), runtime.GetModelSalt()})
 		},
 		Strategy: versionedStrategy{},
 	}
@@ -47,15 +45,13 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	reg["init_purpose"] = WorkerSpec{
 		Key:         "init_purpose",
 		Description: "Legacy alias of bootstrap.",
-		LLMRole:     llm.ModelRoleWorker,
-		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return plan.BootstrapIn{}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "bootstrap")
 			p := plan.BootstrapPipeline{
-				LLM: env.LLM,
+				LLM: runtime.GetLLM(),
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
@@ -63,11 +59,11 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}
 			return bootstrapWorkerOutput(out), nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   plan.BootstrapIn
 				Salt string
-			}{in.(plan.BootstrapIn), env.ModelSalt})
+			}{in.(plan.BootstrapIn), runtime.GetModelSalt()})
 		},
 		Strategy: versionedStrategy{},
 	}
@@ -76,15 +72,13 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 	reg["plan_pipeline"] = WorkerSpec{
 		Key:         "plan_pipeline",
 		Description: "Legacy alias of init_purpose.",
-		LLMRole:     llm.ModelRoleWorker,
-		LLMLevel:    llm.ModelLevelLow,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return plan.BootstrapIn{}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "init_purpose")
 			p := plan.BootstrapPipeline{
-				LLM: env.LLM,
+				LLM: runtime.GetLLM(),
 			}
 			out, err := p.Run(ctx, in.(plan.BootstrapIn))
 			if err != nil {
@@ -92,11 +86,11 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}
 			return bootstrapWorkerOutput(out), nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   plan.BootstrapIn
 				Salt string
-			}{in.(plan.BootstrapIn), env.ModelSalt})
+			}{in.(plan.BootstrapIn), runtime.GetModelSalt()})
 		},
 		Strategy: versionedStrategy{},
 	}
@@ -105,8 +99,6 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 		Key:         "worker_DAG",
 		Description: "Generates an execution plan based on the provided graph spec.",
 		Requires:    []string{"bootstrap"},
-		LLMRole:     llm.ModelRolePlanner,
-		LLMLevel:    llm.ModelLevelHigh,
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			var bootstrapOut struct {
 				BootstrapContext artifact.BootstrapContext `json:"bootstrap_context"`
@@ -116,7 +108,7 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 			}
 			bootstrapCtx := bootstrapOut.BootstrapContext.Normalize()
 			workersByKey := map[string]artifact.WorkerMeta{}
-			if resolver := deps.Env().Resolver; resolver != nil {
+			if resolver := deps.Env().GetResolver(); resolver != nil {
 				for _, spec := range resolver.List() {
 					workersByKey[spec.Key] = artifact.WorkerMeta{
 						Key:         spec.Key,
@@ -157,20 +149,20 @@ func BuildRegistryPlan(env *Env) map[string]WorkerSpec {
 				Workers:     workers,
 			}, nil
 		},
-		Run: func(ctx context.Context, in any, env *Env) (WorkerOutput, error) {
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "worker_DAG")
-			p := plan.PlanContext{LLM: env.LLM}
+			p := plan.PlanContext{LLM: runtime.GetLLM()}
 			out, err := p.Run(ctx, in.(artifact.PlanDependenciesIn))
 			if err != nil {
 				return WorkerOutput{}, err
 			}
 			return WorkerOutput{RuntimeState: out, ClientView: out.ClientView}, nil
 		},
-		Fingerprint: func(in any, env *Env) string {
+		Fingerprint: func(in any, runtime Runtime) string {
 			return JSONFingerprint(struct {
 				In   artifact.PlanDependenciesIn
 				Salt string
-			}{in.(artifact.PlanDependenciesIn), env.ModelSalt})
+			}{in.(artifact.PlanDependenciesIn), runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}

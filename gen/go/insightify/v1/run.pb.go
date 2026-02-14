@@ -22,64 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type WatchRunResponse_EventType int32
-
-const (
-	WatchRunResponse_EVENT_TYPE_UNSPECIFIED WatchRunResponse_EventType = 0
-	WatchRunResponse_EVENT_TYPE_LOG         WatchRunResponse_EventType = 1
-	WatchRunResponse_EVENT_TYPE_PROGRESS    WatchRunResponse_EventType = 2
-	WatchRunResponse_EVENT_TYPE_COMPLETE    WatchRunResponse_EventType = 3
-	WatchRunResponse_EVENT_TYPE_ERROR       WatchRunResponse_EventType = 4
-	WatchRunResponse_EVENT_TYPE_NODE_READY  WatchRunResponse_EventType = 5
-)
-
-// Enum value maps for WatchRunResponse_EventType.
-var (
-	WatchRunResponse_EventType_name = map[int32]string{
-		0: "EVENT_TYPE_UNSPECIFIED",
-		1: "EVENT_TYPE_LOG",
-		2: "EVENT_TYPE_PROGRESS",
-		3: "EVENT_TYPE_COMPLETE",
-		4: "EVENT_TYPE_ERROR",
-		5: "EVENT_TYPE_NODE_READY",
-	}
-	WatchRunResponse_EventType_value = map[string]int32{
-		"EVENT_TYPE_UNSPECIFIED": 0,
-		"EVENT_TYPE_LOG":         1,
-		"EVENT_TYPE_PROGRESS":    2,
-		"EVENT_TYPE_COMPLETE":    3,
-		"EVENT_TYPE_ERROR":       4,
-		"EVENT_TYPE_NODE_READY":  5,
-	}
-)
-
-func (x WatchRunResponse_EventType) Enum() *WatchRunResponse_EventType {
-	p := new(WatchRunResponse_EventType)
-	*p = x
-	return p
-}
-
-func (x WatchRunResponse_EventType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (WatchRunResponse_EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_insightify_v1_run_proto_enumTypes[0].Descriptor()
-}
-
-func (WatchRunResponse_EventType) Type() protoreflect.EnumType {
-	return &file_insightify_v1_run_proto_enumTypes[0]
-}
-
-func (x WatchRunResponse_EventType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use WatchRunResponse_EventType.Descriptor instead.
-func (WatchRunResponse_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_run_proto_rawDescGZIP(), []int{3, 0}
-}
-
 type StartRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -200,132 +142,11 @@ func (x *StartRunResponse) GetClientView() *v1.ClientView {
 	return nil
 }
 
-type WatchRunRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WatchRunRequest) Reset() {
-	*x = WatchRunRequest{}
-	mi := &file_insightify_v1_run_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WatchRunRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WatchRunRequest) ProtoMessage() {}
-
-func (x *WatchRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_run_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WatchRunRequest.ProtoReflect.Descriptor instead.
-func (*WatchRunRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_run_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *WatchRunRequest) GetRunId() string {
-	if x != nil {
-		return x.RunId
-	}
-	return ""
-}
-
-type WatchRunResponse struct {
-	state           protoimpl.MessageState     `protogen:"open.v1"`
-	EventType       WatchRunResponse_EventType `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=insightify.v1.WatchRunResponse_EventType" json:"event_type,omitempty"`
-	Message         string                     `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	ProgressPercent int32                      `protobuf:"varint,3,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
-	ClientView      *v1.ClientView             `protobuf:"bytes,4,opt,name=client_view,json=clientView,proto3" json:"client_view,omitempty"`
-	// Set when event_type is NODE_READY.
-	Node          *UiNode `protobuf:"bytes,5,opt,name=node,proto3" json:"node,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WatchRunResponse) Reset() {
-	*x = WatchRunResponse{}
-	mi := &file_insightify_v1_run_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WatchRunResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WatchRunResponse) ProtoMessage() {}
-
-func (x *WatchRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_run_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WatchRunResponse.ProtoReflect.Descriptor instead.
-func (*WatchRunResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_run_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *WatchRunResponse) GetEventType() WatchRunResponse_EventType {
-	if x != nil {
-		return x.EventType
-	}
-	return WatchRunResponse_EVENT_TYPE_UNSPECIFIED
-}
-
-func (x *WatchRunResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *WatchRunResponse) GetProgressPercent() int32 {
-	if x != nil {
-		return x.ProgressPercent
-	}
-	return 0
-}
-
-func (x *WatchRunResponse) GetClientView() *v1.ClientView {
-	if x != nil {
-		return x.ClientView
-	}
-	return nil
-}
-
-func (x *WatchRunResponse) GetNode() *UiNode {
-	if x != nil {
-		return x.Node
-	}
-	return nil
-}
-
 var File_insightify_v1_run_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_run_proto_rawDesc = "" +
 	"\n" +
-	"\x17insightify/v1/run.proto\x12\rinsightify.v1\x1a\x1bworker/v1/client_view.proto\x1a\x16insightify/v1/ui.proto\"\xeb\x01\n" +
+	"\x17insightify/v1/run.proto\x12\rinsightify.v1\x1a\x1bworker/v1/client_view.proto\"\xeb\x01\n" +
 	"\x0fStartRunRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
@@ -339,28 +160,10 @@ const file_insightify_v1_run_proto_rawDesc = "" +
 	"\x10StartRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x126\n" +
 	"\vclient_view\x18\x02 \x01(\v2\x15.worker.v1.ClientViewR\n" +
-	"clientView\"(\n" +
-	"\x0fWatchRunRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\xa5\x03\n" +
-	"\x10WatchRunResponse\x12H\n" +
-	"\n" +
-	"event_type\x18\x01 \x01(\x0e2).insightify.v1.WatchRunResponse.EventTypeR\teventType\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12)\n" +
-	"\x10progress_percent\x18\x03 \x01(\x05R\x0fprogressPercent\x126\n" +
-	"\vclient_view\x18\x04 \x01(\v2\x15.worker.v1.ClientViewR\n" +
-	"clientView\x12)\n" +
-	"\x04node\x18\x05 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\"\x9e\x01\n" +
-	"\tEventType\x12\x1a\n" +
-	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
-	"\x0eEVENT_TYPE_LOG\x10\x01\x12\x17\n" +
-	"\x13EVENT_TYPE_PROGRESS\x10\x02\x12\x17\n" +
-	"\x13EVENT_TYPE_COMPLETE\x10\x03\x12\x14\n" +
-	"\x10EVENT_TYPE_ERROR\x10\x04\x12\x19\n" +
-	"\x15EVENT_TYPE_NODE_READY\x10\x052\xa8\x01\n" +
+	"clientView2Y\n" +
 	"\n" +
 	"RunService\x12K\n" +
-	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponse\x12M\n" +
-	"\bWatchRun\x12\x1e.insightify.v1.WatchRunRequest\x1a\x1f.insightify.v1.WatchRunResponse0\x01B\xa0\x01\n" +
+	"\bStartRun\x12\x1e.insightify.v1.StartRunRequest\x1a\x1f.insightify.v1.StartRunResponseB\xa0\x01\n" +
 	"\x11com.insightify.v1B\bRunProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -375,33 +178,23 @@ func file_insightify_v1_run_proto_rawDescGZIP() []byte {
 	return file_insightify_v1_run_proto_rawDescData
 }
 
-var file_insightify_v1_run_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_insightify_v1_run_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_insightify_v1_run_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_insightify_v1_run_proto_goTypes = []any{
-	(WatchRunResponse_EventType)(0), // 0: insightify.v1.WatchRunResponse.EventType
-	(*StartRunRequest)(nil),         // 1: insightify.v1.StartRunRequest
-	(*StartRunResponse)(nil),        // 2: insightify.v1.StartRunResponse
-	(*WatchRunRequest)(nil),         // 3: insightify.v1.WatchRunRequest
-	(*WatchRunResponse)(nil),        // 4: insightify.v1.WatchRunResponse
-	nil,                             // 5: insightify.v1.StartRunRequest.ParamsEntry
-	(*v1.ClientView)(nil),           // 6: worker.v1.ClientView
-	(*UiNode)(nil),                  // 7: insightify.v1.UiNode
+	(*StartRunRequest)(nil),  // 0: insightify.v1.StartRunRequest
+	(*StartRunResponse)(nil), // 1: insightify.v1.StartRunResponse
+	nil,                      // 2: insightify.v1.StartRunRequest.ParamsEntry
+	(*v1.ClientView)(nil),    // 3: worker.v1.ClientView
 }
 var file_insightify_v1_run_proto_depIdxs = []int32{
-	5, // 0: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
-	6, // 1: insightify.v1.StartRunResponse.client_view:type_name -> worker.v1.ClientView
-	0, // 2: insightify.v1.WatchRunResponse.event_type:type_name -> insightify.v1.WatchRunResponse.EventType
-	6, // 3: insightify.v1.WatchRunResponse.client_view:type_name -> worker.v1.ClientView
-	7, // 4: insightify.v1.WatchRunResponse.node:type_name -> insightify.v1.UiNode
-	1, // 5: insightify.v1.RunService.StartRun:input_type -> insightify.v1.StartRunRequest
-	3, // 6: insightify.v1.RunService.WatchRun:input_type -> insightify.v1.WatchRunRequest
-	2, // 7: insightify.v1.RunService.StartRun:output_type -> insightify.v1.StartRunResponse
-	4, // 8: insightify.v1.RunService.WatchRun:output_type -> insightify.v1.WatchRunResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	2, // 0: insightify.v1.StartRunRequest.params:type_name -> insightify.v1.StartRunRequest.ParamsEntry
+	3, // 1: insightify.v1.StartRunResponse.client_view:type_name -> worker.v1.ClientView
+	0, // 2: insightify.v1.RunService.StartRun:input_type -> insightify.v1.StartRunRequest
+	1, // 3: insightify.v1.RunService.StartRun:output_type -> insightify.v1.StartRunResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_run_proto_init() }
@@ -409,20 +202,18 @@ func file_insightify_v1_run_proto_init() {
 	if File_insightify_v1_run_proto != nil {
 		return
 	}
-	file_insightify_v1_ui_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_run_proto_rawDesc), len(file_insightify_v1_run_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      0,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_insightify_v1_run_proto_goTypes,
 		DependencyIndexes: file_insightify_v1_run_proto_depIdxs,
-		EnumInfos:         file_insightify_v1_run_proto_enumTypes,
 		MessageInfos:      file_insightify_v1_run_proto_msgTypes,
 	}.Build()
 	File_insightify_v1_run_proto = out.File

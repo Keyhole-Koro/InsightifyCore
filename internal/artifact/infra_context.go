@@ -3,8 +3,9 @@ package artifact
 // InfraContextIn aggregates repository metadata that Stage InfraContext uses to reason about external systems.
 type InfraContextIn struct {
 	Repo                string              `json:"repo"`
-	Roots               CodeRootsOut               `json:"roots"`
-	Architecture        ArchDesignOut               `json:"architecture"`
+	Roots               CodeRootsOut        `json:"roots"`
+	Architecture        ArchDesignOut       `json:"architecture"`
+	IdentifierReports   []IdentifierReport  `json:"identifier_reports,omitempty"`
 	ConfigSamples       []OpenedFile        `json:"config_samples"`
 	IdentifierSummaries []IdentifierSummary `json:"identifier_summaries"`
 	ConfidenceThreshold float64             `json:"confidence_threshold"`

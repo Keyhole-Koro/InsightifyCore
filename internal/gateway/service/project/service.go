@@ -112,7 +112,7 @@ func (s *Service) SelectProject(_ context.Context, userID, projectID string) (En
 	return selected, nil
 }
 
-func (s *Service) InitRun(_ context.Context, userID, projectID string) (Entry, error) {
+func (s *Service) EnsureProject(_ context.Context, userID, projectID string) (Entry, error) {
 	s.store.EnsureLoaded()
 
 	if userID == "" {
@@ -282,11 +282,11 @@ func (s *Service) EnsureRunContext(projectID string) (gatewayworker.RunEnvironme
 }
 
 func (s *Service) hasRequiredWorkers(env gatewayworker.RunEnvironment) bool {
-	if env == nil || env.GetEnv() == nil || env.GetEnv().Resolver == nil {
+	if env == nil || env.Runtime() == nil || env.Runtime().GetResolver() == nil {
 		return false
 	}
-	_, hasBootstrap := env.GetEnv().Resolver.Get("bootstrap")
-	_, hasTestLLM := env.GetEnv().Resolver.Get("testllmChar")
+	_, hasBootstrap := env.Runtime().GetResolver().Get("bootstrap")
+	_, hasTestLLM := env.Runtime().GetResolver().Get("testllmChatNode")
 	return hasBootstrap && hasTestLLM
 }
 

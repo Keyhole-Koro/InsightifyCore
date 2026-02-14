@@ -25,20 +25,20 @@ type cacheMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool) {
+func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, runtime Runtime, inputFP string) (WorkerOutput, bool) {
 	var zero WorkerOutput
-	if env.ForceFrom != "" && env.ForceFrom == strings.ToLower(spec.Key) {
+	if runtime.GetForceFrom() != "" && runtime.GetForceFrom() == strings.ToLower(spec.Key) {
 		return zero, false
 	}
-	fs := ensureFS(env.ArtifactFS)
-	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
-	op := filepath.Join(env.OutDir, spec.Key+".json")
+	fs := ensureFS(runtime.GetArtifactFS())
+	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
+	op := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
 	if !FileExists(fs, mp) || !FileExists(fs, op) {
 		return zero, false
 	}
 	var m cacheMeta
 	if b, err := fs.SafeReadFile(mp); err == nil && json.Unmarshal(b, &m) == nil {
-		if m.Inputs == inputFP && m.Salt == env.ModelSalt {
+		if m.Inputs == inputFP && m.Salt == runtime.GetModelSalt() {
 			var out any
 			if b, err := fs.SafeReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
 				log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), op)
@@ -49,22 +49,22 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, in
 	return zero, false
 }
 
-func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error {
-	_ = os.MkdirAll(env.OutDir, 0755)
-	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
-	op := filepath.Join(env.OutDir, spec.Key+".json")
+func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runtime, out WorkerOutput, inputFP string) error {
+	_ = os.MkdirAll(runtime.GetOutDir(), 0755)
+	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
+	op := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(op, b, 0o644)
 	}
-	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
+	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
 	_ = os.WriteFile(mp, mb, 0o644)
 	log.Printf("%s → %s", strings.ToUpper(spec.Key), op)
 	return nil
 }
 
-func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
-	_ = os.Remove(filepath.Join(env.OutDir, spec.Key+".json"))
-	_ = os.Remove(filepath.Join(env.OutDir, spec.Key+".meta.json"))
+func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, runtime Runtime) error {
+	_ = os.Remove(filepath.Join(runtime.GetOutDir(), spec.Key+".json"))
+	_ = os.Remove(filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json"))
 	return nil
 }
 
@@ -77,28 +77,28 @@ type versionedStrategy struct{}
 // VersionedStrategy returns the versioned (no-cache) strategy.
 func VersionedStrategy() CacheStrategy { return versionedStrategy{} }
 
-func (versionedStrategy) TryLoad(ctx context.Context, spec WorkerSpec, env *Env, inputFP string) (WorkerOutput, bool) {
+func (versionedStrategy) TryLoad(ctx context.Context, spec WorkerSpec, runtime Runtime, inputFP string) (WorkerOutput, bool) {
 	// Never reuse cache for versioned workers.
 	return WorkerOutput{}, false
 }
 
-func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, out WorkerOutput, inputFP string) error {
+func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runtime, out WorkerOutput, inputFP string) error {
 	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
 	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
-	versionedPath := filepath.Join(env.OutDir, versioned)
-	latestPath := filepath.Join(env.OutDir, spec.Key+".json")
+	versionedPath := filepath.Join(runtime.GetOutDir(), versioned)
+	latestPath := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
 
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
 		_ = os.WriteFile(versionedPath, b, 0o644)
 		_ = os.WriteFile(latestPath, b, 0o644)
 	}
 	// meta is optional for versioned write; record last inputs for debugging
-	mp := filepath.Join(env.OutDir, spec.Key+".meta.json")
-	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: env.ModelSalt, CreatedAt: time.Now()}, "", "  ")
+	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
+	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
 	_ = os.WriteFile(mp, mb, 0o644)
 
 	// Best-effort pruning of other versions
-	entries, _ := ensureFS(env.ArtifactFS).SafeReadDir(env.OutDir)
+	entries, _ := ensureFS(runtime.GetArtifactFS()).SafeReadDir(runtime.GetOutDir())
 	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
 	for _, e := range entries {
 		if e.IsDir() {
@@ -106,14 +106,14 @@ func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, env *Env, ou
 		}
 		name := e.Name()
 		if m := re.FindStringSubmatch(name); len(m) == 2 && name != versioned {
-			_ = os.Remove(filepath.Join(env.OutDir, name))
+			_ = os.Remove(filepath.Join(runtime.GetOutDir(), name))
 		}
 	}
 	log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versionedPath, latestPath)
 	return nil
 }
 
-func (versionedStrategy) Invalidate(ctx context.Context, spec WorkerSpec, env *Env) error {
+func (versionedStrategy) Invalidate(ctx context.Context, spec WorkerSpec, runtime Runtime) error {
 	// No-op: keeps versions; do not delete history. Keep latest key artifact as well.
 	return nil
 }

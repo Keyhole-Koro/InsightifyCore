@@ -8,9 +8,33 @@ import (
 	"testing"
 
 	"insightify/internal/artifact"
+	llmclient "insightify/internal/llmClient"
+	"insightify/internal/mcp"
 	"insightify/internal/safeio"
 	"insightify/internal/workers/plan"
 )
+
+type testRuntime struct {
+	outDir     string
+	repoFS     *safeio.SafeFS
+	artifactFS *safeio.SafeFS
+	resolver   SpecResolver
+	mcp        *mcp.Registry
+	modelSalt  string
+	forceFrom  string
+	depsUsage  DepsUsageMode
+	llm        llmclient.LLMClient
+}
+
+func (r *testRuntime) GetOutDir() string             { return r.outDir }
+func (r *testRuntime) GetRepoFS() *safeio.SafeFS     { return r.repoFS }
+func (r *testRuntime) GetArtifactFS() *safeio.SafeFS { return r.artifactFS }
+func (r *testRuntime) GetResolver() SpecResolver     { return r.resolver }
+func (r *testRuntime) GetMCP() *mcp.Registry         { return r.mcp }
+func (r *testRuntime) GetModelSalt() string          { return r.modelSalt }
+func (r *testRuntime) GetForceFrom() string          { return r.forceFrom }
+func (r *testRuntime) GetDepsUsage() DepsUsageMode   { return r.depsUsage }
+func (r *testRuntime) GetLLM() llmclient.LLMClient   { return r.llm }
 
 func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	outDir := t.TempDir()
@@ -34,10 +58,10 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 		t.Fatalf("write seed artifact: %v", err)
 	}
 
-	env := &Env{
-		OutDir:     outDir,
-		ArtifactFS: artifactFS,
-		Resolver: MergeRegistries(map[string]WorkerSpec{
+	rt := &testRuntime{
+		outDir:     outDir,
+		artifactFS: artifactFS,
+		resolver: MergeRegistries(map[string]WorkerSpec{
 			"worker_DAG": {
 				Key:         "worker_DAG",
 				Description: "Build worker DAG",
@@ -50,8 +74,8 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 		}),
 	}
 
-	spec := BuildRegistryPlan(env)["worker_DAG"]
-	inAny, err := spec.BuildInput(context.Background(), newDeps(env, spec.Key, spec.Requires))
+	spec := BuildRegistryPlan(rt)["worker_DAG"]
+	inAny, err := spec.BuildInput(context.Background(), newDeps(rt, spec.Key, spec.Requires))
 	if err != nil {
 		t.Fatalf("BuildInput() error = %v", err)
 	}
@@ -80,8 +104,8 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 }
 
 func TestPlanRegistryIncludesBootstrapAndCompatibilitySpecs(t *testing.T) {
-	env := &Env{}
-	reg := BuildRegistryPlan(env)
+	rt := &testRuntime{}
+	reg := BuildRegistryPlan(rt)
 	if _, ok := reg["bootstrap"]; !ok {
 		t.Fatalf("expected bootstrap worker spec in plan registry")
 	}

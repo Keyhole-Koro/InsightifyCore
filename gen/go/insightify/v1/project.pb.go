@@ -21,29 +21,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type InitRunRequest struct {
+type EnsureProjectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	RepoUrl       string                 `protobuf:"bytes,2,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *InitRunRequest) Reset() {
-	*x = InitRunRequest{}
+func (x *EnsureProjectRequest) Reset() {
+	*x = EnsureProjectRequest{}
 	mi := &file_insightify_v1_project_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *InitRunRequest) String() string {
+func (x *EnsureProjectRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*InitRunRequest) ProtoMessage() {}
+func (*EnsureProjectRequest) ProtoMessage() {}
 
-func (x *InitRunRequest) ProtoReflect() protoreflect.Message {
+func (x *EnsureProjectRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_project_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,56 +54,46 @@ func (x *InitRunRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InitRunRequest.ProtoReflect.Descriptor instead.
-func (*InitRunRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use EnsureProjectRequest.ProtoReflect.Descriptor instead.
+func (*EnsureProjectRequest) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_project_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *InitRunRequest) GetUserId() string {
+func (x *EnsureProjectRequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *InitRunRequest) GetRepoUrl() string {
-	if x != nil {
-		return x.RepoUrl
-	}
-	return ""
-}
-
-func (x *InitRunRequest) GetProjectId() string {
+func (x *EnsureProjectRequest) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
 	}
 	return ""
 }
 
-type InitRunResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	RepoName       string                 `protobuf:"bytes,2,opt,name=repo_name,json=repoName,proto3" json:"repo_name,omitempty"`
-	BootstrapRunId string                 `protobuf:"bytes,3,opt,name=bootstrap_run_id,json=bootstrapRunId,proto3" json:"bootstrap_run_id,omitempty"`
-	ProjectId      string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type EnsureProjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *InitRunResponse) Reset() {
-	*x = InitRunResponse{}
+func (x *EnsureProjectResponse) Reset() {
+	*x = EnsureProjectResponse{}
 	mi := &file_insightify_v1_project_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *InitRunResponse) String() string {
+func (x *EnsureProjectResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*InitRunResponse) ProtoMessage() {}
+func (*EnsureProjectResponse) ProtoMessage() {}
 
-func (x *InitRunResponse) ProtoReflect() protoreflect.Message {
+func (x *EnsureProjectResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_insightify_v1_project_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -116,33 +105,12 @@ func (x *InitRunResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InitRunResponse.ProtoReflect.Descriptor instead.
-func (*InitRunResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use EnsureProjectResponse.ProtoReflect.Descriptor instead.
+func (*EnsureProjectResponse) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_project_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *InitRunResponse) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *InitRunResponse) GetRepoName() string {
-	if x != nil {
-		return x.RepoName
-	}
-	return ""
-}
-
-func (x *InitRunResponse) GetBootstrapRunId() string {
-	if x != nil {
-		return x.BootstrapRunId
-	}
-	return ""
-}
-
-func (x *InitRunResponse) GetProjectId() string {
+func (x *EnsureProjectResponse) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
 	}
@@ -154,10 +122,7 @@ type Project struct {
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	RepoUrl       string                 `protobuf:"bytes,4,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
-	Purpose       string                 `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	RepoName      string                 `protobuf:"bytes,6,opt,name=repo_name,json=repoName,proto3" json:"repo_name,omitempty"`
-	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -209,27 +174,6 @@ func (x *Project) GetUserId() string {
 func (x *Project) GetName() string {
 	if x != nil {
 		return x.Name
-	}
-	return ""
-}
-
-func (x *Project) GetRepoUrl() string {
-	if x != nil {
-		return x.RepoUrl
-	}
-	return ""
-}
-
-func (x *Project) GetPurpose() string {
-	if x != nil {
-		return x.Purpose
-	}
-	return ""
-}
-
-func (x *Project) GetRepoName() string {
-	if x != nil {
-		return x.RepoName
 	}
 	return ""
 }
@@ -341,7 +285,6 @@ type CreateProjectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	RepoUrl       string                 `protobuf:"bytes,3,opt,name=repo_url,json=repoUrl,proto3" json:"repo_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -386,13 +329,6 @@ func (x *CreateProjectRequest) GetUserId() string {
 func (x *CreateProjectRequest) GetName() string {
 	if x != nil {
 		return x.Name
-	}
-	return ""
-}
-
-func (x *CreateProjectRequest) GetRepoUrl() string {
-	if x != nil {
-		return x.RepoUrl
 	}
 	return ""
 }
@@ -541,37 +477,28 @@ var File_insightify_v1_project_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1binsightify/v1/project.proto\x12\rinsightify.v1\"c\n" +
-	"\x0eInitRunRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
-	"\brepo_url\x18\x02 \x01(\tR\arepoUrl\x12\x1d\n" +
+	"\x1binsightify/v1/project.proto\x12\rinsightify.v1\"N\n" +
+	"\x14EnsureProjectRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x03 \x01(\tR\tprojectId\"\x96\x01\n" +
-	"\x0fInitRunResponse\x12\x1d\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"6\n" +
+	"\x15EnsureProjectResponse\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
-	"\trepo_name\x18\x02 \x01(\tR\brepoName\x12(\n" +
-	"\x10bootstrap_run_id\x18\x03 \x01(\tR\x0ebootstrapRunId\x12\x1d\n" +
-	"\n" +
-	"project_id\x18\x04 \x01(\tR\tprojectId\"\xc4\x01\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"r\n" +
 	"\aProject\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x19\n" +
-	"\brepo_url\x18\x04 \x01(\tR\arepoUrl\x12\x18\n" +
-	"\apurpose\x18\x05 \x01(\tR\apurpose\x12\x1b\n" +
-	"\trepo_name\x18\x06 \x01(\tR\brepoName\x12\x1b\n" +
-	"\tis_active\x18\a \x01(\bR\bisActive\".\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\".\n" +
 	"\x13ListProjectsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"v\n" +
 	"\x14ListProjectsResponse\x122\n" +
 	"\bprojects\x18\x01 \x03(\v2\x16.insightify.v1.ProjectR\bprojects\x12*\n" +
-	"\x11active_project_id\x18\x02 \x01(\tR\x0factiveProjectId\"^\n" +
+	"\x11active_project_id\x18\x02 \x01(\tR\x0factiveProjectId\"C\n" +
 	"\x14CreateProjectRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
-	"\brepo_url\x18\x03 \x01(\tR\arepoUrl\"I\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"I\n" +
 	"\x15CreateProjectResponse\x120\n" +
 	"\aproject\x18\x01 \x01(\v2\x16.insightify.v1.ProjectR\aproject\"N\n" +
 	"\x14SelectProjectRequest\x12\x17\n" +
@@ -579,9 +506,9 @@ const file_insightify_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\"I\n" +
 	"\x15SelectProjectResponse\x120\n" +
-	"\aproject\x18\x01 \x01(\v2\x16.insightify.v1.ProjectR\aproject2\xeb\x02\n" +
-	"\x0eProjectService\x12H\n" +
-	"\aInitRun\x12\x1d.insightify.v1.InitRunRequest\x1a\x1e.insightify.v1.InitRunResponse\x12W\n" +
+	"\aproject\x18\x01 \x01(\v2\x16.insightify.v1.ProjectR\aproject2\xfd\x02\n" +
+	"\x0eProjectService\x12Z\n" +
+	"\rEnsureProject\x12#.insightify.v1.EnsureProjectRequest\x1a$.insightify.v1.EnsureProjectResponse\x12W\n" +
 	"\fListProjects\x12\".insightify.v1.ListProjectsRequest\x1a#.insightify.v1.ListProjectsResponse\x12Z\n" +
 	"\rCreateProject\x12#.insightify.v1.CreateProjectRequest\x1a$.insightify.v1.CreateProjectResponse\x12Z\n" +
 	"\rSelectProject\x12#.insightify.v1.SelectProjectRequest\x1a$.insightify.v1.SelectProjectResponseB\xa4\x01\n" +
@@ -601,8 +528,8 @@ func file_insightify_v1_project_proto_rawDescGZIP() []byte {
 
 var file_insightify_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_insightify_v1_project_proto_goTypes = []any{
-	(*InitRunRequest)(nil),        // 0: insightify.v1.InitRunRequest
-	(*InitRunResponse)(nil),       // 1: insightify.v1.InitRunResponse
+	(*EnsureProjectRequest)(nil),  // 0: insightify.v1.EnsureProjectRequest
+	(*EnsureProjectResponse)(nil), // 1: insightify.v1.EnsureProjectResponse
 	(*Project)(nil),               // 2: insightify.v1.Project
 	(*ListProjectsRequest)(nil),   // 3: insightify.v1.ListProjectsRequest
 	(*ListProjectsResponse)(nil),  // 4: insightify.v1.ListProjectsResponse
@@ -615,11 +542,11 @@ var file_insightify_v1_project_proto_depIdxs = []int32{
 	2, // 0: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
 	2, // 1: insightify.v1.CreateProjectResponse.project:type_name -> insightify.v1.Project
 	2, // 2: insightify.v1.SelectProjectResponse.project:type_name -> insightify.v1.Project
-	0, // 3: insightify.v1.ProjectService.InitRun:input_type -> insightify.v1.InitRunRequest
+	0, // 3: insightify.v1.ProjectService.EnsureProject:input_type -> insightify.v1.EnsureProjectRequest
 	3, // 4: insightify.v1.ProjectService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
 	5, // 5: insightify.v1.ProjectService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
 	7, // 6: insightify.v1.ProjectService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
-	1, // 7: insightify.v1.ProjectService.InitRun:output_type -> insightify.v1.InitRunResponse
+	1, // 7: insightify.v1.ProjectService.EnsureProject:output_type -> insightify.v1.EnsureProjectResponse
 	4, // 8: insightify.v1.ProjectService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
 	6, // 9: insightify.v1.ProjectService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
 	8, // 10: insightify.v1.ProjectService.SelectProject:output_type -> insightify.v1.SelectProjectResponse

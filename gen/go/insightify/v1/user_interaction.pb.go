@@ -194,11 +194,12 @@ func (x *SendRequest) GetInput() string {
 }
 
 type SendResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Accepted         bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	InteractionId    string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	AssistantMessage string                 `protobuf:"bytes,3,opt,name=assistant_message,json=assistantMessage,proto3" json:"assistant_message,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SendResponse) Reset() {
@@ -241,6 +242,13 @@ func (x *SendResponse) GetAccepted() bool {
 func (x *SendResponse) GetInteractionId() string {
 	if x != nil {
 		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *SendResponse) GetAssistantMessage() string {
+	if x != nil {
+		return x.AssistantMessage
 	}
 	return ""
 }
@@ -365,10 +373,11 @@ const file_insightify_v1_user_interaction_proto_rawDesc = "" +
 	"\vSendRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x14\n" +
-	"\x05input\x18\x03 \x01(\tR\x05input\"Q\n" +
+	"\x05input\x18\x03 \x01(\tR\x05input\"~\n" +
 	"\fSendResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
-	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\"d\n" +
+	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12+\n" +
+	"\x11assistant_message\x18\x03 \x01(\tR\x10assistantMessage\"d\n" +
 	"\fCloseRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +

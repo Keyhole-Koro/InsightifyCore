@@ -8,6 +8,7 @@ import (
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
+	"insightify/internal/safeio"
 )
 
 var infraContextPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
@@ -35,7 +36,8 @@ var infraContextPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 
 // InfraContext orchestrates the external-context reasoning step.
 type InfraContext struct {
-	LLM llmclient.LLMClient
+	LLM    llmclient.LLMClient
+	RepoFS *safeio.SafeFS
 }
 
 // Run executes Stage InfraContext with defensive guards around the LLM call.
@@ -48,8 +50,15 @@ func (p *InfraContext) Run(ctx context.Context, in artifact.InfraContextIn) (art
 	}
 	const (
 		maxSamples     = 16
+		maxSampleBytes = 16000
 		maxIdentifiers = 40
 	)
+	if len(in.ConfigSamples) == 0 && p.RepoFS != nil {
+		in.ConfigSamples = CollectInfraSamples(p.RepoFS, in.Repo, in.Roots, maxSamples, maxSampleBytes)
+	}
+	if len(in.IdentifierSummaries) == 0 {
+		in.IdentifierSummaries = SelectIdentifierSummaries(in.IdentifierReports, in.Repo, in.Roots, maxIdentifiers)
+	}
 	if len(in.ConfigSamples) > maxSamples {
 		in.ConfigSamples = cloneOpenedFiles(in.ConfigSamples[:maxSamples])
 	}

@@ -33,8 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ProjectServiceInitRunProcedure is the fully-qualified name of the ProjectService's InitRun RPC.
-	ProjectServiceInitRunProcedure = "/insightify.v1.ProjectService/InitRun"
+	// ProjectServiceEnsureProjectProcedure is the fully-qualified name of the ProjectService's
+	// EnsureProject RPC.
+	ProjectServiceEnsureProjectProcedure = "/insightify.v1.ProjectService/EnsureProject"
 	// ProjectServiceListProjectsProcedure is the fully-qualified name of the ProjectService's
 	// ListProjects RPC.
 	ProjectServiceListProjectsProcedure = "/insightify.v1.ProjectService/ListProjects"
@@ -48,7 +49,7 @@ const (
 
 // ProjectServiceClient is a client for the insightify.v1.ProjectService service.
 type ProjectServiceClient interface {
-	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
+	EnsureProject(context.Context, *connect.Request[v1.EnsureProjectRequest]) (*connect.Response[v1.EnsureProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
 	SelectProject(context.Context, *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error)
@@ -65,10 +66,10 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	projectServiceMethods := v1.File_insightify_v1_project_proto.Services().ByName("ProjectService").Methods()
 	return &projectServiceClient{
-		initRun: connect.NewClient[v1.InitRunRequest, v1.InitRunResponse](
+		ensureProject: connect.NewClient[v1.EnsureProjectRequest, v1.EnsureProjectResponse](
 			httpClient,
-			baseURL+ProjectServiceInitRunProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("InitRun")),
+			baseURL+ProjectServiceEnsureProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("EnsureProject")),
 			connect.WithClientOptions(opts...),
 		),
 		listProjects: connect.NewClient[v1.ListProjectsRequest, v1.ListProjectsResponse](
@@ -94,15 +95,15 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // projectServiceClient implements ProjectServiceClient.
 type projectServiceClient struct {
-	initRun       *connect.Client[v1.InitRunRequest, v1.InitRunResponse]
+	ensureProject *connect.Client[v1.EnsureProjectRequest, v1.EnsureProjectResponse]
 	listProjects  *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
 	createProject *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
 	selectProject *connect.Client[v1.SelectProjectRequest, v1.SelectProjectResponse]
 }
 
-// InitRun calls insightify.v1.ProjectService.InitRun.
-func (c *projectServiceClient) InitRun(ctx context.Context, req *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error) {
-	return c.initRun.CallUnary(ctx, req)
+// EnsureProject calls insightify.v1.ProjectService.EnsureProject.
+func (c *projectServiceClient) EnsureProject(ctx context.Context, req *connect.Request[v1.EnsureProjectRequest]) (*connect.Response[v1.EnsureProjectResponse], error) {
+	return c.ensureProject.CallUnary(ctx, req)
 }
 
 // ListProjects calls insightify.v1.ProjectService.ListProjects.
@@ -122,7 +123,7 @@ func (c *projectServiceClient) SelectProject(ctx context.Context, req *connect.R
 
 // ProjectServiceHandler is an implementation of the insightify.v1.ProjectService service.
 type ProjectServiceHandler interface {
-	InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error)
+	EnsureProject(context.Context, *connect.Request[v1.EnsureProjectRequest]) (*connect.Response[v1.EnsureProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
 	SelectProject(context.Context, *connect.Request[v1.SelectProjectRequest]) (*connect.Response[v1.SelectProjectResponse], error)
@@ -135,10 +136,10 @@ type ProjectServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	projectServiceMethods := v1.File_insightify_v1_project_proto.Services().ByName("ProjectService").Methods()
-	projectServiceInitRunHandler := connect.NewUnaryHandler(
-		ProjectServiceInitRunProcedure,
-		svc.InitRun,
-		connect.WithSchema(projectServiceMethods.ByName("InitRun")),
+	projectServiceEnsureProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceEnsureProjectProcedure,
+		svc.EnsureProject,
+		connect.WithSchema(projectServiceMethods.ByName("EnsureProject")),
 		connect.WithHandlerOptions(opts...),
 	)
 	projectServiceListProjectsHandler := connect.NewUnaryHandler(
@@ -161,8 +162,8 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 	)
 	return "/insightify.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case ProjectServiceInitRunProcedure:
-			projectServiceInitRunHandler.ServeHTTP(w, r)
+		case ProjectServiceEnsureProjectProcedure:
+			projectServiceEnsureProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceListProjectsProcedure:
 			projectServiceListProjectsHandler.ServeHTTP(w, r)
 		case ProjectServiceCreateProjectProcedure:
@@ -178,8 +179,8 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 // UnimplementedProjectServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedProjectServiceHandler struct{}
 
-func (UnimplementedProjectServiceHandler) InitRun(context.Context, *connect.Request[v1.InitRunRequest]) (*connect.Response[v1.InitRunResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.ProjectService.InitRun is not implemented"))
+func (UnimplementedProjectServiceHandler) EnsureProject(context.Context, *connect.Request[v1.EnsureProjectRequest]) (*connect.Response[v1.EnsureProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.ProjectService.EnsureProject is not implemented"))
 }
 
 func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {

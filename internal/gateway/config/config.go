@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,11 +15,15 @@ type Config struct {
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
-	port := flag.String("port", ":8080", "server port")
+	port := flag.String("port", ":8081", "server port")
 	flag.Parse()
 
 	if envPort := os.Getenv("PORT"); envPort != "" {
-		*port = ":" + envPort
+		if strings.HasPrefix(envPort, ":") {
+			*port = envPort
+		} else {
+			*port = ":" + envPort
+		}
 	}
 
 	return &Config{

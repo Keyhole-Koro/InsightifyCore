@@ -3,10 +3,11 @@ package testpipe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
-	workerv1 "insightify/gen/go/worker/v1"
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
@@ -15,9 +16,12 @@ import (
 )
 
 const (
-	testChatNodeID    = "test-llm-chat-node"
-	testChatWorkerKey = "testllmChatNode"
-	testChatModelName = "Low"
+	testChatNodeID       = "test-llm-chat-node"
+	testChatWorkerKey    = "testllmChatNode"
+	testChatModelName    = "Low"
+	defaultChatMaxTurns  = 8
+	defaultIdleTimeout   = 30 * time.Second
+	defaultOpeningPrompt = "Hi! How has your day been so far?"
 )
 
 var chatPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
@@ -29,28 +33,134 @@ var chatPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{
 	},
 	Rules: []string{
 		"Prioritize the latest user_input.",
+		"Use history to keep the conversation coherent.",
 		"Ask one clear follow-up question or reply naturally in one turn.",
 	},
 	OutputFormat: "JSON only.",
 	Language:     "English",
 }, llmtool.PresetStrictJSON(), llmtool.PresetNoInvent())
 
-// LLMChatNodePipeline is an interactive chat worker backed by LLM.
-type LLMChatNodePipeline struct {
-	LLM llmclient.LLMClient
+type Interaction interface {
+	WaitForInput(ctx context.Context) (string, error)
+	PublishOutput(ctx context.Context, message string) error
 }
 
-// Run creates/updates a chat node and returns interaction state compatible with bootstrap flow.
-func (p *LLMChatNodePipeline) Run(ctx context.Context, in plan.BootstrapIn) (plan.BootstrapOut, error) {
+type chatTurn struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// LLMChatNodePipeline is an interactive chat worker backed by LLM.
+type LLMChatNodePipeline struct {
+	LLM         llmclient.LLMClient
+	Interaction Interaction
+	MaxTurns    int
+	IdleTimeout time.Duration
+}
+
+// Run creates/updates a chat node and handles interactive conversation turns.
+func (p *LLMChatNodePipeline) Run(ctx context.Context, in plan.BootstrapIn) error {
 	if p == nil {
-		return plan.BootstrapOut{}, fmt.Errorf("testllmChatNode: pipeline is nil")
+		return fmt.Errorf("testllmChatNode: pipeline is nil")
 	}
 	if p.LLM == nil {
-		return plan.BootstrapOut{}, fmt.Errorf("testllmChatNode: llm client is nil")
+		return fmt.Errorf("testllmChatNode: llm client is nil")
 	}
+
+	maxTurns := p.MaxTurns
+	if maxTurns <= 0 {
+		maxTurns = defaultChatMaxTurns
+	}
+
+	idleTimeout := p.IdleTimeout
+	if idleTimeout <= 0 {
+		idleTimeout = defaultIdleTimeout
+	}
+
 	userInput := strings.TrimSpace(in.UserInput)
+	waitNextInput := func() (string, error) {
+		if p.Interaction == nil {
+			return "", nil
+		}
+		waitCtx, cancel := context.WithTimeout(ctx, idleTimeout)
+		nextInput, waitErr := p.Interaction.WaitForInput(waitCtx)
+		cancel()
+		if waitErr != nil {
+			return "", waitErr
+		}
+		return strings.TrimSpace(nextInput), nil
+	}
+	if userInput == "" {
+		if p.Interaction == nil {
+			userInput = defaultOpeningPrompt
+		} else {
+			if err := p.Interaction.PublishOutput(ctx, defaultOpeningPrompt); err != nil {
+				return err
+			}
+			nextInput, waitErr := waitNextInput()
+			if waitErr != nil {
+				if errors.Is(waitErr, context.DeadlineExceeded) || errors.Is(waitErr, context.Canceled) {
+					return nil
+				}
+				return waitErr
+			}
+			if nextInput == "" {
+				return nil
+			}
+			userInput = nextInput
+		}
+	}
+
+	history := make([]chatTurn, 0, maxTurns*2)
+	turn := 0
+
+	for {
+		if turn >= maxTurns {
+			break
+		}
+		turn++
+
+		history = append(history, chatTurn{Role: "user", Content: userInput})
+		reply, err := p.generateReply(ctx, userInput, history)
+		if err != nil {
+			return err
+		}
+		reply = strings.TrimSpace(reply)
+		if reply == "" {
+			break
+		}
+
+		if p.Interaction != nil {
+			if err := p.Interaction.PublishOutput(ctx, reply); err != nil {
+				return err
+			}
+		}
+
+		history = append(history, chatTurn{Role: "assistant", Content: reply})
+		if p.Interaction == nil {
+			return nil
+		}
+
+		nextInput, waitErr := waitNextInput()
+		if waitErr != nil {
+			if errors.Is(waitErr, context.DeadlineExceeded) || errors.Is(waitErr, context.Canceled) {
+				break
+			}
+			return waitErr
+		}
+		if nextInput == "" {
+			break
+		}
+		userInput = nextInput
+	}
+
+	return nil
+}
+
+func (p *LLMChatNodePipeline) generateReply(ctx context.Context, userInput string, history []chatTurn) (string, error) {
 	payload := map[string]any{
-		"user_input": userInput,
+		"user_input": strings.TrimSpace(userInput),
+		"history":    history,
 	}
 	llmCtx := llm.WithModelSelection(
 		llm.WithWorker(ctx, testChatWorkerKey),
@@ -61,27 +171,15 @@ func (p *LLMChatNodePipeline) Run(ctx context.Context, in plan.BootstrapIn) (pla
 	)
 	prompt, err := llmtool.StructuredPromptBuilder(chatPromptSpec)(llmCtx, &llmtool.ToolState{Input: payload}, nil)
 	if err != nil {
-		return plan.BootstrapOut{}, err
+		return "", err
 	}
 	raw, err := p.LLM.GenerateJSONStream(llmCtx, prompt, payload, nil)
 	if err != nil {
-		return plan.BootstrapOut{}, err
+		return "", err
 	}
 	var result artifact.InitPurposeOut
 	if err := json.Unmarshal(raw, &result); err != nil {
-		return plan.BootstrapOut{}, fmt.Errorf("testllmChatNode JSON invalid: %w", err)
+		return "", fmt.Errorf("testllmChatNode JSON invalid: %w", err)
 	}
-	return plan.BootstrapOut{
-		Result: result,
-		BootstrapContext: artifact.BootstrapContext{
-			Purpose:   result.Purpose,
-			UserInput: userInput,
-		}.Normalize(),
-		ClientView: &workerv1.ClientView{
-			Phase: "test_llm_chat_node",
-			Content: &workerv1.ClientView_LlmResponse{
-				LlmResponse: strings.TrimSpace(result.FollowupQuestion),
-			},
-		},
-	}, nil
+	return strings.TrimSpace(result.FollowupQuestion), nil
 }

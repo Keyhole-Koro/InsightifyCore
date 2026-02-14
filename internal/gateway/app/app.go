@@ -32,8 +32,8 @@ func New() (*App, error) {
 	uiStore := ui.NewStore()
 	uiSvc := gatewayui.New(uiStore)
 	projectSvc := gatewayproject.New(defaultProjectStore)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), uiSvc)
 	userInteractionSvc := gatewayuserinteraction.New()
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), uiSvc, userInteractionSvc)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

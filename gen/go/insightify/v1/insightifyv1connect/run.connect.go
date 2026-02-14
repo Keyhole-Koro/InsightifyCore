@@ -35,14 +35,11 @@ const (
 const (
 	// RunServiceStartRunProcedure is the fully-qualified name of the RunService's StartRun RPC.
 	RunServiceStartRunProcedure = "/insightify.v1.RunService/StartRun"
-	// RunServiceWatchRunProcedure is the fully-qualified name of the RunService's WatchRun RPC.
-	RunServiceWatchRunProcedure = "/insightify.v1.RunService/WatchRun"
 )
 
 // RunServiceClient is a client for the insightify.v1.RunService service.
 type RunServiceClient interface {
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
-	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.WatchRunResponse], error)
 }
 
 // NewRunServiceClient constructs a client for the insightify.v1.RunService service. By default, it
@@ -62,19 +59,12 @@ func NewRunServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(runServiceMethods.ByName("StartRun")),
 			connect.WithClientOptions(opts...),
 		),
-		watchRun: connect.NewClient[v1.WatchRunRequest, v1.WatchRunResponse](
-			httpClient,
-			baseURL+RunServiceWatchRunProcedure,
-			connect.WithSchema(runServiceMethods.ByName("WatchRun")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // runServiceClient implements RunServiceClient.
 type runServiceClient struct {
 	startRun *connect.Client[v1.StartRunRequest, v1.StartRunResponse]
-	watchRun *connect.Client[v1.WatchRunRequest, v1.WatchRunResponse]
 }
 
 // StartRun calls insightify.v1.RunService.StartRun.
@@ -82,15 +72,9 @@ func (c *runServiceClient) StartRun(ctx context.Context, req *connect.Request[v1
 	return c.startRun.CallUnary(ctx, req)
 }
 
-// WatchRun calls insightify.v1.RunService.WatchRun.
-func (c *runServiceClient) WatchRun(ctx context.Context, req *connect.Request[v1.WatchRunRequest]) (*connect.ServerStreamForClient[v1.WatchRunResponse], error) {
-	return c.watchRun.CallServerStream(ctx, req)
-}
-
 // RunServiceHandler is an implementation of the insightify.v1.RunService service.
 type RunServiceHandler interface {
 	StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error)
-	WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.WatchRunResponse]) error
 }
 
 // NewRunServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -106,18 +90,10 @@ func NewRunServiceHandler(svc RunServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(runServiceMethods.ByName("StartRun")),
 		connect.WithHandlerOptions(opts...),
 	)
-	runServiceWatchRunHandler := connect.NewServerStreamHandler(
-		RunServiceWatchRunProcedure,
-		svc.WatchRun,
-		connect.WithSchema(runServiceMethods.ByName("WatchRun")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/insightify.v1.RunService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RunServiceStartRunProcedure:
 			runServiceStartRunHandler.ServeHTTP(w, r)
-		case RunServiceWatchRunProcedure:
-			runServiceWatchRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -129,8 +105,4 @@ type UnimplementedRunServiceHandler struct{}
 
 func (UnimplementedRunServiceHandler) StartRun(context.Context, *connect.Request[v1.StartRunRequest]) (*connect.Response[v1.StartRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.StartRun is not implemented"))
-}
-
-func (UnimplementedRunServiceHandler) WatchRun(context.Context, *connect.Request[v1.WatchRunRequest], *connect.ServerStream[v1.WatchRunResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.RunService.WatchRun is not implemented"))
 }
