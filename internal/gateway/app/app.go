@@ -38,10 +38,11 @@ func New() (*App, error) {
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)
 	userInteractionHandler := rpc.NewUserInteractionHandler(userInteractionSvc)
+	uiHandler := rpc.NewUiHandler(uiSvc)
 	traceHandler := handler.NewTraceHandler(workerSvc)
 
 	// Routing & Server
-	mux := server.NewMux(projectHandler, runHandler, userInteractionHandler, traceHandler)
+	mux := server.NewMux(projectHandler, runHandler, userInteractionHandler, uiHandler, traceHandler)
 	srv := server.New(cfg.Port, mux)
 
 	return &App{

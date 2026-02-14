@@ -11,7 +11,6 @@ import (
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/ui"
 )
 
 // BootstrapIn is the input for the bootstrap pipeline.
@@ -24,7 +23,6 @@ type BootstrapOut struct {
 	Result           artifact.InitPurposeOut   `json:"result"`
 	BootstrapContext artifact.BootstrapContext `json:"bootstrap_context"`
 	ClientView       *workerv1.ClientView      `json:"client_view,omitempty"`
-	UINode           ui.Node                   `json:"ui_node,omitempty"`
 }
 
 // NeedMoreInput returns true if more user input is required.
