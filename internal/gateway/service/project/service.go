@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"insightify/internal/gateway/repository/projectstore"
-	gatewayrun "insightify/internal/gateway/service/run"
+	gatewayworker "insightify/internal/gateway/service/worker"
 )
 
 // Service implements Project business logic and owns all project state.
@@ -17,14 +17,14 @@ type Service struct {
 	store *projectstore.Store
 
 	runCtxMu sync.RWMutex
-	runCtx   map[string]gatewayrun.RunEnvironment
+	runCtx   map[string]gatewayworker.RunEnvironment
 }
 
 // New creates a project service backed by the given store.
 func New(store *projectstore.Store) *Service {
 	return &Service{
 		store:  store,
-		runCtx: make(map[string]gatewayrun.RunEnvironment),
+		runCtx: make(map[string]gatewayworker.RunEnvironment),
 	}
 }
 
@@ -38,12 +38,12 @@ func (s *Service) Store() *projectstore.Store { return s.store }
 // Entry is the public type for project entry (was unexported 'entry').
 type Entry struct {
 	State  projectstore.State
-	RunCtx gatewayrun.RunEnvironment
+	RunCtx gatewayworker.RunEnvironment
 }
 
 func (s *Service) ListProjects(_ context.Context, userID string) ([]Entry, string, error) {
 	s.store.EnsureLoaded()
-	
+
 	projects := s.listByUser(userID)
 	// Sort by ProjectID
 	sort.Slice(projects, func(i, j int) bool {
@@ -61,15 +61,15 @@ func (s *Service) ListProjects(_ context.Context, userID string) ([]Entry, strin
 
 func (s *Service) CreateProject(_ context.Context, userID, projectName string) (Entry, error) {
 	s.store.EnsureLoaded()
-	
+
 	if projectName == "" {
 		projectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
 	}
 
 	projectID := fmt.Sprintf("project-%d", time.Now().UnixNano())
 
-	var runCtx gatewayrun.RunEnvironment
-	ctx, err := gatewayrun.NewRunRuntime("", projectID)
+	var runCtx gatewayworker.RunEnvironment
+	ctx, err := gatewayworker.NewRunRuntime("", projectID)
 	if err != nil {
 		return Entry{}, fmt.Errorf("failed to create run context: %w", err)
 	}
@@ -95,7 +95,7 @@ func (s *Service) CreateProject(_ context.Context, userID, projectName string) (
 
 func (s *Service) SelectProject(_ context.Context, userID, projectID string) (Entry, error) {
 	s.store.EnsureLoaded()
-	
+
 	p, ok := s.get(projectID)
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
@@ -114,7 +114,7 @@ func (s *Service) SelectProject(_ context.Context, userID, projectID string) (En
 
 func (s *Service) InitRun(_ context.Context, userID, projectID string) (Entry, error) {
 	s.store.EnsureLoaded()
-	
+
 	if userID == "" {
 		userID = "demo-user"
 	}
@@ -155,7 +155,7 @@ func (s *Service) InitRun(_ context.Context, userID, projectID string) (Entry, e
 
 	// Ensure run context.
 	if !s.hasRequiredWorkers(p.RunCtx) {
-		ctx, err := gatewayrun.NewRunRuntime(p.State.Repo, projectID)
+		ctx, err := gatewayworker.NewRunRuntime(p.State.Repo, projectID)
 		if err != nil {
 			return Entry{}, fmt.Errorf("failed to create run context: %w", err)
 		}
@@ -236,7 +236,7 @@ func (s *Service) setActiveForUser(userID, projectID string) (Entry, bool) {
 // ---------------------------------------------------------------------------
 
 // GetRunContext returns the run context for a project.
-func (s *Service) GetRunContext(projectID string) (gatewayrun.RunEnvironment, bool) {
+func (s *Service) GetRunContext(projectID string) (gatewayworker.RunEnvironment, bool) {
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, false
@@ -264,7 +264,7 @@ func (s *Service) GetEntry(projectID string) (State, bool) {
 }
 
 // EnsureRunContext ensures a project has a valid run context with required workers.
-func (s *Service) EnsureRunContext(projectID string) (gatewayrun.RunEnvironment, error) {
+func (s *Service) EnsureRunContext(projectID string) (gatewayworker.RunEnvironment, error) {
 	e, ok := s.get(projectID)
 	if !ok {
 		return nil, fmt.Errorf("project %s not found", projectID)
@@ -272,7 +272,7 @@ func (s *Service) EnsureRunContext(projectID string) (gatewayrun.RunEnvironment,
 	if e.RunCtx != nil && s.hasRequiredWorkers(e.RunCtx) {
 		return e.RunCtx, nil
 	}
-	ctx, err := gatewayrun.NewRunRuntime(e.State.Repo, projectID)
+	ctx, err := gatewayworker.NewRunRuntime(e.State.Repo, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore run context: %w", err)
 	}
@@ -281,7 +281,7 @@ func (s *Service) EnsureRunContext(projectID string) (gatewayrun.RunEnvironment,
 	return ctx, nil
 }
 
-func (s *Service) hasRequiredWorkers(env gatewayrun.RunEnvironment) bool {
+func (s *Service) hasRequiredWorkers(env gatewayworker.RunEnvironment) bool {
 	if env == nil || env.GetEnv() == nil || env.GetEnv().Resolver == nil {
 		return false
 	}
@@ -301,5 +301,5 @@ type State struct {
 	UserID      string
 	Repo        string
 	IsActive    bool
-	RunCtx      gatewayrun.RunEnvironment
+	RunCtx      gatewayworker.RunEnvironment
 }

@@ -1,7 +1,7 @@
-package run
+package worker
 
 import (
-	"insightify/internal/gateway/repository/ui"
+	gatewayui "insightify/internal/gateway/service/ui"
 	"sync"
 	"time"
 )
@@ -21,11 +21,11 @@ type ProjectView struct {
 // Service manages runs and traces.
 type Service struct {
 	project ProjectReader
-	ui      *ui.Store
+	ui      *gatewayui.Service
 	trace   *TraceLogger
 }
 
-func New(project ProjectReader, ui *ui.Store) *Service {
+func New(project ProjectReader, ui *gatewayui.Service) *Service {
 	return &Service{
 		project: project,
 		ui:      ui,
@@ -55,7 +55,7 @@ func NewTraceLogger() *TraceLogger {
 func (l *TraceLogger) Append(runID, source, stage string, fields map[string]any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	if fields == nil {
 		fields = make(map[string]any)
 	}
@@ -70,7 +70,7 @@ func (l *TraceLogger) Append(runID, source, stage string, fields map[string]any)
 	if _, ok := evt["timestamp"]; !ok {
 		evt["timestamp"] = time.Now().Format(time.RFC3339Nano)
 	}
-	
+
 	l.events[runID] = append(l.events[runID], evt)
 }
 

@@ -1,4 +1,4 @@
-package run
+package worker
 
 import (
 	"insightify/internal/runner"

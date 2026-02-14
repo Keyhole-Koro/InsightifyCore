@@ -1,11 +1,11 @@
 package project
 
 import (
-	gatewayrun "insightify/internal/gateway/service/run"
+	gatewayworker "insightify/internal/gateway/service/worker"
 )
 
-// AsProjectReader returns an adapter that satisfies run.ProjectReader.
-func (s *Service) AsProjectReader() gatewayrun.ProjectReader {
+// AsProjectReader returns an adapter that satisfies worker.ProjectReader.
+func (s *Service) AsProjectReader() gatewayworker.ProjectReader {
 	return &projectReaderAdapter{svc: s}
 }
 
@@ -13,17 +13,17 @@ type projectReaderAdapter struct {
 	svc *Service
 }
 
-func (a *projectReaderAdapter) GetEntry(projectID string) (gatewayrun.ProjectView, bool) {
+func (a *projectReaderAdapter) GetEntry(projectID string) (gatewayworker.ProjectView, bool) {
 	e, ok := a.svc.get(projectID)
 	if !ok {
-		return gatewayrun.ProjectView{}, false
+		return gatewayworker.ProjectView{}, false
 	}
-	return gatewayrun.ProjectView{
+	return gatewayworker.ProjectView{
 		ProjectID: e.State.ProjectID,
 		RunCtx:    e.RunCtx,
 	}, true
 }
 
-func (a *projectReaderAdapter) EnsureRunContext(projectID string) (gatewayrun.RunEnvironment, error) {
+func (a *projectReaderAdapter) EnsureRunContext(projectID string) (gatewayworker.RunEnvironment, error) {
 	return a.svc.EnsureRunContext(projectID)
 }

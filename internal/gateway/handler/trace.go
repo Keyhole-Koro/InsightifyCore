@@ -2,17 +2,17 @@ package handler
 
 import (
 	"encoding/json"
-	gatewayrun "insightify/internal/gateway/service/run"
+	gatewayworker "insightify/internal/gateway/service/worker"
 	"net/http"
 	"strings"
 )
 
 type TraceHandler struct {
-	runSvc *gatewayrun.Service
+	workerSvc *gatewayworker.Service
 }
 
-func NewTraceHandler(runSvc *gatewayrun.Service) *TraceHandler {
-	return &TraceHandler{runSvc: runSvc}
+func NewTraceHandler(workerSvc *gatewayworker.Service) *TraceHandler {
+	return &TraceHandler{workerSvc: workerSvc}
 }
 
 func (h *TraceHandler) HandleFrontendTrace(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (h *TraceHandler) HandleFrontendTrace(w http.ResponseWriter, r *http.Reques
 	if ts := strings.TrimSpace(in.Timestamp); ts != "" {
 		fields["frontend_timestamp"] = ts
 	}
-	h.runSvc.TraceLogger().Append(runID, "frontend", stage, fields)
+	h.workerSvc.TraceLogger().Append(runID, "frontend", stage, fields)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok": true,
@@ -64,7 +64,7 @@ func (h *TraceHandler) HandleRunLogs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "run_id is required", http.StatusBadRequest)
 		return
 	}
-	events, err := h.runSvc.TraceLogger().Read(runID)
+	events, err := h.workerSvc.TraceLogger().Read(runID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

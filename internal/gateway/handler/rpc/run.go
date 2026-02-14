@@ -6,16 +6,16 @@ import (
 	"log/slog"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
-	"insightify/internal/gateway/service/run"
+	"insightify/internal/gateway/service/worker"
 
 	"connectrpc.com/connect"
 )
 
 type RunHandler struct {
-	svc *run.Service
+	svc *worker.Service
 }
 
-func NewRunHandler(svc *run.Service) *RunHandler {
+func NewRunHandler(svc *worker.Service) *RunHandler {
 	return &RunHandler{svc: svc}
 }
 

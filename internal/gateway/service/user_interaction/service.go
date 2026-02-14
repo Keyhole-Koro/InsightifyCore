@@ -16,11 +16,9 @@ type Service struct {
 }
 
 type sessionState struct {
-	runID          string
-	conversationID string
-	interactionID  string
-	closed         bool
-	updatedAt      time.Time
+	interactionID string
+	closed        bool
+	updatedAt     time.Time
 }
 
 func New() *Service {
@@ -34,12 +32,11 @@ func (s *Service) Wait(_ context.Context, req *insightifyv1.WaitRequest) (*insig
 	if runID == "" {
 		return nil, fmt.Errorf("run_id is required")
 	}
-	conversationID := normalizeConversationID(req.GetConversationId(), runID)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	st := s.getOrCreateLocked(runID, conversationID)
+	st := s.getOrCreateLocked(runID)
 	if st.interactionID == "" {
 		st.interactionID = newInteractionID()
 	}
@@ -65,12 +62,11 @@ func (s *Service) Send(_ context.Context, req *insightifyv1.SendRequest) (*insig
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	st := s.getOrCreateLocked(runID, runID)
+	st := s.getOrCreateLocked(runID)
 	if st.closed {
 		return &insightifyv1.SendResponse{
-			Accepted:       false,
-			InteractionId:  st.interactionID,
-			ConversationId: st.conversationID,
+			Accepted:      false,
+			InteractionId: st.interactionID,
 		}, nil
 	}
 	if interactionID := strings.TrimSpace(req.GetInteractionId()); interactionID != "" {
@@ -82,9 +78,8 @@ func (s *Service) Send(_ context.Context, req *insightifyv1.SendRequest) (*insig
 	st.updatedAt = time.Now()
 
 	return &insightifyv1.SendResponse{
-		Accepted:       true,
-		InteractionId:  st.interactionID,
-		ConversationId: st.conversationID,
+		Accepted:      true,
+		InteractionId: st.interactionID,
 	}, nil
 }
 
@@ -97,7 +92,7 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	st := s.getOrCreateLocked(runID, runID)
+	st := s.getOrCreateLocked(runID)
 	if interactionID := strings.TrimSpace(req.GetInteractionId()); interactionID != "" {
 		st.interactionID = interactionID
 	}
@@ -112,25 +107,14 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 	}, nil
 }
 
-func (s *Service) getOrCreateLocked(runID, conversationID string) *sessionState {
-	key := runID + "|" + conversationID
+func (s *Service) getOrCreateLocked(runID string) *sessionState {
+	key := runID
 	if st, ok := s.state[key]; ok {
 		return st
 	}
-	st := &sessionState{
-		runID:          runID,
-		conversationID: conversationID,
-	}
+	st := &sessionState{}
 	s.state[key] = st
 	return st
-}
-
-func normalizeConversationID(conversationID, runID string) string {
-	conversationID = strings.TrimSpace(conversationID)
-	if conversationID != "" {
-		return conversationID
-	}
-	return runID
 }
 
 func newInteractionID() string {

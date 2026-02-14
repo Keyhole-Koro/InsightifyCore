@@ -12,8 +12,9 @@ import (
 	"insightify/internal/gateway/repository/ui"
 	"insightify/internal/gateway/server"
 	gatewayproject "insightify/internal/gateway/service/project"
-	gatewayrun "insightify/internal/gateway/service/run"
+	gatewayui "insightify/internal/gateway/service/ui"
 	gatewayuserinteraction "insightify/internal/gateway/service/user_interaction"
+	gatewayworker "insightify/internal/gateway/service/worker"
 )
 
 type App struct {
@@ -29,14 +30,15 @@ func New() (*App, error) {
 	// Dependencies
 	defaultProjectStore := projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json"))
 	uiStore := ui.NewStore()
+	uiSvc := gatewayui.New(uiStore)
 	projectSvc := gatewayproject.New(defaultProjectStore)
-	runSvc := gatewayrun.New(projectSvc.AsProjectReader(), uiStore)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), uiSvc)
 	userInteractionSvc := gatewayuserinteraction.New()
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
-	runHandler := rpc.NewRunHandler(runSvc)
+	runHandler := rpc.NewRunHandler(workerSvc)
 	userInteractionHandler := rpc.NewUserInteractionHandler(userInteractionSvc)
-	traceHandler := handler.NewTraceHandler(runSvc)
+	traceHandler := handler.NewTraceHandler(workerSvc)
 
 	// Routing & Server
 	mux := server.NewMux(projectHandler, runHandler, userInteractionHandler, traceHandler)
