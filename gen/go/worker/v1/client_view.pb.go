@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: pipeline/v1/client_view.proto
+// source: worker/v1/client_view.proto
 
-package pipelinev1
+package workerv1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -35,7 +35,7 @@ type ClientView struct {
 
 func (x *ClientView) Reset() {
 	*x = ClientView{}
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[0]
+	mi := &file_worker_v1_client_view_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -47,7 +47,7 @@ func (x *ClientView) String() string {
 func (*ClientView) ProtoMessage() {}
 
 func (x *ClientView) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[0]
+	mi := &file_worker_v1_client_view_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +60,7 @@ func (x *ClientView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientView.ProtoReflect.Descriptor instead.
 func (*ClientView) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_client_view_proto_rawDescGZIP(), []int{0}
+	return file_worker_v1_client_view_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ClientView) GetPhase() string {
@@ -121,7 +121,7 @@ type GraphView struct {
 
 func (x *GraphView) Reset() {
 	*x = GraphView{}
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[1]
+	mi := &file_worker_v1_client_view_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -133,7 +133,7 @@ func (x *GraphView) String() string {
 func (*GraphView) ProtoMessage() {}
 
 func (x *GraphView) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[1]
+	mi := &file_worker_v1_client_view_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -146,7 +146,7 @@ func (x *GraphView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphView.ProtoReflect.Descriptor instead.
 func (*GraphView) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_client_view_proto_rawDescGZIP(), []int{1}
+	return file_worker_v1_client_view_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GraphView) GetNodes() []*GraphNode {
@@ -175,7 +175,7 @@ type GraphNode struct {
 
 func (x *GraphNode) Reset() {
 	*x = GraphNode{}
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[2]
+	mi := &file_worker_v1_client_view_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -187,7 +187,7 @@ func (x *GraphNode) String() string {
 func (*GraphNode) ProtoMessage() {}
 
 func (x *GraphNode) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[2]
+	mi := &file_worker_v1_client_view_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -200,7 +200,7 @@ func (x *GraphNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphNode.ProtoReflect.Descriptor instead.
 func (*GraphNode) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_client_view_proto_rawDescGZIP(), []int{2}
+	return file_worker_v1_client_view_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GraphNode) GetUid() string {
@@ -241,7 +241,7 @@ type GraphEdge struct {
 
 func (x *GraphEdge) Reset() {
 	*x = GraphEdge{}
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[3]
+	mi := &file_worker_v1_client_view_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -253,7 +253,7 @@ func (x *GraphEdge) String() string {
 func (*GraphEdge) ProtoMessage() {}
 
 func (x *GraphEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_client_view_proto_msgTypes[3]
+	mi := &file_worker_v1_client_view_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -266,7 +266,7 @@ func (x *GraphEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphEdge.ProtoReflect.Descriptor instead.
 func (*GraphEdge) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_client_view_proto_rawDescGZIP(), []int{3}
+	return file_worker_v1_client_view_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GraphEdge) GetFrom() string {
@@ -283,20 +283,20 @@ func (x *GraphEdge) GetTo() string {
 	return ""
 }
 
-var File_pipeline_v1_client_view_proto protoreflect.FileDescriptor
+var File_worker_v1_client_view_proto protoreflect.FileDescriptor
 
-const file_pipeline_v1_client_view_proto_rawDesc = "" +
+const file_worker_v1_client_view_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpipeline/v1/client_view.proto\x12\vpipeline.v1\"\x82\x01\n" +
+	"\x1bworker/v1/client_view.proto\x12\tworker.v1\"\x80\x01\n" +
 	"\n" +
 	"ClientView\x12\x14\n" +
-	"\x05phase\x18\x01 \x01(\tR\x05phase\x12.\n" +
-	"\x05graph\x18\x02 \x01(\v2\x16.pipeline.v1.GraphViewH\x00R\x05graph\x12#\n" +
+	"\x05phase\x18\x01 \x01(\tR\x05phase\x12,\n" +
+	"\x05graph\x18\x02 \x01(\v2\x14.worker.v1.GraphViewH\x00R\x05graph\x12#\n" +
 	"\fllm_response\x18\x03 \x01(\tH\x00R\vllmResponseB\t\n" +
-	"\acontent\"g\n" +
-	"\tGraphView\x12,\n" +
-	"\x05nodes\x18\x01 \x03(\v2\x16.pipeline.v1.GraphNodeR\x05nodes\x12,\n" +
-	"\x05edges\x18\x02 \x03(\v2\x16.pipeline.v1.GraphEdgeR\x05edges\"t\n" +
+	"\acontent\"c\n" +
+	"\tGraphView\x12*\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x14.worker.v1.GraphNodeR\x05nodes\x12*\n" +
+	"\x05edges\x18\x02 \x03(\v2\x14.worker.v1.GraphEdgeR\x05edges\"t\n" +
 	"\tGraphNode\x12\x10\n" +
 	"\x03uid\x18\x01 \x01(\tR\x03uid\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12 \n" +
@@ -305,32 +305,33 @@ const file_pipeline_v1_client_view_proto_rawDesc = "" +
 	"parent_uid\x18\x04 \x01(\tR\tparentUid\"/\n" +
 	"\tGraphEdge\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
-	"\x02to\x18\x02 \x01(\tR\x02toB\x99\x01\n" +
-	"\x0fcom.pipeline.v1B\x0fClientViewProtoP\x01Z(insightify/gen/go/pipeline/v1;pipelinev1\xa2\x02\x03PXX\xaa\x02\vPipeline.V1\xca\x02\vPipeline\\V1\xe2\x02\x17Pipeline\\V1\\GPBMetadata\xea\x02\fPipeline::V1b\x06proto3"
+	"\x02to\x18\x02 \x01(\tR\x02toB\x8b\x01\n" +
+	"\rcom.worker.v1B\x0fClientViewProtoP\x01Z$insightify/gen/go/worker/v1;workerv1\xa2\x02\x03WXX\xaa\x02\tWorker.V1\xca\x02\tWorker\\V1\xe2\x02\x15Worker\\V1\\GPBMetadata\xea\x02\n" +
+	"Worker::V1b\x06proto3"
 
 var (
-	file_pipeline_v1_client_view_proto_rawDescOnce sync.Once
-	file_pipeline_v1_client_view_proto_rawDescData []byte
+	file_worker_v1_client_view_proto_rawDescOnce sync.Once
+	file_worker_v1_client_view_proto_rawDescData []byte
 )
 
-func file_pipeline_v1_client_view_proto_rawDescGZIP() []byte {
-	file_pipeline_v1_client_view_proto_rawDescOnce.Do(func() {
-		file_pipeline_v1_client_view_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pipeline_v1_client_view_proto_rawDesc), len(file_pipeline_v1_client_view_proto_rawDesc)))
+func file_worker_v1_client_view_proto_rawDescGZIP() []byte {
+	file_worker_v1_client_view_proto_rawDescOnce.Do(func() {
+		file_worker_v1_client_view_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_worker_v1_client_view_proto_rawDesc), len(file_worker_v1_client_view_proto_rawDesc)))
 	})
-	return file_pipeline_v1_client_view_proto_rawDescData
+	return file_worker_v1_client_view_proto_rawDescData
 }
 
-var file_pipeline_v1_client_view_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_pipeline_v1_client_view_proto_goTypes = []any{
-	(*ClientView)(nil), // 0: pipeline.v1.ClientView
-	(*GraphView)(nil),  // 1: pipeline.v1.GraphView
-	(*GraphNode)(nil),  // 2: pipeline.v1.GraphNode
-	(*GraphEdge)(nil),  // 3: pipeline.v1.GraphEdge
+var file_worker_v1_client_view_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_worker_v1_client_view_proto_goTypes = []any{
+	(*ClientView)(nil), // 0: worker.v1.ClientView
+	(*GraphView)(nil),  // 1: worker.v1.GraphView
+	(*GraphNode)(nil),  // 2: worker.v1.GraphNode
+	(*GraphEdge)(nil),  // 3: worker.v1.GraphEdge
 }
-var file_pipeline_v1_client_view_proto_depIdxs = []int32{
-	1, // 0: pipeline.v1.ClientView.graph:type_name -> pipeline.v1.GraphView
-	2, // 1: pipeline.v1.GraphView.nodes:type_name -> pipeline.v1.GraphNode
-	3, // 2: pipeline.v1.GraphView.edges:type_name -> pipeline.v1.GraphEdge
+var file_worker_v1_client_view_proto_depIdxs = []int32{
+	1, // 0: worker.v1.ClientView.graph:type_name -> worker.v1.GraphView
+	2, // 1: worker.v1.GraphView.nodes:type_name -> worker.v1.GraphNode
+	3, // 2: worker.v1.GraphView.edges:type_name -> worker.v1.GraphEdge
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -338,12 +339,12 @@ var file_pipeline_v1_client_view_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_pipeline_v1_client_view_proto_init() }
-func file_pipeline_v1_client_view_proto_init() {
-	if File_pipeline_v1_client_view_proto != nil {
+func init() { file_worker_v1_client_view_proto_init() }
+func file_worker_v1_client_view_proto_init() {
+	if File_worker_v1_client_view_proto != nil {
 		return
 	}
-	file_pipeline_v1_client_view_proto_msgTypes[0].OneofWrappers = []any{
+	file_worker_v1_client_view_proto_msgTypes[0].OneofWrappers = []any{
 		(*ClientView_Graph)(nil),
 		(*ClientView_LlmResponse)(nil),
 	}
@@ -351,17 +352,17 @@ func file_pipeline_v1_client_view_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pipeline_v1_client_view_proto_rawDesc), len(file_pipeline_v1_client_view_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_worker_v1_client_view_proto_rawDesc), len(file_worker_v1_client_view_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_pipeline_v1_client_view_proto_goTypes,
-		DependencyIndexes: file_pipeline_v1_client_view_proto_depIdxs,
-		MessageInfos:      file_pipeline_v1_client_view_proto_msgTypes,
+		GoTypes:           file_worker_v1_client_view_proto_goTypes,
+		DependencyIndexes: file_worker_v1_client_view_proto_depIdxs,
+		MessageInfos:      file_worker_v1_client_view_proto_msgTypes,
 	}.Build()
-	File_pipeline_v1_client_view_proto = out.File
-	file_pipeline_v1_client_view_proto_goTypes = nil
-	file_pipeline_v1_client_view_proto_depIdxs = nil
+	File_worker_v1_client_view_proto = out.File
+	file_worker_v1_client_view_proto_goTypes = nil
+	file_worker_v1_client_view_proto_depIdxs = nil
 }

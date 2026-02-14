@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 )
 
 // StreamStep represents a step in the test streaming pipeline.
@@ -12,7 +12,7 @@ type StreamStep struct {
 	Message  string
 	Progress float32
 	Delay    time.Duration
-	View     *pipelinev1.ClientView
+	View     *workerv1.ClientView
 }
 
 // TestStreamingPipeline is a mock pipeline that simulates streaming progress.
@@ -30,17 +30,17 @@ func (p *TestStreamingPipeline) Steps() []StreamStep {
 }
 
 // GenerateSampleGraph creates a sample graph for the test result.
-func (p *TestStreamingPipeline) GenerateSampleGraph() *pipelinev1.ClientView {
-	return &pipelinev1.ClientView{
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{
-				Nodes: []*pipelinev1.GraphNode{
+func (p *TestStreamingPipeline) GenerateSampleGraph() *workerv1.ClientView {
+	return &workerv1.ClientView{
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{
+				Nodes: []*workerv1.GraphNode{
 					{Uid: "init", Label: "Initialize", Description: "System initialization"},
 					{Uid: "load", Label: "Load Data", Description: "Loading input data"},
 					{Uid: "process", Label: "Process", Description: "Main processing step"},
 					{Uid: "output", Label: "Output", Description: "Generate output"},
 				},
-				Edges: []*pipelinev1.GraphEdge{
+				Edges: []*workerv1.GraphEdge{
 					{From: "init", To: "load"},
 					{From: "load", To: "process"},
 					{From: "process", To: "output"},
@@ -51,14 +51,14 @@ func (p *TestStreamingPipeline) GenerateSampleGraph() *pipelinev1.ClientView {
 }
 
 // Run executes the streaming pipeline, sending progress to the provided channel.
-func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- StreamStep) (*pipelinev1.ClientView, error) {
+func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- StreamStep) (*workerv1.ClientView, error) {
 	defer close(progressCh)
 
 	fullView := p.GenerateSampleGraph()
-	partialView := &pipelinev1.ClientView{
+	partialView := &workerv1.ClientView{
 		Phase: fullView.GetPhase(),
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{},
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{},
 		},
 	}
 
@@ -89,20 +89,20 @@ func (p *TestStreamingPipeline) Run(ctx context.Context, progressCh chan<- Strea
 	return fullView, nil
 }
 
-func cloneClientView(view *pipelinev1.ClientView) *pipelinev1.ClientView {
+func cloneClientView(view *workerv1.ClientView) *workerv1.ClientView {
 	if view == nil {
 		return nil
 	}
 
-	cloned := &pipelinev1.ClientView{Phase: view.GetPhase()}
+	cloned := &workerv1.ClientView{Phase: view.GetPhase()}
 	if view.GetGraph() == nil {
 		return cloned
 	}
 
-	clonedGraph := &pipelinev1.GraphView{}
-	cloned.Content = &pipelinev1.ClientView_Graph{Graph: clonedGraph}
+	clonedGraph := &workerv1.GraphView{}
+	cloned.Content = &workerv1.ClientView_Graph{Graph: clonedGraph}
 	if len(view.GetGraph().Nodes) > 0 {
-		clonedGraph.Nodes = make([]*pipelinev1.GraphNode, 0, len(view.GetGraph().Nodes))
+		clonedGraph.Nodes = make([]*workerv1.GraphNode, 0, len(view.GetGraph().Nodes))
 		for _, n := range view.GetGraph().Nodes {
 			if n == nil {
 				clonedGraph.Nodes = append(clonedGraph.Nodes, nil)
@@ -113,7 +113,7 @@ func cloneClientView(view *pipelinev1.ClientView) *pipelinev1.ClientView {
 		}
 	}
 	if len(view.GetGraph().Edges) > 0 {
-		clonedGraph.Edges = make([]*pipelinev1.GraphEdge, 0, len(view.GetGraph().Edges))
+		clonedGraph.Edges = make([]*workerv1.GraphEdge, 0, len(view.GetGraph().Edges))
 		for _, e := range view.GetGraph().Edges {
 			if e == nil {
 				clonedGraph.Edges = append(clonedGraph.Edges, nil)

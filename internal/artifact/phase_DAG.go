@@ -1,7 +1,7 @@
 package artifact
 
 import (
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 )
 
 // WorkerMeta carries minimal phase info for DAG construction.
@@ -20,6 +20,6 @@ type PlanDependenciesIn struct {
 }
 
 type PlanDependenciesOut struct {
-	RuntimeState any                    `json:"artifact"`
-	ClientView   *pipelinev1.ClientView `json:"client_view"`
+	RuntimeState any                  `json:"artifact"`
+	ClientView   *workerv1.ClientView `json:"client_view"`
 }

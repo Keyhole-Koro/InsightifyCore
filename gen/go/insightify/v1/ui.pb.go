@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: insightify/v1/llm_chat.proto
+// source: insightify/v1/ui.proto
 
 package insightifyv1
 
@@ -60,11 +60,11 @@ func (x UiNodeType) String() string {
 }
 
 func (UiNodeType) Descriptor() protoreflect.EnumDescriptor {
-	return file_insightify_v1_llm_chat_proto_enumTypes[0].Descriptor()
+	return file_insightify_v1_ui_proto_enumTypes[0].Descriptor()
 }
 
 func (UiNodeType) Type() protoreflect.EnumType {
-	return &file_insightify_v1_llm_chat_proto_enumTypes[0]
+	return &file_insightify_v1_ui_proto_enumTypes[0]
 }
 
 func (x UiNodeType) Number() protoreflect.EnumNumber {
@@ -73,7 +73,7 @@ func (x UiNodeType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use UiNodeType.Descriptor instead.
 func (UiNodeType) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{0}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{0}
 }
 
 type UiChatMessage_Role int32
@@ -109,11 +109,11 @@ func (x UiChatMessage_Role) String() string {
 }
 
 func (UiChatMessage_Role) Descriptor() protoreflect.EnumDescriptor {
-	return file_insightify_v1_llm_chat_proto_enumTypes[1].Descriptor()
+	return file_insightify_v1_ui_proto_enumTypes[1].Descriptor()
 }
 
 func (UiChatMessage_Role) Type() protoreflect.EnumType {
-	return &file_insightify_v1_llm_chat_proto_enumTypes[1]
+	return &file_insightify_v1_ui_proto_enumTypes[1]
 }
 
 func (x UiChatMessage_Role) Number() protoreflect.EnumNumber {
@@ -122,7 +122,7 @@ func (x UiChatMessage_Role) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use UiChatMessage_Role.Descriptor instead.
 func (UiChatMessage_Role) EnumDescriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{1, 0}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{1, 0}
 }
 
 type UiNodeMeta struct {
@@ -136,7 +136,7 @@ type UiNodeMeta struct {
 
 func (x *UiNodeMeta) Reset() {
 	*x = UiNodeMeta{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
+	mi := &file_insightify_v1_ui_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -148,7 +148,7 @@ func (x *UiNodeMeta) String() string {
 func (*UiNodeMeta) ProtoMessage() {}
 
 func (x *UiNodeMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[0]
+	mi := &file_insightify_v1_ui_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -161,7 +161,7 @@ func (x *UiNodeMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiNodeMeta.ProtoReflect.Descriptor instead.
 func (*UiNodeMeta) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{0}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *UiNodeMeta) GetTitle() string {
@@ -196,7 +196,7 @@ type UiChatMessage struct {
 
 func (x *UiChatMessage) Reset() {
 	*x = UiChatMessage{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
+	mi := &file_insightify_v1_ui_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -208,7 +208,7 @@ func (x *UiChatMessage) String() string {
 func (*UiChatMessage) ProtoMessage() {}
 
 func (x *UiChatMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[1]
+	mi := &file_insightify_v1_ui_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -221,7 +221,7 @@ func (x *UiChatMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiChatMessage.ProtoReflect.Descriptor instead.
 func (*UiChatMessage) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{1}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *UiChatMessage) GetId() string {
@@ -258,7 +258,7 @@ type UiLlmChatState struct {
 
 func (x *UiLlmChatState) Reset() {
 	*x = UiLlmChatState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
+	mi := &file_insightify_v1_ui_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +270,7 @@ func (x *UiLlmChatState) String() string {
 func (*UiLlmChatState) ProtoMessage() {}
 
 func (x *UiLlmChatState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[2]
+	mi := &file_insightify_v1_ui_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +283,7 @@ func (x *UiLlmChatState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiLlmChatState.ProtoReflect.Descriptor instead.
 func (*UiLlmChatState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{2}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UiLlmChatState) GetModel() string {
@@ -330,7 +330,7 @@ type UiMarkdownState struct {
 
 func (x *UiMarkdownState) Reset() {
 	*x = UiMarkdownState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
+	mi := &file_insightify_v1_ui_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +342,7 @@ func (x *UiMarkdownState) String() string {
 func (*UiMarkdownState) ProtoMessage() {}
 
 func (x *UiMarkdownState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[3]
+	mi := &file_insightify_v1_ui_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +355,7 @@ func (x *UiMarkdownState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiMarkdownState.ProtoReflect.Descriptor instead.
 func (*UiMarkdownState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{3}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UiMarkdownState) GetMarkdown() string {
@@ -375,7 +375,7 @@ type UiImageState struct {
 
 func (x *UiImageState) Reset() {
 	*x = UiImageState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
+	mi := &file_insightify_v1_ui_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +387,7 @@ func (x *UiImageState) String() string {
 func (*UiImageState) ProtoMessage() {}
 
 func (x *UiImageState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[4]
+	mi := &file_insightify_v1_ui_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +400,7 @@ func (x *UiImageState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiImageState.ProtoReflect.Descriptor instead.
 func (*UiImageState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{4}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *UiImageState) GetSrc() string {
@@ -427,7 +427,7 @@ type UiTableState struct {
 
 func (x *UiTableState) Reset() {
 	*x = UiTableState{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
+	mi := &file_insightify_v1_ui_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -439,7 +439,7 @@ func (x *UiTableState) String() string {
 func (*UiTableState) ProtoMessage() {}
 
 func (x *UiTableState) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[5]
+	mi := &file_insightify_v1_ui_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -452,7 +452,7 @@ func (x *UiTableState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiTableState.ProtoReflect.Descriptor instead.
 func (*UiTableState) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{5}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UiTableState) GetColumns() []string {
@@ -478,7 +478,7 @@ type UiTableRow struct {
 
 func (x *UiTableRow) Reset() {
 	*x = UiTableRow{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
+	mi := &file_insightify_v1_ui_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -490,7 +490,7 @@ func (x *UiTableRow) String() string {
 func (*UiTableRow) ProtoMessage() {}
 
 func (x *UiTableRow) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[6]
+	mi := &file_insightify_v1_ui_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +503,7 @@ func (x *UiTableRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiTableRow.ProtoReflect.Descriptor instead.
 func (*UiTableRow) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{6}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UiTableRow) GetCells() []string {
@@ -528,7 +528,7 @@ type UiNode struct {
 
 func (x *UiNode) Reset() {
 	*x = UiNode{}
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
+	mi := &file_insightify_v1_ui_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -540,7 +540,7 @@ func (x *UiNode) String() string {
 func (*UiNode) ProtoMessage() {}
 
 func (x *UiNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_llm_chat_proto_msgTypes[7]
+	mi := &file_insightify_v1_ui_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -553,7 +553,7 @@ func (x *UiNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiNode.ProtoReflect.Descriptor instead.
 func (*UiNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_llm_chat_proto_rawDescGZIP(), []int{7}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UiNode) GetId() string {
@@ -605,11 +605,11 @@ func (x *UiNode) GetTable() *UiTableState {
 	return nil
 }
 
-var File_insightify_v1_llm_chat_proto protoreflect.FileDescriptor
+var File_insightify_v1_ui_proto protoreflect.FileDescriptor
 
-const file_insightify_v1_llm_chat_proto_rawDesc = "" +
+const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinsightify/v1/llm_chat.proto\x12\rinsightify.v1\"X\n" +
+	"\x16insightify/v1/ui.proto\x12\rinsightify.v1\"X\n" +
 	"\n" +
 	"UiNodeMeta\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
@@ -656,24 +656,24 @@ const file_insightify_v1_llm_chat_proto_rawDesc = "" +
 	"\x15UI_NODE_TYPE_LLM_CHAT\x10\x01\x12\x19\n" +
 	"\x15UI_NODE_TYPE_MARKDOWN\x10\x02\x12\x16\n" +
 	"\x12UI_NODE_TYPE_IMAGE\x10\x03\x12\x16\n" +
-	"\x12UI_NODE_TYPE_TABLE\x10\x04B\xa4\x01\n" +
-	"\x11com.insightify.v1B\fLlmChatProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
+	"\x12UI_NODE_TYPE_TABLE\x10\x04B\x9f\x01\n" +
+	"\x11com.insightify.v1B\aUiProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
-	file_insightify_v1_llm_chat_proto_rawDescOnce sync.Once
-	file_insightify_v1_llm_chat_proto_rawDescData []byte
+	file_insightify_v1_ui_proto_rawDescOnce sync.Once
+	file_insightify_v1_ui_proto_rawDescData []byte
 )
 
-func file_insightify_v1_llm_chat_proto_rawDescGZIP() []byte {
-	file_insightify_v1_llm_chat_proto_rawDescOnce.Do(func() {
-		file_insightify_v1_llm_chat_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_insightify_v1_llm_chat_proto_rawDesc), len(file_insightify_v1_llm_chat_proto_rawDesc)))
+func file_insightify_v1_ui_proto_rawDescGZIP() []byte {
+	file_insightify_v1_ui_proto_rawDescOnce.Do(func() {
+		file_insightify_v1_ui_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_insightify_v1_ui_proto_rawDesc), len(file_insightify_v1_ui_proto_rawDesc)))
 	})
-	return file_insightify_v1_llm_chat_proto_rawDescData
+	return file_insightify_v1_ui_proto_rawDescData
 }
 
-var file_insightify_v1_llm_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_insightify_v1_llm_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_insightify_v1_llm_chat_proto_goTypes = []any{
+var file_insightify_v1_ui_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_insightify_v1_ui_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_insightify_v1_ui_proto_goTypes = []any{
 	(UiNodeType)(0),         // 0: insightify.v1.UiNodeType
 	(UiChatMessage_Role)(0), // 1: insightify.v1.UiChatMessage.Role
 	(*UiNodeMeta)(nil),      // 2: insightify.v1.UiNodeMeta
@@ -685,7 +685,7 @@ var file_insightify_v1_llm_chat_proto_goTypes = []any{
 	(*UiTableRow)(nil),      // 8: insightify.v1.UiTableRow
 	(*UiNode)(nil),          // 9: insightify.v1.UiNode
 }
-var file_insightify_v1_llm_chat_proto_depIdxs = []int32{
+var file_insightify_v1_ui_proto_depIdxs = []int32{
 	1, // 0: insightify.v1.UiChatMessage.role:type_name -> insightify.v1.UiChatMessage.Role
 	3, // 1: insightify.v1.UiLlmChatState.messages:type_name -> insightify.v1.UiChatMessage
 	8, // 2: insightify.v1.UiTableState.rows:type_name -> insightify.v1.UiTableRow
@@ -702,27 +702,27 @@ var file_insightify_v1_llm_chat_proto_depIdxs = []int32{
 	0, // [0:9] is the sub-list for field type_name
 }
 
-func init() { file_insightify_v1_llm_chat_proto_init() }
-func file_insightify_v1_llm_chat_proto_init() {
-	if File_insightify_v1_llm_chat_proto != nil {
+func init() { file_insightify_v1_ui_proto_init() }
+func file_insightify_v1_ui_proto_init() {
+	if File_insightify_v1_ui_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_llm_chat_proto_rawDesc), len(file_insightify_v1_llm_chat_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_ui_proto_rawDesc), len(file_insightify_v1_ui_proto_rawDesc)),
 			NumEnums:      2,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_insightify_v1_llm_chat_proto_goTypes,
-		DependencyIndexes: file_insightify_v1_llm_chat_proto_depIdxs,
-		EnumInfos:         file_insightify_v1_llm_chat_proto_enumTypes,
-		MessageInfos:      file_insightify_v1_llm_chat_proto_msgTypes,
+		GoTypes:           file_insightify_v1_ui_proto_goTypes,
+		DependencyIndexes: file_insightify_v1_ui_proto_depIdxs,
+		EnumInfos:         file_insightify_v1_ui_proto_enumTypes,
+		MessageInfos:      file_insightify_v1_ui_proto_msgTypes,
 	}.Build()
-	File_insightify_v1_llm_chat_proto = out.File
-	file_insightify_v1_llm_chat_proto_goTypes = nil
-	file_insightify_v1_llm_chat_proto_depIdxs = nil
+	File_insightify_v1_ui_proto = out.File
+	file_insightify_v1_ui_proto_goTypes = nil
+	file_insightify_v1_ui_proto_depIdxs = nil
 }

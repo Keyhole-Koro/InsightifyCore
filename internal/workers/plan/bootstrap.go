@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
@@ -23,7 +23,7 @@ type BootstrapIn struct {
 type BootstrapOut struct {
 	Result           artifact.InitPurposeOut   `json:"result"`
 	BootstrapContext artifact.BootstrapContext `json:"bootstrap_context"`
-	ClientView       *pipelinev1.ClientView    `json:"client_view,omitempty"`
+	ClientView       *workerv1.ClientView      `json:"client_view,omitempty"`
 	UINode           ui.Node                   `json:"ui_node,omitempty"`
 }
 
@@ -211,9 +211,9 @@ func (p *BootstrapPipeline) runScoutLLM(ctx context.Context, userInput string) (
 	return out, nil
 }
 
-func buildClientView(result artifact.InitPurposeOut) *pipelinev1.ClientView {
-	return &pipelinev1.ClientView{
+func buildClientView(result artifact.InitPurposeOut) *workerv1.ClientView {
+	return &workerv1.ClientView{
 		Phase:   "bootstrap",
-		Content: &pipelinev1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.FollowupQuestion)},
+		Content: &workerv1.ClientView_LlmResponse{LlmResponse: strings.TrimSpace(result.FollowupQuestion)},
 	}
 }

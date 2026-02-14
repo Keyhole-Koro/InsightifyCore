@@ -4,19 +4,19 @@ import (
 	"strings"
 	"testing"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 )
 
 func TestAssignGraphNodeUIDs_RewritesNodeIDsAndEdges(t *testing.T) {
-	view := &pipelinev1.ClientView{
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{
-				Nodes: []*pipelinev1.GraphNode{
+	view := &workerv1.ClientView{
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{
+				Nodes: []*workerv1.GraphNode{
 					{Uid: "a", Label: "A"},
 					{Uid: "a", Label: "A-dup"},
 					{Uid: "", Label: "B"},
 				},
-				Edges: []*pipelinev1.GraphEdge{
+				Edges: []*workerv1.GraphEdge{
 					{From: "a", To: "a"},
 				},
 			},
@@ -49,10 +49,10 @@ func TestAssignGraphNodeUIDs_RewritesNodeIDsAndEdges(t *testing.T) {
 }
 
 func TestAssignGraphNodeUIDs_DeterministicPattern(t *testing.T) {
-	view := &pipelinev1.ClientView{
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{
-				Nodes: []*pipelinev1.GraphNode{
+	view := &workerv1.ClientView{
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{
+				Nodes: []*workerv1.GraphNode{
 					{Uid: "node-main", Label: "Node Main"},
 				},
 			},
@@ -68,27 +68,27 @@ func TestAssignGraphNodeUIDs_DeterministicPattern(t *testing.T) {
 
 func TestAssignGraphNodeUIDsWithGenerator_StableAcrossSnapshots(t *testing.T) {
 	gen := NewUIDGenerator()
-	view1 := &pipelinev1.ClientView{
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{
-				Nodes: []*pipelinev1.GraphNode{
+	view1 := &workerv1.ClientView{
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{
+				Nodes: []*workerv1.GraphNode{
 					{Uid: "init", Label: "Initialize"},
 					{Uid: "load", Label: "Load"},
 				},
-				Edges: []*pipelinev1.GraphEdge{
+				Edges: []*workerv1.GraphEdge{
 					{From: "init", To: "load"},
 				},
 			},
 		},
 	}
-	view2 := &pipelinev1.ClientView{
-		Content: &pipelinev1.ClientView_Graph{
-			Graph: &pipelinev1.GraphView{
-				Nodes: []*pipelinev1.GraphNode{
+	view2 := &workerv1.ClientView{
+		Content: &workerv1.ClientView_Graph{
+			Graph: &workerv1.GraphView{
+				Nodes: []*workerv1.GraphNode{
 					{Uid: "init", Label: "Initialize"},
 					{Uid: "load", Label: "Load"},
 				},
-				Edges: []*pipelinev1.GraphEdge{
+				Edges: []*workerv1.GraphEdge{
 					{From: "init", To: "load"},
 				},
 			},

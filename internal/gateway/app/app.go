@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"path/filepath"
 
-	gatewayproject "insightify/internal/gateway/service/project"
-	"insightify/internal/gateway/repository/projectstore"
-	gatewayrun "insightify/internal/gateway/service/run"
 	"insightify/internal/gateway/config"
 	"insightify/internal/gateway/handler"
-	"insightify/internal/gateway/server"
 	"insightify/internal/gateway/handler/rpc"
+	"insightify/internal/gateway/repository/projectstore"
 	"insightify/internal/gateway/repository/ui"
+	"insightify/internal/gateway/server"
+	gatewayproject "insightify/internal/gateway/service/project"
+	gatewayrun "insightify/internal/gateway/service/run"
 )
 
 type App struct {
@@ -30,13 +30,14 @@ func New() (*App, error) {
 	uiStore := ui.NewStore()
 	projectSvc := gatewayproject.New(defaultProjectStore)
 	runSvc := gatewayrun.New(projectSvc.AsProjectReader(), uiStore)
-	
+
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(runSvc)
+	userInteractionHandler := rpc.NewUserInteractionHandler(runSvc)
 	traceHandler := handler.NewTraceHandler(runSvc)
 
 	// Routing & Server
-	mux := server.NewMux(projectHandler, runHandler, traceHandler)
+	mux := server.NewMux(projectHandler, runHandler, userInteractionHandler, traceHandler)
 	srv := server.New(cfg.Port, mux)
 
 	return &App{

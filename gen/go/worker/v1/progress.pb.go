@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: pipeline/v1/progress.proto
+// source: worker/v1/progress.proto
 
-package pipelinev1
+package workerv1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -36,7 +36,7 @@ type ProgressEvent struct {
 
 func (x *ProgressEvent) Reset() {
 	*x = ProgressEvent{}
-	mi := &file_pipeline_v1_progress_proto_msgTypes[0]
+	mi := &file_worker_v1_progress_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +48,7 @@ func (x *ProgressEvent) String() string {
 func (*ProgressEvent) ProtoMessage() {}
 
 func (x *ProgressEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_progress_proto_msgTypes[0]
+	mi := &file_worker_v1_progress_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +61,7 @@ func (x *ProgressEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProgressEvent.ProtoReflect.Descriptor instead.
 func (*ProgressEvent) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_progress_proto_rawDescGZIP(), []int{0}
+	return file_worker_v1_progress_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ProgressEvent) GetPayload() isProgressEvent_Payload {
@@ -129,7 +129,7 @@ type StatusPayload struct {
 
 func (x *StatusPayload) Reset() {
 	*x = StatusPayload{}
-	mi := &file_pipeline_v1_progress_proto_msgTypes[1]
+	mi := &file_worker_v1_progress_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -141,7 +141,7 @@ func (x *StatusPayload) String() string {
 func (*StatusPayload) ProtoMessage() {}
 
 func (x *StatusPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_progress_proto_msgTypes[1]
+	mi := &file_worker_v1_progress_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -154,7 +154,7 @@ func (x *StatusPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusPayload.ProtoReflect.Descriptor instead.
 func (*StatusPayload) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_progress_proto_rawDescGZIP(), []int{1}
+	return file_worker_v1_progress_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *StatusPayload) GetMessage() string {
@@ -174,7 +174,7 @@ type LogPayload struct {
 
 func (x *LogPayload) Reset() {
 	*x = LogPayload{}
-	mi := &file_pipeline_v1_progress_proto_msgTypes[2]
+	mi := &file_worker_v1_progress_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -186,7 +186,7 @@ func (x *LogPayload) String() string {
 func (*LogPayload) ProtoMessage() {}
 
 func (x *LogPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_progress_proto_msgTypes[2]
+	mi := &file_worker_v1_progress_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -199,7 +199,7 @@ func (x *LogPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogPayload.ProtoReflect.Descriptor instead.
 func (*LogPayload) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_progress_proto_rawDescGZIP(), []int{2}
+	return file_worker_v1_progress_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *LogPayload) GetLevel() string {
@@ -226,7 +226,7 @@ type ChunkPayload struct {
 
 func (x *ChunkPayload) Reset() {
 	*x = ChunkPayload{}
-	mi := &file_pipeline_v1_progress_proto_msgTypes[3]
+	mi := &file_worker_v1_progress_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +238,7 @@ func (x *ChunkPayload) String() string {
 func (*ChunkPayload) ProtoMessage() {}
 
 func (x *ChunkPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_pipeline_v1_progress_proto_msgTypes[3]
+	mi := &file_worker_v1_progress_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +251,7 @@ func (x *ChunkPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChunkPayload.ProtoReflect.Descriptor instead.
 func (*ChunkPayload) Descriptor() ([]byte, []int) {
-	return file_pipeline_v1_progress_proto_rawDescGZIP(), []int{3}
+	return file_worker_v1_progress_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ChunkPayload) GetText() string {
@@ -268,15 +268,15 @@ func (x *ChunkPayload) GetIsFinal() bool {
 	return false
 }
 
-var File_pipeline_v1_progress_proto protoreflect.FileDescriptor
+var File_worker_v1_progress_proto protoreflect.FileDescriptor
 
-const file_pipeline_v1_progress_proto_rawDesc = "" +
+const file_worker_v1_progress_proto_rawDesc = "" +
 	"\n" +
-	"\x1apipeline/v1/progress.proto\x12\vpipeline.v1\"\xb0\x01\n" +
-	"\rProgressEvent\x124\n" +
-	"\x06status\x18\x01 \x01(\v2\x1a.pipeline.v1.StatusPayloadH\x00R\x06status\x12+\n" +
-	"\x03log\x18\x02 \x01(\v2\x17.pipeline.v1.LogPayloadH\x00R\x03log\x121\n" +
-	"\x05chunk\x18\x03 \x01(\v2\x19.pipeline.v1.ChunkPayloadH\x00R\x05chunkB\t\n" +
+	"\x18worker/v1/progress.proto\x12\tworker.v1\"\xaa\x01\n" +
+	"\rProgressEvent\x122\n" +
+	"\x06status\x18\x01 \x01(\v2\x18.worker.v1.StatusPayloadH\x00R\x06status\x12)\n" +
+	"\x03log\x18\x02 \x01(\v2\x15.worker.v1.LogPayloadH\x00R\x03log\x12/\n" +
+	"\x05chunk\x18\x03 \x01(\v2\x17.worker.v1.ChunkPayloadH\x00R\x05chunkB\t\n" +
 	"\apayload\")\n" +
 	"\rStatusPayload\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"<\n" +
@@ -286,32 +286,33 @@ const file_pipeline_v1_progress_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"=\n" +
 	"\fChunkPayload\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x19\n" +
-	"\bis_final\x18\x02 \x01(\bR\aisFinalB\x97\x01\n" +
-	"\x0fcom.pipeline.v1B\rProgressProtoP\x01Z(insightify/gen/go/pipeline/v1;pipelinev1\xa2\x02\x03PXX\xaa\x02\vPipeline.V1\xca\x02\vPipeline\\V1\xe2\x02\x17Pipeline\\V1\\GPBMetadata\xea\x02\fPipeline::V1b\x06proto3"
+	"\bis_final\x18\x02 \x01(\bR\aisFinalB\x89\x01\n" +
+	"\rcom.worker.v1B\rProgressProtoP\x01Z$insightify/gen/go/worker/v1;workerv1\xa2\x02\x03WXX\xaa\x02\tWorker.V1\xca\x02\tWorker\\V1\xe2\x02\x15Worker\\V1\\GPBMetadata\xea\x02\n" +
+	"Worker::V1b\x06proto3"
 
 var (
-	file_pipeline_v1_progress_proto_rawDescOnce sync.Once
-	file_pipeline_v1_progress_proto_rawDescData []byte
+	file_worker_v1_progress_proto_rawDescOnce sync.Once
+	file_worker_v1_progress_proto_rawDescData []byte
 )
 
-func file_pipeline_v1_progress_proto_rawDescGZIP() []byte {
-	file_pipeline_v1_progress_proto_rawDescOnce.Do(func() {
-		file_pipeline_v1_progress_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pipeline_v1_progress_proto_rawDesc), len(file_pipeline_v1_progress_proto_rawDesc)))
+func file_worker_v1_progress_proto_rawDescGZIP() []byte {
+	file_worker_v1_progress_proto_rawDescOnce.Do(func() {
+		file_worker_v1_progress_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_worker_v1_progress_proto_rawDesc), len(file_worker_v1_progress_proto_rawDesc)))
 	})
-	return file_pipeline_v1_progress_proto_rawDescData
+	return file_worker_v1_progress_proto_rawDescData
 }
 
-var file_pipeline_v1_progress_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_pipeline_v1_progress_proto_goTypes = []any{
-	(*ProgressEvent)(nil), // 0: pipeline.v1.ProgressEvent
-	(*StatusPayload)(nil), // 1: pipeline.v1.StatusPayload
-	(*LogPayload)(nil),    // 2: pipeline.v1.LogPayload
-	(*ChunkPayload)(nil),  // 3: pipeline.v1.ChunkPayload
+var file_worker_v1_progress_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_worker_v1_progress_proto_goTypes = []any{
+	(*ProgressEvent)(nil), // 0: worker.v1.ProgressEvent
+	(*StatusPayload)(nil), // 1: worker.v1.StatusPayload
+	(*LogPayload)(nil),    // 2: worker.v1.LogPayload
+	(*ChunkPayload)(nil),  // 3: worker.v1.ChunkPayload
 }
-var file_pipeline_v1_progress_proto_depIdxs = []int32{
-	1, // 0: pipeline.v1.ProgressEvent.status:type_name -> pipeline.v1.StatusPayload
-	2, // 1: pipeline.v1.ProgressEvent.log:type_name -> pipeline.v1.LogPayload
-	3, // 2: pipeline.v1.ProgressEvent.chunk:type_name -> pipeline.v1.ChunkPayload
+var file_worker_v1_progress_proto_depIdxs = []int32{
+	1, // 0: worker.v1.ProgressEvent.status:type_name -> worker.v1.StatusPayload
+	2, // 1: worker.v1.ProgressEvent.log:type_name -> worker.v1.LogPayload
+	3, // 2: worker.v1.ProgressEvent.chunk:type_name -> worker.v1.ChunkPayload
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -319,12 +320,12 @@ var file_pipeline_v1_progress_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_pipeline_v1_progress_proto_init() }
-func file_pipeline_v1_progress_proto_init() {
-	if File_pipeline_v1_progress_proto != nil {
+func init() { file_worker_v1_progress_proto_init() }
+func file_worker_v1_progress_proto_init() {
+	if File_worker_v1_progress_proto != nil {
 		return
 	}
-	file_pipeline_v1_progress_proto_msgTypes[0].OneofWrappers = []any{
+	file_worker_v1_progress_proto_msgTypes[0].OneofWrappers = []any{
 		(*ProgressEvent_Status)(nil),
 		(*ProgressEvent_Log)(nil),
 		(*ProgressEvent_Chunk)(nil),
@@ -333,17 +334,17 @@ func file_pipeline_v1_progress_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pipeline_v1_progress_proto_rawDesc), len(file_pipeline_v1_progress_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_worker_v1_progress_proto_rawDesc), len(file_worker_v1_progress_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_pipeline_v1_progress_proto_goTypes,
-		DependencyIndexes: file_pipeline_v1_progress_proto_depIdxs,
-		MessageInfos:      file_pipeline_v1_progress_proto_msgTypes,
+		GoTypes:           file_worker_v1_progress_proto_goTypes,
+		DependencyIndexes: file_worker_v1_progress_proto_depIdxs,
+		MessageInfos:      file_worker_v1_progress_proto_msgTypes,
 	}.Build()
-	File_pipeline_v1_progress_proto = out.File
-	file_pipeline_v1_progress_proto_goTypes = nil
-	file_pipeline_v1_progress_proto_depIdxs = nil
+	File_worker_v1_progress_proto = out.File
+	file_worker_v1_progress_proto_goTypes = nil
+	file_worker_v1_progress_proto_depIdxs = nil
 }

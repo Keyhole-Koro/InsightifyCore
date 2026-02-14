@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 )
 
 // AssignGraphNodeUIDs rewrites GraphNode.Uid values to generated UIDs and updates edges accordingly.
 // It mutates the provided view in place and returns old->new UID mappings for non-empty original UIDs.
-func AssignGraphNodeUIDs(view *pipelinev1.ClientView) map[string]string {
+func AssignGraphNodeUIDs(view *workerv1.ClientView) map[string]string {
 	return AssignGraphNodeUIDsWithGenerator(nil, view)
 }
 
 // AssignGraphNodeUIDsWithGenerator is AssignGraphNodeUIDs with an explicit shared generator.
-func AssignGraphNodeUIDsWithGenerator(gen *UIDGenerator, view *pipelinev1.ClientView) map[string]string {
+func AssignGraphNodeUIDsWithGenerator(gen *UIDGenerator, view *workerv1.ClientView) map[string]string {
 	if view == nil || view.GetGraph() == nil || len(view.GetGraph().GetNodes()) == 0 {
 		return nil
 	}

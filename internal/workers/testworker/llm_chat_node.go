@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
@@ -77,9 +77,9 @@ func (p *LLMChatNodePipeline) Run(ctx context.Context, in plan.BootstrapIn) (pla
 			Purpose:   result.Purpose,
 			UserInput: userInput,
 		}.Normalize(),
-		ClientView: &pipelinev1.ClientView{
+		ClientView: &workerv1.ClientView{
 			Phase: "test_llm_chat_node",
-			Content: &pipelinev1.ClientView_LlmResponse{
+			Content: &workerv1.ClientView_LlmResponse{
 				LlmResponse: strings.TrimSpace(result.FollowupQuestion),
 			},
 		},

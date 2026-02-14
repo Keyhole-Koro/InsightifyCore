@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	pipelinev1 "insightify/gen/go/pipeline/v1"
+	workerv1 "insightify/gen/go/worker/v1"
 	"insightify/internal/artifact"
 )
 
@@ -18,8 +18,8 @@ type PlanContext struct {
 func (p *PlanContext) Run(ctx context.Context, in artifact.PlanDependenciesIn) (artifact.PlanDependenciesOut, error) {
 	_ = ctx
 
-	nodes := make([]*pipelinev1.GraphNode, 0, len(in.Workers))
-	edges := make([]*pipelinev1.GraphEdge, 0)
+	nodes := make([]*workerv1.GraphNode, 0, len(in.Workers))
+	edges := make([]*workerv1.GraphEdge, 0)
 
 	workersByKey := make(map[string]artifact.WorkerMeta, len(in.Workers))
 	for _, w := range in.Workers {
@@ -39,7 +39,7 @@ func (p *PlanContext) Run(ctx context.Context, in artifact.PlanDependenciesIn) (
 
 	for _, key := range keys {
 		w := workersByKey[key]
-		nodes = append(nodes, &pipelinev1.GraphNode{
+		nodes = append(nodes, &workerv1.GraphNode{
 			Uid:         w.Key,
 			Label:       w.Key,
 			Description: strings.TrimSpace(w.Description),
@@ -64,12 +64,12 @@ func (p *PlanContext) Run(ctx context.Context, in artifact.PlanDependenciesIn) (
 			// Create placeholder nodes for required workers not present in input.
 			if _, ok := workersByKey[req]; !ok {
 				workersByKey[req] = artifact.WorkerMeta{Key: req}
-				nodes = append(nodes, &pipelinev1.GraphNode{
+				nodes = append(nodes, &workerv1.GraphNode{
 					Uid:   req,
 					Label: req,
 				})
 			}
-			edges = append(edges, &pipelinev1.GraphEdge{
+			edges = append(edges, &workerv1.GraphEdge{
 				From: req,
 				To:   key,
 			})
@@ -78,10 +78,10 @@ func (p *PlanContext) Run(ctx context.Context, in artifact.PlanDependenciesIn) (
 
 	return artifact.PlanDependenciesOut{
 		RuntimeState: in,
-		ClientView: &pipelinev1.ClientView{
+		ClientView: &workerv1.ClientView{
 			Phase: "worker_DAG",
-			Content: &pipelinev1.ClientView_Graph{
-				Graph: &pipelinev1.GraphView{
+			Content: &workerv1.ClientView_Graph{
+				Graph: &workerv1.GraphView{
 					Nodes: nodes,
 					Edges: edges,
 				},

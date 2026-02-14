@@ -12,6 +12,7 @@ import (
 func NewMux(
 	projectHandler *rpc.ProjectHandler,
 	runHandler *rpc.RunHandler,
+	userInteractionHandler *rpc.UserInteractionHandler,
 	traceHandler *handler.TraceHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -19,6 +20,7 @@ func NewMux(
 	// RPC Handlers
 	mux.Handle(insightifyv1connect.NewProjectServiceHandler(projectHandler))
 	mux.Handle(insightifyv1connect.NewRunServiceHandler(runHandler))
+	mux.Handle(insightifyv1connect.NewUserInteractionServiceHandler(userInteractionHandler))
 
 	// Debug Handlers
 	mux.HandleFunc("/debug/frontend-trace", traceHandler.HandleFrontendTrace)
