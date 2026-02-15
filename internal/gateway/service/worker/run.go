@@ -8,6 +8,9 @@ import (
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	"insightify/internal/runner"
+	"io/fs"
+	"os"
+	"path/filepath"
 )
 
 type runState struct {
@@ -87,6 +90,43 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 
 	clientView := asClientView(out.ClientView)
 	if s.ui != nil {
-		s.ui.UpsertFromClientView(runID, workerID, clientView)
+		node := s.ui.UpsertFromClientView(runID, workerID, clientView)
+		if node != nil && s.workspaces != nil {
+			if err := s.workspaces.AssignRunToCurrentTab(projectID, runID); err != nil {
+				log.Printf("failed to assign run %s to current tab for project %s: %v", runID, projectID, err)
+			}
+		}
 	}
+
+	// Persist artifacts
+	if s.artifact != nil {
+		go func() {
+			if err := s.syncArtifacts(context.Background(), runID, runEnv.GetOutDir()); err != nil {
+				log.Printf("failed to sync artifacts for run %s: %v", runID, err)
+			}
+		}()
+	}
+}
+
+func (s *Service) syncArtifacts(ctx context.Context, runID, outDir string) error {
+	return filepath.WalkDir(outDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip errors
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(outDir, path)
+		if err != nil {
+			return nil
+		}
+		// Skip hidden files or internal dirs if needed, but for now persist all
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		// Normalize path to forward slashes
+		rel = filepath.ToSlash(rel)
+		return s.artifact.Put(ctx, runID, rel, content)
+	})
 }

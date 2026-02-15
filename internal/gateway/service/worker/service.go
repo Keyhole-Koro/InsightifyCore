@@ -1,6 +1,7 @@
 package worker
 
 import (
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 	gatewayui "insightify/internal/gateway/service/ui"
 	"insightify/internal/runner"
 	"sync"
@@ -13,6 +14,10 @@ type ProjectReader interface {
 	EnsureRunContext(projectID string) (RunEnvironment, error)
 }
 
+type WorkspaceRunBinder interface {
+	AssignRunToCurrentTab(projectID, runID string) error
+}
+
 // ProjectView is a simplified view of a project.
 type ProjectView struct {
 	ProjectID string
@@ -22,8 +27,10 @@ type ProjectView struct {
 // Service manages runs and telemetry.
 type Service struct {
 	project     ProjectReader
+	workspaces  WorkspaceRunBinder
 	ui          *gatewayui.Service
 	interaction runner.InteractionWaiter
+	artifact    artifactrepo.Store
 	telemetry   *TelemetryStore
 
 	runMu      sync.RWMutex
@@ -31,11 +38,13 @@ type Service struct {
 	runCounter atomic.Uint64
 }
 
-func New(project ProjectReader, ui *gatewayui.Service, interaction runner.InteractionWaiter) *Service {
+func New(project ProjectReader, workspaces WorkspaceRunBinder, ui *gatewayui.Service, interaction runner.InteractionWaiter, artifact artifactrepo.Store) *Service {
 	return &Service{
 		project:     project,
+		workspaces:  workspaces,
 		ui:          ui,
 		interaction: interaction,
+		artifact:    artifact,
 		telemetry:   NewTelemetryStore(),
 		runs:        make(map[string]*runState),
 	}

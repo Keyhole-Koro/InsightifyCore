@@ -753,6 +753,702 @@ func (x *GetUiDocumentResponse) GetDocument() *UiDocument {
 	return nil
 }
 
+type GetProjectUiDocumentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TabId         string                 `protobuf:"bytes,2,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectUiDocumentRequest) Reset() {
+	*x = GetProjectUiDocumentRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectUiDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectUiDocumentRequest) ProtoMessage() {}
+
+func (x *GetProjectUiDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectUiDocumentRequest.ProtoReflect.Descriptor instead.
+func (*GetProjectUiDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetProjectUiDocumentRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetProjectUiDocumentRequest) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+type GetProjectUiDocumentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Found         bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TabId         string                 `protobuf:"bytes,3,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	RunId         string                 `protobuf:"bytes,4,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Document      *UiDocument            `protobuf:"bytes,5,opt,name=document,proto3" json:"document,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectUiDocumentResponse) Reset() {
+	*x = GetProjectUiDocumentResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectUiDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectUiDocumentResponse) ProtoMessage() {}
+
+func (x *GetProjectUiDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectUiDocumentResponse.ProtoReflect.Descriptor instead.
+func (*GetProjectUiDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetProjectUiDocumentResponse) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
+func (x *GetProjectUiDocumentResponse) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetProjectUiDocumentResponse) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+func (x *GetProjectUiDocumentResponse) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *GetProjectUiDocumentResponse) GetDocument() *UiDocument {
+	if x != nil {
+		return x.Document
+	}
+	return nil
+}
+
+type UiWorkspace struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkspaceId   string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ActiveTabId   string                 `protobuf:"bytes,4,opt,name=active_tab_id,json=activeTabId,proto3" json:"active_tab_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UiWorkspace) Reset() {
+	*x = UiWorkspace{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UiWorkspace) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UiWorkspace) ProtoMessage() {}
+
+func (x *UiWorkspace) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UiWorkspace.ProtoReflect.Descriptor instead.
+func (*UiWorkspace) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *UiWorkspace) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *UiWorkspace) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *UiWorkspace) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UiWorkspace) GetActiveTabId() string {
+	if x != nil {
+		return x.ActiveTabId
+	}
+	return ""
+}
+
+type UiWorkspaceTab struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TabId           string                 `protobuf:"bytes,1,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	WorkspaceId     string                 `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	Title           string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	RunId           string                 `protobuf:"bytes,4,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	OrderIndex      int32                  `protobuf:"varint,5,opt,name=order_index,json=orderIndex,proto3" json:"order_index,omitempty"`
+	IsPinned        bool                   `protobuf:"varint,6,opt,name=is_pinned,json=isPinned,proto3" json:"is_pinned,omitempty"`
+	CreatedAtUnixMs int64                  `protobuf:"varint,7,opt,name=created_at_unix_ms,json=createdAtUnixMs,proto3" json:"created_at_unix_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UiWorkspaceTab) Reset() {
+	*x = UiWorkspaceTab{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UiWorkspaceTab) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UiWorkspaceTab) ProtoMessage() {}
+
+func (x *UiWorkspaceTab) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UiWorkspaceTab.ProtoReflect.Descriptor instead.
+func (*UiWorkspaceTab) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UiWorkspaceTab) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+func (x *UiWorkspaceTab) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *UiWorkspaceTab) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *UiWorkspaceTab) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *UiWorkspaceTab) GetOrderIndex() int32 {
+	if x != nil {
+		return x.OrderIndex
+	}
+	return 0
+}
+
+func (x *UiWorkspaceTab) GetIsPinned() bool {
+	if x != nil {
+		return x.IsPinned
+	}
+	return false
+}
+
+func (x *UiWorkspaceTab) GetCreatedAtUnixMs() int64 {
+	if x != nil {
+		return x.CreatedAtUnixMs
+	}
+	return 0
+}
+
+type GetUiWorkspaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUiWorkspaceRequest) Reset() {
+	*x = GetUiWorkspaceRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUiWorkspaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUiWorkspaceRequest) ProtoMessage() {}
+
+func (x *GetUiWorkspaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUiWorkspaceRequest.ProtoReflect.Descriptor instead.
+func (*GetUiWorkspaceRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetUiWorkspaceRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type GetUiWorkspaceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workspace     *UiWorkspace           `protobuf:"bytes,1,opt,name=workspace,proto3" json:"workspace,omitempty"`
+	Tabs          []*UiWorkspaceTab      `protobuf:"bytes,2,rep,name=tabs,proto3" json:"tabs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUiWorkspaceResponse) Reset() {
+	*x = GetUiWorkspaceResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUiWorkspaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUiWorkspaceResponse) ProtoMessage() {}
+
+func (x *GetUiWorkspaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUiWorkspaceResponse.ProtoReflect.Descriptor instead.
+func (*GetUiWorkspaceResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetUiWorkspaceResponse) GetWorkspace() *UiWorkspace {
+	if x != nil {
+		return x.Workspace
+	}
+	return nil
+}
+
+func (x *GetUiWorkspaceResponse) GetTabs() []*UiWorkspaceTab {
+	if x != nil {
+		return x.Tabs
+	}
+	return nil
+}
+
+type ListUiTabsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUiTabsRequest) Reset() {
+	*x = ListUiTabsRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUiTabsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUiTabsRequest) ProtoMessage() {}
+
+func (x *ListUiTabsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUiTabsRequest.ProtoReflect.Descriptor instead.
+func (*ListUiTabsRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListUiTabsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type ListUiTabsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workspace     *UiWorkspace           `protobuf:"bytes,1,opt,name=workspace,proto3" json:"workspace,omitempty"`
+	Tabs          []*UiWorkspaceTab      `protobuf:"bytes,2,rep,name=tabs,proto3" json:"tabs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUiTabsResponse) Reset() {
+	*x = ListUiTabsResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUiTabsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUiTabsResponse) ProtoMessage() {}
+
+func (x *ListUiTabsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUiTabsResponse.ProtoReflect.Descriptor instead.
+func (*ListUiTabsResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListUiTabsResponse) GetWorkspace() *UiWorkspace {
+	if x != nil {
+		return x.Workspace
+	}
+	return nil
+}
+
+func (x *ListUiTabsResponse) GetTabs() []*UiWorkspaceTab {
+	if x != nil {
+		return x.Tabs
+	}
+	return nil
+}
+
+type CreateUiTabRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUiTabRequest) Reset() {
+	*x = CreateUiTabRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUiTabRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUiTabRequest) ProtoMessage() {}
+
+func (x *CreateUiTabRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUiTabRequest.ProtoReflect.Descriptor instead.
+func (*CreateUiTabRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CreateUiTabRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateUiTabRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+type CreateUiTabResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workspace     *UiWorkspace           `protobuf:"bytes,1,opt,name=workspace,proto3" json:"workspace,omitempty"`
+	Tab           *UiWorkspaceTab        `protobuf:"bytes,2,opt,name=tab,proto3" json:"tab,omitempty"`
+	Tabs          []*UiWorkspaceTab      `protobuf:"bytes,3,rep,name=tabs,proto3" json:"tabs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUiTabResponse) Reset() {
+	*x = CreateUiTabResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUiTabResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUiTabResponse) ProtoMessage() {}
+
+func (x *CreateUiTabResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUiTabResponse.ProtoReflect.Descriptor instead.
+func (*CreateUiTabResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CreateUiTabResponse) GetWorkspace() *UiWorkspace {
+	if x != nil {
+		return x.Workspace
+	}
+	return nil
+}
+
+func (x *CreateUiTabResponse) GetTab() *UiWorkspaceTab {
+	if x != nil {
+		return x.Tab
+	}
+	return nil
+}
+
+func (x *CreateUiTabResponse) GetTabs() []*UiWorkspaceTab {
+	if x != nil {
+		return x.Tabs
+	}
+	return nil
+}
+
+type SelectUiTabRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TabId         string                 `protobuf:"bytes,2,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SelectUiTabRequest) Reset() {
+	*x = SelectUiTabRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectUiTabRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectUiTabRequest) ProtoMessage() {}
+
+func (x *SelectUiTabRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectUiTabRequest.ProtoReflect.Descriptor instead.
+func (*SelectUiTabRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SelectUiTabRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SelectUiTabRequest) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+type SelectUiTabResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workspace     *UiWorkspace           `protobuf:"bytes,1,opt,name=workspace,proto3" json:"workspace,omitempty"`
+	Tabs          []*UiWorkspaceTab      `protobuf:"bytes,2,rep,name=tabs,proto3" json:"tabs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SelectUiTabResponse) Reset() {
+	*x = SelectUiTabResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectUiTabResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectUiTabResponse) ProtoMessage() {}
+
+func (x *SelectUiTabResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectUiTabResponse.ProtoReflect.Descriptor instead.
+func (*SelectUiTabResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *SelectUiTabResponse) GetWorkspace() *UiWorkspace {
+	if x != nil {
+		return x.Workspace
+	}
+	return nil
+}
+
+func (x *SelectUiTabResponse) GetTabs() []*UiWorkspaceTab {
+	if x != nil {
+		return x.Tabs
+	}
+	return nil
+}
+
 type ApplyUiOpsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -765,7 +1461,7 @@ type ApplyUiOpsRequest struct {
 
 func (x *ApplyUiOpsRequest) Reset() {
 	*x = ApplyUiOpsRequest{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[11]
+	mi := &file_insightify_v1_ui_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +1473,7 @@ func (x *ApplyUiOpsRequest) String() string {
 func (*ApplyUiOpsRequest) ProtoMessage() {}
 
 func (x *ApplyUiOpsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[11]
+	mi := &file_insightify_v1_ui_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +1486,7 @@ func (x *ApplyUiOpsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyUiOpsRequest.ProtoReflect.Descriptor instead.
 func (*ApplyUiOpsRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{11}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ApplyUiOpsRequest) GetRunId() string {
@@ -833,7 +1529,7 @@ type ApplyUiOpsResponse struct {
 
 func (x *ApplyUiOpsResponse) Reset() {
 	*x = ApplyUiOpsResponse{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[12]
+	mi := &file_insightify_v1_ui_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -845,7 +1541,7 @@ func (x *ApplyUiOpsResponse) String() string {
 func (*ApplyUiOpsResponse) ProtoMessage() {}
 
 func (x *ApplyUiOpsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[12]
+	mi := &file_insightify_v1_ui_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -858,7 +1554,7 @@ func (x *ApplyUiOpsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyUiOpsResponse.ProtoReflect.Descriptor instead.
 func (*ApplyUiOpsResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{12}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ApplyUiOpsResponse) GetDocument() *UiDocument {
@@ -903,7 +1599,7 @@ type UiOp struct {
 
 func (x *UiOp) Reset() {
 	*x = UiOp{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[13]
+	mi := &file_insightify_v1_ui_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -915,7 +1611,7 @@ func (x *UiOp) String() string {
 func (*UiOp) ProtoMessage() {}
 
 func (x *UiOp) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[13]
+	mi := &file_insightify_v1_ui_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -928,7 +1624,7 @@ func (x *UiOp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiOp.ProtoReflect.Descriptor instead.
 func (*UiOp) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{13}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UiOp) GetAction() isUiOp_Action {
@@ -996,7 +1692,7 @@ type UiUpsertNode struct {
 
 func (x *UiUpsertNode) Reset() {
 	*x = UiUpsertNode{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[14]
+	mi := &file_insightify_v1_ui_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1704,7 @@ func (x *UiUpsertNode) String() string {
 func (*UiUpsertNode) ProtoMessage() {}
 
 func (x *UiUpsertNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[14]
+	mi := &file_insightify_v1_ui_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1717,7 @@ func (x *UiUpsertNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiUpsertNode.ProtoReflect.Descriptor instead.
 func (*UiUpsertNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{14}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UiUpsertNode) GetNode() *UiNode {
@@ -1040,7 +1736,7 @@ type UiDeleteNode struct {
 
 func (x *UiDeleteNode) Reset() {
 	*x = UiDeleteNode{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[15]
+	mi := &file_insightify_v1_ui_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1052,7 +1748,7 @@ func (x *UiDeleteNode) String() string {
 func (*UiDeleteNode) ProtoMessage() {}
 
 func (x *UiDeleteNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[15]
+	mi := &file_insightify_v1_ui_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1065,7 +1761,7 @@ func (x *UiDeleteNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiDeleteNode.ProtoReflect.Descriptor instead.
 func (*UiDeleteNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{15}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UiDeleteNode) GetNodeId() string {
@@ -1083,7 +1779,7 @@ type UiClearNodes struct {
 
 func (x *UiClearNodes) Reset() {
 	*x = UiClearNodes{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[16]
+	mi := &file_insightify_v1_ui_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1791,7 @@ func (x *UiClearNodes) String() string {
 func (*UiClearNodes) ProtoMessage() {}
 
 func (x *UiClearNodes) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[16]
+	mi := &file_insightify_v1_ui_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1804,7 @@ func (x *UiClearNodes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiClearNodes.ProtoReflect.Descriptor instead.
 func (*UiClearNodes) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{16}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{28}
 }
 
 var File_insightify_v1_ui_proto protoreflect.FileDescriptor
@@ -1164,7 +1860,60 @@ const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\x14GetUiDocumentRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"N\n" +
 	"\x15GetUiDocumentResponse\x125\n" +
-	"\bdocument\x18\x01 \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\"\x8a\x01\n" +
+	"\bdocument\x18\x01 \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\"S\n" +
+	"\x1bGetProjectUiDocumentRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06tab_id\x18\x02 \x01(\tR\x05tabId\"\xb8\x01\n" +
+	"\x1cGetProjectUiDocumentResponse\x12\x14\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06tab_id\x18\x03 \x01(\tR\x05tabId\x12\x15\n" +
+	"\x06run_id\x18\x04 \x01(\tR\x05runId\x125\n" +
+	"\bdocument\x18\x05 \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\"\x87\x01\n" +
+	"\vUiWorkspace\x12!\n" +
+	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\"\n" +
+	"\ractive_tab_id\x18\x04 \x01(\tR\vactiveTabId\"\xe2\x01\n" +
+	"\x0eUiWorkspaceTab\x12\x15\n" +
+	"\x06tab_id\x18\x01 \x01(\tR\x05tabId\x12!\n" +
+	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x15\n" +
+	"\x06run_id\x18\x04 \x01(\tR\x05runId\x12\x1f\n" +
+	"\vorder_index\x18\x05 \x01(\x05R\n" +
+	"orderIndex\x12\x1b\n" +
+	"\tis_pinned\x18\x06 \x01(\bR\bisPinned\x12+\n" +
+	"\x12created_at_unix_ms\x18\a \x01(\x03R\x0fcreatedAtUnixMs\"6\n" +
+	"\x15GetUiWorkspaceRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\x85\x01\n" +
+	"\x16GetUiWorkspaceResponse\x128\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x1a.insightify.v1.UiWorkspaceR\tworkspace\x121\n" +
+	"\x04tabs\x18\x02 \x03(\v2\x1d.insightify.v1.UiWorkspaceTabR\x04tabs\"2\n" +
+	"\x11ListUiTabsRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\x81\x01\n" +
+	"\x12ListUiTabsResponse\x128\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x1a.insightify.v1.UiWorkspaceR\tworkspace\x121\n" +
+	"\x04tabs\x18\x02 \x03(\v2\x1d.insightify.v1.UiWorkspaceTabR\x04tabs\"I\n" +
+	"\x12CreateUiTabRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\"\xb3\x01\n" +
+	"\x13CreateUiTabResponse\x128\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x1a.insightify.v1.UiWorkspaceR\tworkspace\x12/\n" +
+	"\x03tab\x18\x02 \x01(\v2\x1d.insightify.v1.UiWorkspaceTabR\x03tab\x121\n" +
+	"\x04tabs\x18\x03 \x03(\v2\x1d.insightify.v1.UiWorkspaceTabR\x04tabs\"J\n" +
+	"\x12SelectUiTabRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06tab_id\x18\x02 \x01(\tR\x05tabId\"\x82\x01\n" +
+	"\x13SelectUiTabResponse\x128\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x1a.insightify.v1.UiWorkspaceR\tworkspace\x121\n" +
+	"\x04tabs\x18\x02 \x03(\v2\x1d.insightify.v1.UiWorkspaceTabR\x04tabs\"\x8a\x01\n" +
 	"\x11ApplyUiOpsRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12!\n" +
 	"\fbase_version\x18\x02 \x01(\x03R\vbaseVersion\x12%\n" +
@@ -1194,10 +1943,16 @@ const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\x15UI_NODE_TYPE_LLM_CHAT\x10\x01\x12\x19\n" +
 	"\x15UI_NODE_TYPE_MARKDOWN\x10\x02\x12\x16\n" +
 	"\x12UI_NODE_TYPE_IMAGE\x10\x03\x12\x16\n" +
-	"\x12UI_NODE_TYPE_TABLE\x10\x042\xb6\x01\n" +
+	"\x12UI_NODE_TYPE_TABLE\x10\x042\xa8\x02\n" +
 	"\tUiService\x12X\n" +
-	"\vGetDocument\x12#.insightify.v1.GetUiDocumentRequest\x1a$.insightify.v1.GetUiDocumentResponse\x12O\n" +
-	"\bApplyOps\x12 .insightify.v1.ApplyUiOpsRequest\x1a!.insightify.v1.ApplyUiOpsResponseB\x9f\x01\n" +
+	"\vGetDocument\x12#.insightify.v1.GetUiDocumentRequest\x1a$.insightify.v1.GetUiDocumentResponse\x12p\n" +
+	"\x15GetProjectTabDocument\x12*.insightify.v1.GetProjectUiDocumentRequest\x1a+.insightify.v1.GetProjectUiDocumentResponse\x12O\n" +
+	"\bApplyOps\x12 .insightify.v1.ApplyUiOpsRequest\x1a!.insightify.v1.ApplyUiOpsResponse2\xea\x02\n" +
+	"\x12UiWorkspaceService\x12[\n" +
+	"\fGetWorkspace\x12$.insightify.v1.GetUiWorkspaceRequest\x1a%.insightify.v1.GetUiWorkspaceResponse\x12O\n" +
+	"\bListTabs\x12 .insightify.v1.ListUiTabsRequest\x1a!.insightify.v1.ListUiTabsResponse\x12R\n" +
+	"\tCreateTab\x12!.insightify.v1.CreateUiTabRequest\x1a\".insightify.v1.CreateUiTabResponse\x12R\n" +
+	"\tSelectTab\x12!.insightify.v1.SelectUiTabRequest\x1a\".insightify.v1.SelectUiTabResponseB\x9f\x01\n" +
 	"\x11com.insightify.v1B\aUiProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -1213,27 +1968,39 @@ func file_insightify_v1_ui_proto_rawDescGZIP() []byte {
 }
 
 var file_insightify_v1_ui_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_insightify_v1_ui_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_insightify_v1_ui_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_insightify_v1_ui_proto_goTypes = []any{
-	(UiNodeType)(0),               // 0: insightify.v1.UiNodeType
-	(UiChatMessage_Role)(0),       // 1: insightify.v1.UiChatMessage.Role
-	(*UiNodeMeta)(nil),            // 2: insightify.v1.UiNodeMeta
-	(*UiChatMessage)(nil),         // 3: insightify.v1.UiChatMessage
-	(*UiLlmChatState)(nil),        // 4: insightify.v1.UiLlmChatState
-	(*UiMarkdownState)(nil),       // 5: insightify.v1.UiMarkdownState
-	(*UiImageState)(nil),          // 6: insightify.v1.UiImageState
-	(*UiTableState)(nil),          // 7: insightify.v1.UiTableState
-	(*UiTableRow)(nil),            // 8: insightify.v1.UiTableRow
-	(*UiNode)(nil),                // 9: insightify.v1.UiNode
-	(*UiDocument)(nil),            // 10: insightify.v1.UiDocument
-	(*GetUiDocumentRequest)(nil),  // 11: insightify.v1.GetUiDocumentRequest
-	(*GetUiDocumentResponse)(nil), // 12: insightify.v1.GetUiDocumentResponse
-	(*ApplyUiOpsRequest)(nil),     // 13: insightify.v1.ApplyUiOpsRequest
-	(*ApplyUiOpsResponse)(nil),    // 14: insightify.v1.ApplyUiOpsResponse
-	(*UiOp)(nil),                  // 15: insightify.v1.UiOp
-	(*UiUpsertNode)(nil),          // 16: insightify.v1.UiUpsertNode
-	(*UiDeleteNode)(nil),          // 17: insightify.v1.UiDeleteNode
-	(*UiClearNodes)(nil),          // 18: insightify.v1.UiClearNodes
+	(UiNodeType)(0),                      // 0: insightify.v1.UiNodeType
+	(UiChatMessage_Role)(0),              // 1: insightify.v1.UiChatMessage.Role
+	(*UiNodeMeta)(nil),                   // 2: insightify.v1.UiNodeMeta
+	(*UiChatMessage)(nil),                // 3: insightify.v1.UiChatMessage
+	(*UiLlmChatState)(nil),               // 4: insightify.v1.UiLlmChatState
+	(*UiMarkdownState)(nil),              // 5: insightify.v1.UiMarkdownState
+	(*UiImageState)(nil),                 // 6: insightify.v1.UiImageState
+	(*UiTableState)(nil),                 // 7: insightify.v1.UiTableState
+	(*UiTableRow)(nil),                   // 8: insightify.v1.UiTableRow
+	(*UiNode)(nil),                       // 9: insightify.v1.UiNode
+	(*UiDocument)(nil),                   // 10: insightify.v1.UiDocument
+	(*GetUiDocumentRequest)(nil),         // 11: insightify.v1.GetUiDocumentRequest
+	(*GetUiDocumentResponse)(nil),        // 12: insightify.v1.GetUiDocumentResponse
+	(*GetProjectUiDocumentRequest)(nil),  // 13: insightify.v1.GetProjectUiDocumentRequest
+	(*GetProjectUiDocumentResponse)(nil), // 14: insightify.v1.GetProjectUiDocumentResponse
+	(*UiWorkspace)(nil),                  // 15: insightify.v1.UiWorkspace
+	(*UiWorkspaceTab)(nil),               // 16: insightify.v1.UiWorkspaceTab
+	(*GetUiWorkspaceRequest)(nil),        // 17: insightify.v1.GetUiWorkspaceRequest
+	(*GetUiWorkspaceResponse)(nil),       // 18: insightify.v1.GetUiWorkspaceResponse
+	(*ListUiTabsRequest)(nil),            // 19: insightify.v1.ListUiTabsRequest
+	(*ListUiTabsResponse)(nil),           // 20: insightify.v1.ListUiTabsResponse
+	(*CreateUiTabRequest)(nil),           // 21: insightify.v1.CreateUiTabRequest
+	(*CreateUiTabResponse)(nil),          // 22: insightify.v1.CreateUiTabResponse
+	(*SelectUiTabRequest)(nil),           // 23: insightify.v1.SelectUiTabRequest
+	(*SelectUiTabResponse)(nil),          // 24: insightify.v1.SelectUiTabResponse
+	(*ApplyUiOpsRequest)(nil),            // 25: insightify.v1.ApplyUiOpsRequest
+	(*ApplyUiOpsResponse)(nil),           // 26: insightify.v1.ApplyUiOpsResponse
+	(*UiOp)(nil),                         // 27: insightify.v1.UiOp
+	(*UiUpsertNode)(nil),                 // 28: insightify.v1.UiUpsertNode
+	(*UiDeleteNode)(nil),                 // 29: insightify.v1.UiDeleteNode
+	(*UiClearNodes)(nil),                 // 30: insightify.v1.UiClearNodes
 }
 var file_insightify_v1_ui_proto_depIdxs = []int32{
 	1,  // 0: insightify.v1.UiChatMessage.role:type_name -> insightify.v1.UiChatMessage.Role
@@ -1247,21 +2014,41 @@ var file_insightify_v1_ui_proto_depIdxs = []int32{
 	7,  // 8: insightify.v1.UiNode.table:type_name -> insightify.v1.UiTableState
 	9,  // 9: insightify.v1.UiDocument.nodes:type_name -> insightify.v1.UiNode
 	10, // 10: insightify.v1.GetUiDocumentResponse.document:type_name -> insightify.v1.UiDocument
-	15, // 11: insightify.v1.ApplyUiOpsRequest.ops:type_name -> insightify.v1.UiOp
-	10, // 12: insightify.v1.ApplyUiOpsResponse.document:type_name -> insightify.v1.UiDocument
-	16, // 13: insightify.v1.UiOp.upsert_node:type_name -> insightify.v1.UiUpsertNode
-	17, // 14: insightify.v1.UiOp.delete_node:type_name -> insightify.v1.UiDeleteNode
-	18, // 15: insightify.v1.UiOp.clear_nodes:type_name -> insightify.v1.UiClearNodes
-	9,  // 16: insightify.v1.UiUpsertNode.node:type_name -> insightify.v1.UiNode
-	11, // 17: insightify.v1.UiService.GetDocument:input_type -> insightify.v1.GetUiDocumentRequest
-	13, // 18: insightify.v1.UiService.ApplyOps:input_type -> insightify.v1.ApplyUiOpsRequest
-	12, // 19: insightify.v1.UiService.GetDocument:output_type -> insightify.v1.GetUiDocumentResponse
-	14, // 20: insightify.v1.UiService.ApplyOps:output_type -> insightify.v1.ApplyUiOpsResponse
-	19, // [19:21] is the sub-list for method output_type
-	17, // [17:19] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	10, // 11: insightify.v1.GetProjectUiDocumentResponse.document:type_name -> insightify.v1.UiDocument
+	15, // 12: insightify.v1.GetUiWorkspaceResponse.workspace:type_name -> insightify.v1.UiWorkspace
+	16, // 13: insightify.v1.GetUiWorkspaceResponse.tabs:type_name -> insightify.v1.UiWorkspaceTab
+	15, // 14: insightify.v1.ListUiTabsResponse.workspace:type_name -> insightify.v1.UiWorkspace
+	16, // 15: insightify.v1.ListUiTabsResponse.tabs:type_name -> insightify.v1.UiWorkspaceTab
+	15, // 16: insightify.v1.CreateUiTabResponse.workspace:type_name -> insightify.v1.UiWorkspace
+	16, // 17: insightify.v1.CreateUiTabResponse.tab:type_name -> insightify.v1.UiWorkspaceTab
+	16, // 18: insightify.v1.CreateUiTabResponse.tabs:type_name -> insightify.v1.UiWorkspaceTab
+	15, // 19: insightify.v1.SelectUiTabResponse.workspace:type_name -> insightify.v1.UiWorkspace
+	16, // 20: insightify.v1.SelectUiTabResponse.tabs:type_name -> insightify.v1.UiWorkspaceTab
+	27, // 21: insightify.v1.ApplyUiOpsRequest.ops:type_name -> insightify.v1.UiOp
+	10, // 22: insightify.v1.ApplyUiOpsResponse.document:type_name -> insightify.v1.UiDocument
+	28, // 23: insightify.v1.UiOp.upsert_node:type_name -> insightify.v1.UiUpsertNode
+	29, // 24: insightify.v1.UiOp.delete_node:type_name -> insightify.v1.UiDeleteNode
+	30, // 25: insightify.v1.UiOp.clear_nodes:type_name -> insightify.v1.UiClearNodes
+	9,  // 26: insightify.v1.UiUpsertNode.node:type_name -> insightify.v1.UiNode
+	11, // 27: insightify.v1.UiService.GetDocument:input_type -> insightify.v1.GetUiDocumentRequest
+	13, // 28: insightify.v1.UiService.GetProjectTabDocument:input_type -> insightify.v1.GetProjectUiDocumentRequest
+	25, // 29: insightify.v1.UiService.ApplyOps:input_type -> insightify.v1.ApplyUiOpsRequest
+	17, // 30: insightify.v1.UiWorkspaceService.GetWorkspace:input_type -> insightify.v1.GetUiWorkspaceRequest
+	19, // 31: insightify.v1.UiWorkspaceService.ListTabs:input_type -> insightify.v1.ListUiTabsRequest
+	21, // 32: insightify.v1.UiWorkspaceService.CreateTab:input_type -> insightify.v1.CreateUiTabRequest
+	23, // 33: insightify.v1.UiWorkspaceService.SelectTab:input_type -> insightify.v1.SelectUiTabRequest
+	12, // 34: insightify.v1.UiService.GetDocument:output_type -> insightify.v1.GetUiDocumentResponse
+	14, // 35: insightify.v1.UiService.GetProjectTabDocument:output_type -> insightify.v1.GetProjectUiDocumentResponse
+	26, // 36: insightify.v1.UiService.ApplyOps:output_type -> insightify.v1.ApplyUiOpsResponse
+	18, // 37: insightify.v1.UiWorkspaceService.GetWorkspace:output_type -> insightify.v1.GetUiWorkspaceResponse
+	20, // 38: insightify.v1.UiWorkspaceService.ListTabs:output_type -> insightify.v1.ListUiTabsResponse
+	22, // 39: insightify.v1.UiWorkspaceService.CreateTab:output_type -> insightify.v1.CreateUiTabResponse
+	24, // 40: insightify.v1.UiWorkspaceService.SelectTab:output_type -> insightify.v1.SelectUiTabResponse
+	34, // [34:41] is the sub-list for method output_type
+	27, // [27:34] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_ui_proto_init() }
@@ -1269,7 +2056,7 @@ func file_insightify_v1_ui_proto_init() {
 	if File_insightify_v1_ui_proto != nil {
 		return
 	}
-	file_insightify_v1_ui_proto_msgTypes[13].OneofWrappers = []any{
+	file_insightify_v1_ui_proto_msgTypes[25].OneofWrappers = []any{
 		(*UiOp_UpsertNode)(nil),
 		(*UiOp_DeleteNode)(nil),
 		(*UiOp_ClearNodes)(nil),
@@ -1280,9 +2067,9 @@ func file_insightify_v1_ui_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_ui_proto_rawDesc), len(file_insightify_v1_ui_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   17,
+			NumMessages:   29,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_insightify_v1_ui_proto_goTypes,
 		DependencyIndexes: file_insightify_v1_ui_proto_depIdxs,

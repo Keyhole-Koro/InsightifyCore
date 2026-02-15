@@ -14,6 +14,7 @@ func NewMux(
 	runHandler *rpc.RunHandler,
 	userInteractionHandler *rpc.UserInteractionHandler,
 	uiHandler *rpc.UiHandler,
+	uiWorkspaceHandler *rpc.UiWorkspaceHandler,
 	traceHandler *handler.TraceHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -22,6 +23,7 @@ func NewMux(
 	mux.Handle(insightifyv1connect.NewProjectServiceHandler(projectHandler))
 	mux.Handle(insightifyv1connect.NewRunServiceHandler(runHandler))
 	mux.Handle(insightifyv1connect.NewUiServiceHandler(uiHandler))
+	mux.Handle(insightifyv1connect.NewUiWorkspaceServiceHandler(uiWorkspaceHandler))
 
 	// Debug Handlers
 	mux.HandleFunc("/ws/interaction", userInteractionHandler.HandleInteractionWS)

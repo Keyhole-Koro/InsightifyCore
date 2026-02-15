@@ -22,6 +22,21 @@ CREATE TABLE IF NOT EXISTS project_states (
 	return s.schemaErr
 }
 
+func scanStateDB(row rowScanner) (State, bool) {
+	var state State
+	err := row.Scan(
+		&state.ProjectID,
+		&state.ProjectName,
+		&state.UserID,
+		&state.Repo,
+		&state.IsActive,
+	)
+	if err != nil {
+		return State{}, false
+	}
+	return normalizeState(state), true
+}
+
 func (s *Store) getDB(projectID string) (State, bool) {
 	if err := s.ensureSchema(); err != nil {
 		return State{}, false
@@ -32,7 +47,7 @@ func (s *Store) getDB(projectID string) (State, bool) {
 	}
 	row := s.db.QueryRow(`SELECT project_id, project_name, user_id, repo, is_active
 FROM project_states WHERE project_id = $1`, id)
-	return scanState(row)
+	return scanStateDB(row)
 }
 
 func (s *Store) putDB(state State) {
@@ -44,7 +59,9 @@ func (s *Store) putDB(state State) {
 		return
 	}
 	_, _ = s.db.Exec(`
-INSERT INTO project_states (project_id, project_name, user_id, repo, is_active)
+INSERT INTO project_states (
+  project_id, project_name, user_id, repo, is_active
+)
 VALUES ($1,$2,$3,$4,$5)
 ON CONFLICT (project_id)
 DO UPDATE SET project_name=EXCLUDED.project_name,
@@ -67,7 +84,7 @@ func (s *Store) updateDB(projectID string, update func(*State)) (State, bool) {
 	id := strings.TrimSpace(projectID)
 	row := tx.QueryRow(`SELECT project_id, project_name, user_id, repo, is_active
 FROM project_states WHERE project_id = $1 FOR UPDATE`, id)
-	cur, ok := scanState(row)
+	cur, ok := scanStateDB(row)
 	if !ok {
 		return State{}, false
 	}
@@ -98,7 +115,8 @@ func (s *Store) listByUserDB(userID string) []State {
 		err  error
 	)
 	if uid == "" {
-		rows, err = s.db.Query(`SELECT project_id, project_name, user_id, repo, is_active FROM project_states`)
+		rows, err = s.db.Query(`SELECT project_id, project_name, user_id, repo, is_active
+FROM project_states`)
 	} else {
 		rows, err = s.db.Query(`SELECT project_id, project_name, user_id, repo, is_active
 FROM project_states WHERE user_id = $1`, uid)
@@ -128,7 +146,7 @@ func (s *Store) getActiveByUserDB(userID string) (State, bool) {
 	}
 	row := s.db.QueryRow(`SELECT project_id, project_name, user_id, repo, is_active
 FROM project_states WHERE user_id = $1 AND is_active = TRUE LIMIT 1`, uid)
-	return scanState(row)
+	return scanStateDB(row)
 }
 
 func (s *Store) setActiveForUserDB(userID, projectID string) (State, bool) {
@@ -148,7 +166,7 @@ func (s *Store) setActiveForUserDB(userID, projectID string) (State, bool) {
 
 	row := tx.QueryRow(`SELECT project_id, project_name, user_id, repo, is_active
 FROM project_states WHERE project_id = $1 AND user_id = $2 FOR UPDATE`, pid, uid)
-	target, ok := scanState(row)
+	target, ok := scanStateDB(row)
 	if !ok {
 		return State{}, false
 	}

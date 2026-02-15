@@ -7,15 +7,18 @@ import (
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	uirepo "insightify/internal/gateway/repository/ui"
+	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
+	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
 )
 
 // Service provides UI node state operations for gateway services.
 type Service struct {
-	store *uirepo.Store
+	store      uirepo.Store
+	workspaces *gatewayuiworkspace.Service
 }
 
-func New(store *uirepo.Store) *Service {
-	return &Service{store: store}
+func New(store uirepo.Store, workspaces *gatewayuiworkspace.Service) *Service {
+	return &Service{store: store, workspaces: workspaces}
 }
 
 func (s *Service) GetDocument(_ context.Context, req *insightifyv1.GetUiDocumentRequest) (*insightifyv1.GetUiDocumentResponse, error) {
@@ -58,7 +61,124 @@ func (s *Service) ApplyOps(_ context.Context, req *insightifyv1.ApplyUiOpsReques
 	return res, nil
 }
 
-// Compatibility helpers used by worker service.
+func (s *Service) GetProjectTabDocument(_ context.Context, req *insightifyv1.GetProjectUiDocumentRequest) (*insightifyv1.GetProjectUiDocumentResponse, error) {
+	if s == nil || s.store == nil {
+		return nil, fmt.Errorf("ui service is not available")
+	}
+	if s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	if projectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+
+	_, tab, ok, err := s.workspaces.ResolveTab(projectID, strings.TrimSpace(req.GetTabId()))
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return &insightifyv1.GetProjectUiDocumentResponse{
+			Found:     false,
+			ProjectId: projectID,
+		}, nil
+	}
+	tabID := strings.TrimSpace(tab.TabID)
+	runID := strings.TrimSpace(tab.RunID)
+	if runID == "" {
+		return &insightifyv1.GetProjectUiDocumentResponse{
+			Found:     false,
+			ProjectId: projectID,
+			TabId:     tabID,
+		}, nil
+	}
+	doc := s.store.GetDocument(runID)
+	if doc == nil {
+		doc = &insightifyv1.UiDocument{RunId: runID}
+	}
+	return &insightifyv1.GetProjectUiDocumentResponse{
+		Found:     true,
+		ProjectId: projectID,
+		TabId:     strings.TrimSpace(tabID),
+		RunId:     runID,
+		Document:  doc,
+	}, nil
+}
+
+func (s *Service) GetWorkspace(_ context.Context, req *insightifyv1.GetUiWorkspaceRequest) (*insightifyv1.GetUiWorkspaceResponse, error) {
+	if s == nil || s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	if projectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+	view, err := s.workspaces.Ensure(projectID)
+	if err != nil {
+		return nil, err
+	}
+	return &insightifyv1.GetUiWorkspaceResponse{
+		Workspace: toProtoWorkspace(view.Workspace),
+		Tabs:      toProtoTabs(view.Tabs),
+	}, nil
+}
+
+func (s *Service) ListTabs(_ context.Context, req *insightifyv1.ListUiTabsRequest) (*insightifyv1.ListUiTabsResponse, error) {
+	if s == nil || s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	if projectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+	view, err := s.workspaces.Ensure(projectID)
+	if err != nil {
+		return nil, err
+	}
+	return &insightifyv1.ListUiTabsResponse{
+		Workspace: toProtoWorkspace(view.Workspace),
+		Tabs:      toProtoTabs(view.Tabs),
+	}, nil
+}
+
+func (s *Service) CreateTab(_ context.Context, req *insightifyv1.CreateUiTabRequest) (*insightifyv1.CreateUiTabResponse, error) {
+	if s == nil || s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	if projectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+	view, tab, err := s.workspaces.CreateTab(projectID, strings.TrimSpace(req.GetTitle()))
+	if err != nil {
+		return nil, err
+	}
+	return &insightifyv1.CreateUiTabResponse{
+		Workspace: toProtoWorkspace(view.Workspace),
+		Tab:       toProtoTab(tab),
+		Tabs:      toProtoTabs(view.Tabs),
+	}, nil
+}
+
+func (s *Service) SelectTab(_ context.Context, req *insightifyv1.SelectUiTabRequest) (*insightifyv1.SelectUiTabResponse, error) {
+	if s == nil || s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	tabID := strings.TrimSpace(req.GetTabId())
+	if projectID == "" || tabID == "" {
+		return nil, fmt.Errorf("project_id and tab_id are required")
+	}
+	view, err := s.workspaces.SelectTab(projectID, tabID)
+	if err != nil {
+		return nil, err
+	}
+	return &insightifyv1.SelectUiTabResponse{
+		Workspace: toProtoWorkspace(view.Workspace),
+		Tabs:      toProtoTabs(view.Tabs),
+	}, nil
+}
+
 func (s *Service) Set(runID string, node *insightifyv1.UiNode) {
 	if s == nil || s.store == nil || strings.TrimSpace(runID) == "" || node == nil {
 		return
@@ -94,4 +214,36 @@ func (s *Service) Clear(runID string) {
 			},
 		},
 	})
+}
+
+func toProtoWorkspace(ws uiworkspacerepo.Workspace) *insightifyv1.UiWorkspace {
+	return &insightifyv1.UiWorkspace{
+		WorkspaceId: strings.TrimSpace(ws.WorkspaceID),
+		ProjectId:   strings.TrimSpace(ws.ProjectID),
+		Name:        strings.TrimSpace(ws.Name),
+		ActiveTabId: strings.TrimSpace(ws.ActiveTabID),
+	}
+}
+
+func toProtoTab(t uiworkspacerepo.Tab) *insightifyv1.UiWorkspaceTab {
+	return &insightifyv1.UiWorkspaceTab{
+		TabId:           strings.TrimSpace(t.TabID),
+		WorkspaceId:     strings.TrimSpace(t.WorkspaceID),
+		Title:           strings.TrimSpace(t.Title),
+		RunId:           strings.TrimSpace(t.RunID),
+		OrderIndex:      t.OrderIndex,
+		IsPinned:        t.IsPinned,
+		CreatedAtUnixMs: t.CreatedAtUnixMs,
+	}
+}
+
+func toProtoTabs(tabs []uiworkspacerepo.Tab) []*insightifyv1.UiWorkspaceTab {
+	if len(tabs) == 0 {
+		return nil
+	}
+	out := make([]*insightifyv1.UiWorkspaceTab, 0, len(tabs))
+	for _, t := range tabs {
+		out = append(out, toProtoTab(t))
+	}
+	return out
 }
