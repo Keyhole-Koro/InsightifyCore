@@ -2,14 +2,16 @@ package userinteraction
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 )
 
 func TestSendQueuesInputForWaitForInput(t *testing.T) {
-	svc := New()
+	svc := New(nil, "")
 	runID := "run-1"
 	want := "hello from user"
 
@@ -57,7 +59,7 @@ func TestSendQueuesInputForWaitForInput(t *testing.T) {
 }
 
 func TestSubscribeEmitsStateTransitions(t *testing.T) {
-	svc := New()
+	svc := New(nil, "")
 	runID := "run-subscribe"
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -121,7 +123,7 @@ func TestSubscribeEmitsStateTransitions(t *testing.T) {
 }
 
 func TestPublishOutputEmitsAssistantMessage(t *testing.T) {
-	svc := New()
+	svc := New(nil, "")
 	runID := "run-output"
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -155,6 +157,80 @@ func TestPublishOutputEmitsAssistantMessage(t *testing.T) {
 			t.Fatalf("timed out waiting for assistant message event")
 		}
 	}
+}
+
+func TestConversationArtifactStoredByRunID(t *testing.T) {
+	store := &memoryArtifactStore{data: map[string][]byte{}}
+	svc := New(store, "")
+	runID := "run-conversation"
+	interactionID := "interaction-1"
+
+	_, err := svc.Send(context.Background(), &insightifyv1.SendRequest{
+		RunId:         runID,
+		InteractionId: interactionID,
+		Input:         "hello",
+	})
+	if err != nil {
+		t.Fatalf("Send() error = %v", err)
+	}
+	if err := svc.PublishOutput(context.Background(), runID, interactionID, "hi there"); err != nil {
+		t.Fatalf("PublishOutput() error = %v", err)
+	}
+
+	raw, ok := store.data[runID+"/"+svc.conversationArtifactPath]
+	if !ok {
+		t.Fatalf("conversation artifact not stored")
+	}
+	var doc struct {
+		RunID    string `json:"run_id"`
+		Messages []struct {
+			Role          string `json:"role"`
+			Content       string `json:"content"`
+			InteractionID string `json:"interaction_id"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal conversation artifact: %v", err)
+	}
+	if doc.RunID != runID {
+		t.Fatalf("run_id = %q, want %q", doc.RunID, runID)
+	}
+	if len(doc.Messages) != 2 {
+		t.Fatalf("messages len = %d, want 2", len(doc.Messages))
+	}
+	if doc.Messages[0].Role != "user" || doc.Messages[0].Content != "hello" {
+		t.Fatalf("first message = %#v, want user/hello", doc.Messages[0])
+	}
+	if doc.Messages[1].Role != "assistant" || doc.Messages[1].Content != "hi there" {
+		t.Fatalf("second message = %#v, want assistant/hi there", doc.Messages[1])
+	}
+	if doc.Messages[0].InteractionID != interactionID || doc.Messages[1].InteractionID != interactionID {
+		t.Fatalf("interaction_id mismatch: %#v", doc.Messages)
+	}
+}
+
+type memoryArtifactStore struct {
+	data map[string][]byte
+}
+
+func (m *memoryArtifactStore) Put(_ context.Context, runID, path string, content []byte) error {
+	if m.data == nil {
+		m.data = map[string][]byte{}
+	}
+	m.data[runID+"/"+path] = append([]byte(nil), content...)
+	return nil
+}
+
+func (m *memoryArtifactStore) Get(_ context.Context, runID, path string) ([]byte, error) {
+	v, ok := m.data[runID+"/"+path]
+	if !ok {
+		return nil, artifactrepo.ErrNotFound
+	}
+	return append([]byte(nil), v...), nil
+}
+
+func (m *memoryArtifactStore) List(_ context.Context, runID string) ([]string, error) {
+	return nil, nil
 }
 
 func readWaitState(t *testing.T, sub <-chan *SubscriptionEvent) *insightifyv1.WaitResponse {

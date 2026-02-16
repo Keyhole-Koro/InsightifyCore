@@ -7,7 +7,7 @@ import (
 )
 
 // Runtime is the execution context required by runner and worker specs.
-// Gateway RunRuntime and other runtimes can implement this.
+// Gateway ProjectRuntime/ExecutionRuntime and other runtimes can implement this.
 type Runtime interface {
 	GetOutDir() string
 	GetRepoFS() *safeio.SafeFS

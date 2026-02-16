@@ -4,49 +4,21 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 )
 
-type Service struct {
-	mu    sync.Mutex
-	state map[string]*sessionState
-}
-
-type SubscriptionEventKind string
-
-const (
-	SubscriptionEventWaitState        SubscriptionEventKind = "wait_state"
-	SubscriptionEventAssistantMessage SubscriptionEventKind = "assistant_message"
-)
-
-type SubscriptionEvent struct {
-	Kind             SubscriptionEventKind
-	WaitState        *insightifyv1.WaitResponse
-	InteractionID    string
-	AssistantMessage string
-}
-
-type outputMessage struct {
-	interactionID string
-	message       string
-}
-
-type sessionState struct {
-	interactionID string
-	closed        bool
-	waiting       bool
-	inputQueue    []string
-	outputQueue   []outputMessage
-	changed       chan struct{}
-	updatedAt     time.Time
-}
-
-func New() *Service {
+func New(artifact artifactrepo.Store, conversationArtifactPath string) *Service {
+	path := strings.TrimSpace(conversationArtifactPath)
+	if path == "" {
+		path = defaultConversationArtifactPath
+	}
 	return &Service{
-		state: make(map[string]*sessionState),
+		state:                    make(map[string]*sessionState),
+		artifact:                 artifact,
+		conversationArtifactPath: path,
 	}
 }
 
@@ -155,75 +127,6 @@ func (s *Service) Subscribe(ctx context.Context, runID string) (<-chan *Subscrip
 	return out, nil
 }
 
-// PublishOutput enqueues a server assistant message for the run.
-func (s *Service) PublishOutput(_ context.Context, runID, interactionID, message string) error {
-	runID = strings.TrimSpace(runID)
-	interactionID = strings.TrimSpace(interactionID)
-	message = strings.TrimSpace(message)
-	if runID == "" {
-		return fmt.Errorf("run_id is required")
-	}
-	if message == "" {
-		return fmt.Errorf("message is required")
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	st := s.getOrCreateLocked(runID)
-	if interactionID != "" {
-		st.interactionID = interactionID
-	}
-	if st.interactionID == "" {
-		st.interactionID = newInteractionID()
-	}
-	st.outputQueue = append(st.outputQueue, outputMessage{
-		interactionID: st.interactionID,
-		message:       message,
-	})
-	st.updatedAt = time.Now()
-	notifyLocked(st)
-	return nil
-}
-
-func (s *Service) Send(_ context.Context, req *insightifyv1.SendRequest) (*insightifyv1.SendResponse, error) {
-	runID := strings.TrimSpace(req.GetRunId())
-	input := strings.TrimSpace(req.GetInput())
-	if runID == "" {
-		return nil, fmt.Errorf("run_id is required")
-	}
-	if input == "" {
-		return nil, fmt.Errorf("input is required")
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	st := s.getOrCreateLocked(runID)
-	if st.closed {
-		return &insightifyv1.SendResponse{
-			Accepted:      false,
-			InteractionId: st.interactionID,
-		}, nil
-	}
-	if interactionID := strings.TrimSpace(req.GetInteractionId()); interactionID != "" {
-		st.interactionID = interactionID
-	}
-	if st.interactionID == "" {
-		st.interactionID = newInteractionID()
-	}
-	st.inputQueue = append(st.inputQueue, input)
-	st.waiting = false
-	st.updatedAt = time.Now()
-	notifyLocked(st)
-
-	return &insightifyv1.SendResponse{
-		Accepted:         true,
-		InteractionId:    st.interactionID,
-		AssistantMessage: "",
-	}, nil
-}
-
 func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*insightifyv1.CloseResponse, error) {
 	runID := strings.TrimSpace(req.GetRunId())
 	if runID == "" {
@@ -298,59 +201,4 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 		case <-ch:
 		}
 	}
-}
-
-func (s *Service) waitResponseFromStateLocked(st *sessionState) *insightifyv1.WaitResponse {
-	if st == nil {
-		return &insightifyv1.WaitResponse{}
-	}
-	return &insightifyv1.WaitResponse{
-		Waiting:       st.waiting && !st.closed,
-		InteractionId: st.interactionID,
-		Closed:        st.closed,
-	}
-}
-
-func (s *Service) getOrCreateLocked(runID string) *sessionState {
-	key := runID
-	if st, ok := s.state[key]; ok {
-		return st
-	}
-	st := &sessionState{
-		waiting: false,
-		changed: make(chan struct{}),
-	}
-	s.state[key] = st
-	return st
-}
-
-func notifyLocked(st *sessionState) {
-	if st == nil {
-		return
-	}
-	close(st.changed)
-	st.changed = make(chan struct{})
-}
-
-func pushEvent(out chan *SubscriptionEvent, state *SubscriptionEvent) {
-	if out == nil || state == nil {
-		return
-	}
-	select {
-	case out <- state:
-		return
-	default:
-	}
-	select {
-	case <-out:
-	default:
-	}
-	select {
-	case out <- state:
-	default:
-	}
-}
-
-func newInteractionID() string {
-	return fmt.Sprintf("interaction-%d", time.Now().UnixNano())
 }

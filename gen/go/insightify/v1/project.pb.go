@@ -123,6 +123,7 @@ type Project struct {
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	Artifacts     map[string]string      `protobuf:"bytes,5,rep,name=artifacts,proto3" json:"artifacts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +184,13 @@ func (x *Project) GetIsActive() bool {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *Project) GetArtifacts() map[string]string {
+	if x != nil {
+		return x.Artifacts
+	}
+	return nil
 }
 
 type ListProjectsRequest struct {
@@ -484,13 +492,17 @@ const file_insightify_v1_project_proto_rawDesc = "" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\"6\n" +
 	"\x15EnsureProjectResponse\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\"r\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\xf5\x01\n" +
 	"\aProject\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n" +
-	"\tis_active\x18\x04 \x01(\bR\bisActive\".\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x12C\n" +
+	"\tartifacts\x18\x05 \x03(\v2%.insightify.v1.Project.ArtifactsEntryR\tartifacts\x1a<\n" +
+	"\x0eArtifactsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\".\n" +
 	"\x13ListProjectsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"v\n" +
 	"\x14ListProjectsResponse\x122\n" +
@@ -526,7 +538,7 @@ func file_insightify_v1_project_proto_rawDescGZIP() []byte {
 	return file_insightify_v1_project_proto_rawDescData
 }
 
-var file_insightify_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_insightify_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_insightify_v1_project_proto_goTypes = []any{
 	(*EnsureProjectRequest)(nil),  // 0: insightify.v1.EnsureProjectRequest
 	(*EnsureProjectResponse)(nil), // 1: insightify.v1.EnsureProjectResponse
@@ -537,24 +549,26 @@ var file_insightify_v1_project_proto_goTypes = []any{
 	(*CreateProjectResponse)(nil), // 6: insightify.v1.CreateProjectResponse
 	(*SelectProjectRequest)(nil),  // 7: insightify.v1.SelectProjectRequest
 	(*SelectProjectResponse)(nil), // 8: insightify.v1.SelectProjectResponse
+	nil,                           // 9: insightify.v1.Project.ArtifactsEntry
 }
 var file_insightify_v1_project_proto_depIdxs = []int32{
-	2, // 0: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
-	2, // 1: insightify.v1.CreateProjectResponse.project:type_name -> insightify.v1.Project
-	2, // 2: insightify.v1.SelectProjectResponse.project:type_name -> insightify.v1.Project
-	0, // 3: insightify.v1.ProjectService.EnsureProject:input_type -> insightify.v1.EnsureProjectRequest
-	3, // 4: insightify.v1.ProjectService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
-	5, // 5: insightify.v1.ProjectService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
-	7, // 6: insightify.v1.ProjectService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
-	1, // 7: insightify.v1.ProjectService.EnsureProject:output_type -> insightify.v1.EnsureProjectResponse
-	4, // 8: insightify.v1.ProjectService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
-	6, // 9: insightify.v1.ProjectService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
-	8, // 10: insightify.v1.ProjectService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	9, // 0: insightify.v1.Project.artifacts:type_name -> insightify.v1.Project.ArtifactsEntry
+	2, // 1: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
+	2, // 2: insightify.v1.CreateProjectResponse.project:type_name -> insightify.v1.Project
+	2, // 3: insightify.v1.SelectProjectResponse.project:type_name -> insightify.v1.Project
+	0, // 4: insightify.v1.ProjectService.EnsureProject:input_type -> insightify.v1.EnsureProjectRequest
+	3, // 5: insightify.v1.ProjectService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
+	5, // 6: insightify.v1.ProjectService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
+	7, // 7: insightify.v1.ProjectService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
+	1, // 8: insightify.v1.ProjectService.EnsureProject:output_type -> insightify.v1.EnsureProjectResponse
+	4, // 9: insightify.v1.ProjectService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
+	6, // 10: insightify.v1.ProjectService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
+	8, // 11: insightify.v1.ProjectService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
+	8, // [8:12] is the sub-list for method output_type
+	4, // [4:8] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_project_proto_init() }
@@ -568,7 +582,7 @@ func file_insightify_v1_project_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_project_proto_rawDesc), len(file_insightify_v1_project_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

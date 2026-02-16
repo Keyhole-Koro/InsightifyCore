@@ -17,14 +17,14 @@ type Service struct {
 	store *projectstore.Store
 
 	runCtxMu sync.RWMutex
-	runCtx   map[string]gatewayworker.RunEnvironment
+	runCtx   map[string]*gatewayworker.ProjectRuntime
 }
 
 // New creates a project service backed by the given store.
 func New(store *projectstore.Store) *Service {
 	return &Service{
 		store:  store,
-		runCtx: make(map[string]gatewayworker.RunEnvironment),
+		runCtx: make(map[string]*gatewayworker.ProjectRuntime),
 	}
 }
 
@@ -38,7 +38,7 @@ func (s *Service) Store() *projectstore.Store { return s.store }
 // Entry is the public type for project entry (was unexported 'entry').
 type Entry struct {
 	State  projectstore.State
-	RunCtx gatewayworker.RunEnvironment
+	RunCtx *gatewayworker.ProjectRuntime
 }
 
 func (s *Service) ListProjects(_ context.Context, userID string) ([]Entry, string, error) {
@@ -68,8 +68,8 @@ func (s *Service) CreateProject(_ context.Context, userID, projectName string) (
 
 	projectID := fmt.Sprintf("project-%d", time.Now().UnixNano())
 
-	var runCtx gatewayworker.RunEnvironment
-	ctx, err := gatewayworker.NewRunRuntime("", projectID)
+	var runCtx *gatewayworker.ProjectRuntime
+	ctx, err := gatewayworker.NewProjectRuntime("", projectID)
 	if err != nil {
 		return Entry{}, fmt.Errorf("failed to create run context: %w", err)
 	}
@@ -155,7 +155,7 @@ func (s *Service) EnsureProject(_ context.Context, userID, projectID string) (En
 
 	// Ensure run context.
 	if !s.hasRequiredWorkers(p.RunCtx) {
-		ctx, err := gatewayworker.NewRunRuntime(p.State.Repo, projectID)
+		ctx, err := gatewayworker.NewProjectRuntime(p.State.Repo, projectID)
 		if err != nil {
 			return Entry{}, fmt.Errorf("failed to create run context: %w", err)
 		}
@@ -236,7 +236,7 @@ func (s *Service) setActiveForUser(userID, projectID string) (Entry, bool) {
 // ---------------------------------------------------------------------------
 
 // GetRunContext returns the run context for a project.
-func (s *Service) GetRunContext(projectID string) (gatewayworker.RunEnvironment, bool) {
+func (s *Service) GetRunContext(projectID string) (*gatewayworker.ProjectRuntime, bool) {
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, false
@@ -264,7 +264,7 @@ func (s *Service) GetEntry(projectID string) (State, bool) {
 }
 
 // EnsureRunContext ensures a project has a valid run context with required workers.
-func (s *Service) EnsureRunContext(projectID string) (gatewayworker.RunEnvironment, error) {
+func (s *Service) EnsureRunContext(projectID string) (*gatewayworker.ProjectRuntime, error) {
 	e, ok := s.get(projectID)
 	if !ok {
 		return nil, fmt.Errorf("project %s not found", projectID)
@@ -272,7 +272,7 @@ func (s *Service) EnsureRunContext(projectID string) (gatewayworker.RunEnvironme
 	if e.RunCtx != nil && s.hasRequiredWorkers(e.RunCtx) {
 		return e.RunCtx, nil
 	}
-	ctx, err := gatewayworker.NewRunRuntime(e.State.Repo, projectID)
+	ctx, err := gatewayworker.NewProjectRuntime(e.State.Repo, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore run context: %w", err)
 	}
@@ -281,12 +281,12 @@ func (s *Service) EnsureRunContext(projectID string) (gatewayworker.RunEnvironme
 	return ctx, nil
 }
 
-func (s *Service) hasRequiredWorkers(env gatewayworker.RunEnvironment) bool {
-	if env == nil || env.Runtime() == nil || env.Runtime().GetResolver() == nil {
+func (s *Service) hasRequiredWorkers(env *gatewayworker.ProjectRuntime) bool {
+	if env == nil || env.Resolver == nil {
 		return false
 	}
-	_, hasBootstrap := env.Runtime().GetResolver().Get("bootstrap")
-	_, hasTestLLM := env.Runtime().GetResolver().Get("testllmChatNode")
+	_, hasBootstrap := env.Resolver.Get("bootstrap")
+	_, hasTestLLM := env.Resolver.Get("testllmChatNode")
 	return hasBootstrap && hasTestLLM
 }
 
@@ -301,5 +301,5 @@ type State struct {
 	UserID      string
 	Repo        string
 	IsActive    bool
-	RunCtx      gatewayworker.RunEnvironment
+	RunCtx      *gatewayworker.ProjectRuntime
 }

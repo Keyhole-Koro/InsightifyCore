@@ -98,7 +98,7 @@ Frontend は `@connectrpc/connect-web` で transport を作り、`Project/Run/Ui
 - `schema/proto/insightify/v1/user_interaction.proto`
 - `InsightifyCore/internal/gateway/server/routes.go`
 - `InsightifyCore/internal/gateway/handler/rpc/user_interaction.go`
-- `InsightifyCore/internal/gateway/service/user_interaction/service.go`
+- `InsightifyCore/internal/gateway/service/userinteraction/service.go`
 - `InsightifyWeb/src/features/interaction/api.ts`
 
 ## 5. 追加で書いておくと良い項目
@@ -115,4 +115,4 @@ Frontend は `@connectrpc/connect-web` で transport を作り、`Project/Run/Ui
 - `InsightifyCore/internal/runner/registry_plan.go`
 - `InsightifyCore/internal/runner/registry_infra.go`
 - `InsightifyCore/internal/gateway/service/worker/run.go`
-- `InsightifyCore/internal/gateway/service/user_interaction/service.go`
+- `InsightifyCore/internal/gateway/service/userinteraction/service.go`

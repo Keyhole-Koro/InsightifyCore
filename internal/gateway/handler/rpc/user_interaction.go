@@ -8,7 +8,7 @@ import (
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
-	userinteraction "insightify/internal/gateway/service/user_interaction"
+	userinteraction "insightify/internal/gateway/service/userinteraction"
 
 	"github.com/gorilla/websocket"
 )

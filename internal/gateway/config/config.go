@@ -10,9 +10,10 @@ import (
 )
 
 type Config struct {
-	Port     string
-	Env      string
-	Artifact ArtifactConfig
+	Port        string
+	Env         string
+	Artifact    ArtifactConfig
+	Interaction InteractionConfig
 }
 
 type ArtifactConfig struct {
@@ -23,6 +24,20 @@ type ArtifactConfig struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+}
+
+func (c ArtifactConfig) CanUseS3() bool {
+	if !c.Enabled {
+		return false
+	}
+	return strings.TrimSpace(c.Endpoint) != "" &&
+		strings.TrimSpace(c.AccessKey) != "" &&
+		strings.TrimSpace(c.SecretKey) != "" &&
+		strings.TrimSpace(c.Bucket) != ""
+}
+
+type InteractionConfig struct {
+	ConversationArtifactPath string
 }
 
 func Load() (*Config, error) {
@@ -45,20 +60,33 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:     *port,
-		Env:      env,
-		Artifact: loadArtifactConfig(env),
+		Port:        *port,
+		Env:         env,
+		Artifact:    loadArtifactConfig(env),
+		Interaction: loadInteractionConfig(),
 	}, nil
 }
 
 func loadArtifactConfig(env string) ArtifactConfig {
+	if strings.EqualFold(strings.TrimSpace(env), "local") {
+		return ArtifactConfig{
+			Enabled:   true,
+			Endpoint:  firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_MINIO_ENDPOINT")), "minio:9000"),
+			Region:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_REGION")), "us-east-1"),
+			AccessKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_ACCESS_KEY")), "insightify"),
+			SecretKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_SECRET_KEY")), "insightify123"),
+			Bucket:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_BUCKET")), "insightify-artifacts"),
+			UseSSL:    false,
+		}
+	}
+
 	endpoint := resolveArtifactEndpoint(env)
 	return ArtifactConfig{
-		Enabled:   strings.EqualFold(strings.TrimSpace(env), "local") || endpoint != "",
+		Enabled:   endpoint != "",
 		Endpoint:  endpoint,
 		Region:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_REGION")), "us-east-1"),
-		AccessKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_ACCESS_KEY")), strings.TrimSpace(os.Getenv("MINIO_ROOT_USER"))),
-		SecretKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_SECRET_KEY")), strings.TrimSpace(os.Getenv("MINIO_ROOT_PASSWORD"))),
+		AccessKey: strings.TrimSpace(os.Getenv("ARTIFACT_S3_ACCESS_KEY")),
+		SecretKey: strings.TrimSpace(os.Getenv("ARTIFACT_S3_SECRET_KEY")),
 		Bucket:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_BUCKET")), "insightify-artifacts"),
 		UseSSL:    resolveArtifactUseSSL(env),
 	}
@@ -93,4 +121,13 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func loadInteractionConfig() InteractionConfig {
+	return InteractionConfig{
+		ConversationArtifactPath: firstNonEmpty(
+			strings.TrimSpace(os.Getenv("INTERACTION_CONVERSATION_ARTIFACT_PATH")),
+			"interaction/conversation_history.json",
+		),
+	}
 }

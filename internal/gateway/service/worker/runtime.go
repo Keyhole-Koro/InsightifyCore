@@ -12,15 +12,8 @@ import (
 	"insightify/internal/scan"
 )
 
-// RunEnvironment abstracts the worker execution environment.
-type RunEnvironment interface {
-	Runtime() runner.Runtime
-	GetOutDir() string
-	GetID() string
-}
-
-// RunRuntime holds the full runtime environment for a single project run.
-type RunRuntime struct {
+// ProjectRuntime holds long-lived runtime dependencies for a project.
+type ProjectRuntime struct {
 	ID       string
 	RepoName string
 	OutDir   string
@@ -37,20 +30,52 @@ type RunRuntime struct {
 	Cleanup func()
 }
 
-// RunEnvironment interface implementation.
-func (r *RunRuntime) Runtime() runner.Runtime { return r }
-func (r *RunRuntime) GetOutDir() string       { return r.OutDir }
-func (r *RunRuntime) GetID() string           { return r.ID }
+// ExecutionOptions controls per-execution runtime overrides.
+type ExecutionOptions struct {
+	OutDir    string
+	ForceFrom string
+	DepsUsage runner.DepsUsageMode
+}
+
+// ExecutionRuntime provides a runner.Runtime view for a single execution.
+type ExecutionRuntime struct {
+	project   *ProjectRuntime
+	outDir    string
+	forceFrom string
+	depsUsage runner.DepsUsageMode
+}
+
+// ProjectRuntime interface-style accessors.
+func (r *ProjectRuntime) Runtime() runner.Runtime {
+	return r.NewExecutionRuntime(ExecutionOptions{})
+}
+func (r *ProjectRuntime) GetOutDir() string { return r.OutDir }
+func (r *ProjectRuntime) GetID() string     { return r.ID }
+
+// NewExecutionRuntime builds a per-execution runtime from project defaults.
+func (r *ProjectRuntime) NewExecutionRuntime(opts ExecutionOptions) *ExecutionRuntime {
+	outDir := opts.OutDir
+	if outDir == "" {
+		outDir = r.OutDir
+	}
+	return &ExecutionRuntime{
+		project:   r,
+		outDir:    outDir,
+		forceFrom: opts.ForceFrom,
+		depsUsage: opts.DepsUsage,
+	}
+}
 
 // runner.Runtime interface implementation.
-func (r *RunRuntime) GetRepoFS() *safeio.SafeFS          { return r.RepoFS }
-func (r *RunRuntime) GetArtifactFS() *safeio.SafeFS      { return r.ArtifactFS }
-func (r *RunRuntime) GetResolver() runner.SpecResolver   { return r.Resolver }
-func (r *RunRuntime) GetMCP() *mcp.Registry              { return r.MCP }
-func (r *RunRuntime) GetModelSalt() string               { return r.ModelSalt }
-func (r *RunRuntime) GetForceFrom() string               { return r.ForceFrom }
-func (r *RunRuntime) GetDepsUsage() runner.DepsUsageMode { return r.DepsUsage }
-func (r *RunRuntime) GetLLM() llmclient.LLMClient        { return r.LLM }
+func (r *ExecutionRuntime) GetOutDir() string                  { return r.outDir }
+func (r *ExecutionRuntime) GetRepoFS() *safeio.SafeFS          { return r.project.RepoFS }
+func (r *ExecutionRuntime) GetArtifactFS() *safeio.SafeFS      { return r.project.ArtifactFS }
+func (r *ExecutionRuntime) GetResolver() runner.SpecResolver   { return r.project.Resolver }
+func (r *ExecutionRuntime) GetMCP() *mcp.Registry              { return r.project.MCP }
+func (r *ExecutionRuntime) GetModelSalt() string               { return r.project.ModelSalt }
+func (r *ExecutionRuntime) GetForceFrom() string               { return r.forceFrom }
+func (r *ExecutionRuntime) GetDepsUsage() runner.DepsUsageMode { return r.depsUsage }
+func (r *ExecutionRuntime) GetLLM() llmclient.LLMClient        { return r.project.LLM }
 
 type resolvedSources struct {
 	Name        string
@@ -59,8 +84,8 @@ type resolvedSources struct {
 	PrimaryFS   *safeio.SafeFS
 }
 
-// NewRunRuntime constructs the full runtime environment for a project run.
-func NewRunRuntime(repoName, projectID string) (*RunRuntime, error) {
+// NewProjectRuntime constructs the full runtime environment for a project.
+func NewProjectRuntime(repoName, projectID string) (*ProjectRuntime, error) {
 	repoFS := safeio.Default()
 	if repoFS == nil {
 		cwd, err := os.Getwd()
@@ -87,7 +112,7 @@ func NewRunRuntime(repoName, projectID string) (*RunRuntime, error) {
 		return nil, err
 	}
 
-	rt := &RunRuntime{
+	rt := &ProjectRuntime{
 		ID:         projectID,
 		RepoName:   repoName,
 		OutDir:     outDir,
@@ -103,12 +128,18 @@ func NewRunRuntime(repoName, projectID string) (*RunRuntime, error) {
 	}
 	rt.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(rt.MCP, mcp.Host{RepoRoot: repoFS.Root(), ReposRoot: scan.ReposDir(), RepoFS: repoFS, ArtifactFS: artifactFS})
+	runtimeView := rt.Runtime()
 	rt.Resolver = runner.MergeRegistries(
-		runner.BuildRegistryArchitecture(rt),
-		runner.BuildRegistryCodebase(rt),
-		runner.BuildRegistryExternal(rt),
-		runner.BuildRegistryPlan(rt),
-		runner.BuildRegistryTestWorker(rt),
+		runner.BuildRegistryArchitecture(runtimeView),
+		runner.BuildRegistryCodebase(runtimeView),
+		runner.BuildRegistryExternal(runtimeView),
+		runner.BuildRegistryPlan(runtimeView),
+		runner.BuildRegistryTestWorker(runtimeView),
 	)
 	return rt, nil
+}
+
+// NewRunRuntime is kept as a compatibility alias.
+func NewRunRuntime(repoName, projectID string) (*ProjectRuntime, error) {
+	return NewProjectRuntime(repoName, projectID)
 }

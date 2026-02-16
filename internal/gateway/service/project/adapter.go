@@ -24,6 +24,6 @@ func (a *projectReaderAdapter) GetEntry(projectID string) (gatewayworker.Project
 	}, true
 }
 
-func (a *projectReaderAdapter) EnsureRunContext(projectID string) (gatewayworker.RunEnvironment, error) {
+func (a *projectReaderAdapter) EnsureRunContext(projectID string) (*gatewayworker.ProjectRuntime, error) {
 	return a.svc.EnsureRunContext(projectID)
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
 	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
 	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
@@ -13,12 +14,23 @@ import (
 
 // Service provides UI node state operations for gateway services.
 type Service struct {
-	store      uirepo.Store
-	workspaces *gatewayuiworkspace.Service
+	store                    uirepo.Store
+	workspaces               *gatewayuiworkspace.Service
+	artifact                 artifactrepo.Store
+	conversationArtifactPath string
 }
 
-func New(store uirepo.Store, workspaces *gatewayuiworkspace.Service) *Service {
-	return &Service{store: store, workspaces: workspaces}
+func New(store uirepo.Store, workspaces *gatewayuiworkspace.Service, artifact artifactrepo.Store, conversationArtifactPath string) *Service {
+	path := strings.TrimSpace(conversationArtifactPath)
+	if path == "" {
+		path = "interaction/conversation_history.json"
+	}
+	return &Service{
+		store:                    store,
+		workspaces:               workspaces,
+		artifact:                 artifact,
+		conversationArtifactPath: path,
+	}
 }
 
 func (s *Service) GetDocument(_ context.Context, req *insightifyv1.GetUiDocumentRequest) (*insightifyv1.GetUiDocumentResponse, error) {
@@ -33,6 +45,7 @@ func (s *Service) GetDocument(_ context.Context, req *insightifyv1.GetUiDocument
 	if doc == nil {
 		doc = &insightifyv1.UiDocument{RunId: runID}
 	}
+	doc = s.withConversationHistory(context.Background(), runID, doc)
 	return &insightifyv1.GetUiDocumentResponse{Document: doc}, nil
 }
 
@@ -73,7 +86,11 @@ func (s *Service) GetProjectTabDocument(_ context.Context, req *insightifyv1.Get
 		return nil, fmt.Errorf("project_id is required")
 	}
 
-	_, tab, ok, err := s.workspaces.ResolveTab(projectID, strings.TrimSpace(req.GetTabId()))
+	preferredTabID := strings.TrimSpace(req.GetTabId())
+	if preferredTabID == "" {
+		preferredTabID = gatewayuiworkspace.DefaultTabID
+	}
+	_, tab, ok, err := s.workspaces.ResolveTab(projectID, preferredTabID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +113,7 @@ func (s *Service) GetProjectTabDocument(_ context.Context, req *insightifyv1.Get
 	if doc == nil {
 		doc = &insightifyv1.UiDocument{RunId: runID}
 	}
+	doc = s.withConversationHistory(context.Background(), runID, doc)
 	return &insightifyv1.GetProjectUiDocumentResponse{
 		Found:     true,
 		ProjectId: projectID,

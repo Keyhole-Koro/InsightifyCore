@@ -11,7 +11,7 @@ import (
 // ProjectReader is an interface to read project state without circular dependency on project service.
 type ProjectReader interface {
 	GetEntry(projectID string) (ProjectView, bool)
-	EnsureRunContext(projectID string) (RunEnvironment, error)
+	EnsureRunContext(projectID string) (*ProjectRuntime, error)
 }
 
 type WorkspaceRunBinder interface {
@@ -21,7 +21,7 @@ type WorkspaceRunBinder interface {
 // ProjectView is a simplified view of a project.
 type ProjectView struct {
 	ProjectID string
-	RunCtx    RunEnvironment
+	RunCtx    *ProjectRuntime
 }
 
 // Service manages runs and telemetry.
@@ -34,7 +34,7 @@ type Service struct {
 	telemetry   *TelemetryStore
 
 	runMu      sync.RWMutex
-	runs       map[string]*runState
+	runs       map[string]*WorkerRuntime
 	runCounter atomic.Uint64
 }
 
@@ -46,7 +46,7 @@ func New(project ProjectReader, workspaces WorkspaceRunBinder, ui *gatewayui.Ser
 		interaction: interaction,
 		artifact:    artifact,
 		telemetry:   NewTelemetryStore(),
-		runs:        make(map[string]*runState),
+		runs:        make(map[string]*WorkerRuntime),
 	}
 }
 

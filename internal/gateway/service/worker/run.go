@@ -11,12 +11,15 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-type runState struct {
-	runID     string
-	projectID string
-	workerID  string
+// WorkerRuntime tracks run-scoped execution state.
+type WorkerRuntime struct {
+	RunID     string
+	ProjectID string
+	WorkerID  string
+	StartedAt time.Time
 }
 
 func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunRequest) (*insightifyv1.StartRunResponse, error) {
@@ -34,15 +37,22 @@ func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunReques
 
 	runID := s.newRunID()
 	runCtx, cancel := context.WithCancel(context.Background())
-	st := &runState{
-		runID:     runID,
-		projectID: projectID,
-		workerID:  workerID,
+	st := &WorkerRuntime{
+		RunID:     runID,
+		ProjectID: projectID,
+		WorkerID:  workerID,
+		StartedAt: time.Now(),
 	}
 
 	s.runMu.Lock()
 	s.runs[runID] = st
 	s.runMu.Unlock()
+
+	if s.workspaces != nil {
+		if err := s.workspaces.AssignRunToCurrentTab(projectID, runID); err != nil {
+			log.Printf("failed to assign run %s to current tab for project %s: %v", runID, projectID, err)
+		}
+	}
 
 	go func() {
 		defer cancel()
@@ -60,17 +70,11 @@ func (s *Service) newRunID() string {
 func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID string, params map[string]string) {
 	runEnv, err := s.project.EnsureRunContext(projectID)
 	if err != nil {
-		log.Printf("run %s ensure context failed: %v", runID, err)
-		if s.interaction != nil {
-			_ = s.interaction.PublishOutput(context.Background(), runID, "", fmt.Sprintf("run setup failed: %v", err))
-		}
+		log.Printf("[ERROR] run %s ensure context failed: %v", runID, err)
 		return
 	}
 	if runEnv == nil || runEnv.Runtime() == nil || runEnv.Runtime().GetResolver() == nil {
-		log.Printf("run %s has no resolver", runID)
-		if s.interaction != nil {
-			_ = s.interaction.PublishOutput(context.Background(), runID, "", "run environment resolver is not available")
-		}
+		log.Printf("[ERROR] run %s has no resolver", runID)
 		return
 	}
 
@@ -81,27 +85,21 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 
 	out, err := runner.ExecuteWorker(execCtx, runEnv.Runtime(), workerID, params)
 	if err != nil {
-		log.Printf("run %s execute worker %s failed: %v", runID, workerID, err)
-		if s.interaction != nil {
-			_ = s.interaction.PublishOutput(context.Background(), runID, "", fmt.Sprintf("worker failed: %v", err))
-		}
+		log.Printf("[ERROR] run %s execute worker %s failed: %v", runID, workerID, err)
 		return
 	}
 
 	clientView := asClientView(out.ClientView)
 	if s.ui != nil {
-		node := s.ui.UpsertFromClientView(runID, workerID, clientView)
-		if node != nil && s.workspaces != nil {
-			if err := s.workspaces.AssignRunToCurrentTab(projectID, runID); err != nil {
-				log.Printf("failed to assign run %s to current tab for project %s: %v", runID, projectID, err)
-			}
-		}
+		_ = s.ui.UpsertFromClientView(runID, workerID, clientView)
 	}
 
 	// Persist artifacts
 	if s.artifact != nil {
 		go func() {
-			if err := s.syncArtifacts(context.Background(), runID, runEnv.GetOutDir()); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer cancel()
+			if err := s.syncArtifacts(ctx, runID, runEnv.GetOutDir()); err != nil {
 				log.Printf("failed to sync artifacts for run %s: %v", runID, err)
 			}
 		}()

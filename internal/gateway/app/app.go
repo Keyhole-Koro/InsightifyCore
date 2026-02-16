@@ -21,7 +21,7 @@ import (
 	gatewayproject "insightify/internal/gateway/service/project"
 	gatewayui "insightify/internal/gateway/service/ui"
 	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
-	gatewayuserinteraction "insightify/internal/gateway/service/user_interaction"
+	gatewayuserinteraction "insightify/internal/gateway/service/userinteraction"
 	gatewayworker "insightify/internal/gateway/service/worker"
 )
 
@@ -49,8 +49,8 @@ func New() (*App, error) {
 
 	projectSvc := gatewayproject.New(defaultProjectStore)
 	uiWorkspaceSvc := gatewayuiworkspace.New(stores.uiWorkspace)
-	uiSvc := gatewayui.New(stores.ui, uiWorkspaceSvc)
-	userInteractionSvc := gatewayuserinteraction.New()
+	uiSvc := gatewayui.New(stores.ui, uiWorkspaceSvc, stores.artifact, cfg.Interaction.ConversationArtifactPath)
+	userInteractionSvc := gatewayuserinteraction.New(stores.artifact, cfg.Interaction.ConversationArtifactPath)
 	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), uiWorkspaceSvc, uiSvc, userInteractionSvc, stores.artifact)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
@@ -70,6 +70,23 @@ func New() (*App, error) {
 }
 
 func initStores(cfg *config.Config) (*gatewayStores, error) {
+	newArtifactS3Store := func() (artifactrepo.Store, error) {
+		s3Cfg := artifactrepo.S3Config{
+			Endpoint:  cfg.Artifact.Endpoint,
+			Region:    cfg.Artifact.Region,
+			AccessKey: cfg.Artifact.AccessKey,
+			SecretKey: cfg.Artifact.SecretKey,
+			Bucket:    cfg.Artifact.Bucket,
+			UseSSL:    cfg.Artifact.UseSSL,
+		}
+		s3Store, err := artifactrepo.NewS3Store(s3Cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize artifact s3 store: %w", err)
+		}
+		log.Printf("artifact store: s3 bucket=%s endpoint=%s", s3Cfg.Bucket, s3Cfg.Endpoint)
+		return s3Store, nil
+	}
+
 	if dsn := os.Getenv("PROJECT_STORE_PG_DSN"); dsn != "" {
 		db, err := sql.Open("pgx", dsn)
 		if err != nil {
@@ -80,27 +97,31 @@ func initStores(cfg *config.Config) (*gatewayStores, error) {
 			artifact:    artifactrepo.NewPostgresStore(db),
 			uiWorkspace: uiworkspacerepo.NewPostgresStore(db),
 		}
-		if cfg.Artifact.Enabled {
-			s3Cfg := artifactrepo.S3Config{
-				Endpoint:  cfg.Artifact.Endpoint,
-				Region:    cfg.Artifact.Region,
-				AccessKey: cfg.Artifact.AccessKey,
-				SecretKey: cfg.Artifact.SecretKey,
-				Bucket:    cfg.Artifact.Bucket,
-				UseSSL:    cfg.Artifact.UseSSL,
-			}
-			s3Store, err := artifactrepo.NewS3Store(s3Cfg)
+		if cfg.Artifact.CanUseS3() {
+			s3Store, err := newArtifactS3Store()
 			if err != nil {
-				return nil, fmt.Errorf("failed to initialize artifact s3 store: %w", err)
+				return nil, err
 			}
-			log.Printf("artifact store: s3 bucket=%s endpoint=%s", s3Cfg.Bucket, s3Cfg.Endpoint)
 			stores.artifact = s3Store
+		} else if cfg.Artifact.Enabled {
+			log.Printf("artifact store: using postgres fallback (s3 config incomplete)")
 		}
 		return stores, nil
 	}
 
+	artifactStore := artifactrepo.Store(artifactrepo.NewMemoryStore())
+	if cfg.Artifact.CanUseS3() {
+		s3Store, err := newArtifactS3Store()
+		if err != nil {
+			return nil, err
+		}
+		artifactStore = s3Store
+	} else if cfg.Artifact.Enabled {
+		log.Printf("artifact store: using in-memory fallback (s3 config incomplete)")
+	}
 	return &gatewayStores{
 		ui:          uirepo.NewStore(),
+		artifact:    artifactStore,
 		uiWorkspace: uiworkspacerepo.NewMemoryStore(),
 	}, nil
 }

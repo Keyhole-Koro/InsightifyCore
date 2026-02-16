@@ -7,6 +7,10 @@ import (
 	repo "insightify/internal/gateway/repository/uiworkspace"
 )
 
+const DefaultTabID = "default"
+
+const defaultTabTitle = "Default"
+
 type Service struct {
 	store repo.Store
 }
@@ -37,7 +41,7 @@ func (s *Service) Ensure(projectID string) (WorkspaceView, error) {
 		return WorkspaceView{}, err
 	}
 	if len(tabs) == 0 {
-		tab, err := s.store.CreateTab(ws.WorkspaceID, "Tab 1")
+		tab, err := s.store.CreateTab(ws.WorkspaceID, defaultTabTitle)
 		if err != nil {
 			return WorkspaceView{}, err
 		}
@@ -62,6 +66,18 @@ func (s *Service) ResolveTab(projectID, preferredTabID string) (repo.Workspace, 
 		return repo.Workspace{}, repo.Tab{}, false, nil
 	}
 	target := strings.TrimSpace(preferredTabID)
+	if target == "" || strings.EqualFold(target, DefaultTabID) {
+		if defaultTab, ok := findDefaultTab(view.Tabs); ok {
+			return view.Workspace, defaultTab, true, nil
+		}
+		created, err := s.store.CreateTab(view.Workspace.WorkspaceID, defaultTabTitle)
+		if err != nil {
+			return repo.Workspace{}, repo.Tab{}, false, err
+		}
+		_ = s.store.SelectTab(view.Workspace.WorkspaceID, created.TabID)
+		view.Workspace.ActiveTabID = created.TabID
+		return view.Workspace, created, true, nil
+	}
 	if target != "" {
 		for _, t := range view.Tabs {
 			if strings.TrimSpace(t.TabID) == target {
@@ -78,6 +94,15 @@ func (s *Service) ResolveTab(projectID, preferredTabID string) (repo.Workspace, 
 		}
 	}
 	return view.Workspace, view.Tabs[len(view.Tabs)-1], true, nil
+}
+
+func findDefaultTab(tabs []repo.Tab) (repo.Tab, bool) {
+	for _, t := range tabs {
+		if strings.EqualFold(strings.TrimSpace(t.Title), defaultTabTitle) {
+			return t, true
+		}
+	}
+	return repo.Tab{}, false
 }
 
 func (s *Service) AttachRunToCurrentTab(projectID, runID string) (repo.Tab, error) {
