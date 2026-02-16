@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	entsql "entgo.io/ent/dialect/sql"
 	"insightify/internal/gateway/config"
 	"insightify/internal/gateway/ent"
 	"insightify/internal/gateway/handler"
@@ -26,7 +26,7 @@ import (
 )
 
 type App struct {
-	server *server.Server
+	server    *server.Server
 	entClient *ent.Client // Add Ent client to App struct for proper shutdown
 }
 
@@ -81,13 +81,14 @@ func New() (*App, error) {
 	// Workspace Store (Ent)
 	uiWorkspaceStore := uiworkspace.NewPostgresStore(client)
 
-	defaultProjectStore := projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json")) // This seems to be a fallback/local store
+	_ = projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json")) // kept for local fallback wiring evolution
+	projectStoreAdapter := projectstore.NewAdapter(projectStore)
 
-	projectSvc := gatewayproject.New(projectStore, artifactStore) // Use the Ent-backed projectStore
-	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore) // Use the Ent-backed uiWorkspaceStore
+	projectSvc := gatewayproject.New(projectStoreAdapter, projectStoreAdapter, artifactStore)
+	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore)                                               // Use the Ent-backed uiWorkspaceStore
 	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStore, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
 	userInteractionSvc := gatewayuserinteraction.New(artifactStore, cfg.Interaction.ConversationArtifactPath)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), defaultProjectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStoreAdapter, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

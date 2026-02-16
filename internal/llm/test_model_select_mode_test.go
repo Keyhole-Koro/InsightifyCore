@@ -83,11 +83,13 @@ func TestSelectModel_DefaultModePrefersAvailableHeaders(t *testing.T) {
 		t.Fatalf("set default: %v", err)
 	}
 
-	fallback := &awareTestLLM{name: "fallback", tokenCap: 1024}
-	cli := Wrap(NewModelDispatchClient(fallback), SelectModel(reg, 1024))
+	fallback := &awareTestLLM{name: "fallback", tokenCap: 4096} // Test
+	client := Wrap(NewModelDispatchClient(fallback),
+		SelectModel(reg, 4096, ModelSelectionModePreferAvailable),
+	)
 
 	ctx := WithModelSelection(context.Background(), ModelRoleWorker, ModelLevelMiddle, "", "")
-	raw, err := cli.GenerateJSON(ctx, "p", nil)
+	raw, err := client.GenerateJSON(ctx, "p", nil)
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}

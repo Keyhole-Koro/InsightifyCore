@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"insightify/internal/globalctx"
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 )
@@ -17,17 +16,11 @@ func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, erro
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = globalctx.WithGlobalContext(ctx, globalctx.GlobalContext{
-		ModelSelectionMode: globalctx.ModelSelectionModePreferAvailable,
-		ProviderTiers: map[string]string{
-			"gemini": strings.TrimSpace(os.Getenv("LLM_GEMINI_TIER")),
-			"groq":   strings.TrimSpace(os.Getenv("LLM_GROQ_TIER")),
-		},
-	})
+	// Removed globalctx usage
 
 	reg := llm.NewInMemoryModelRegistry()
-	geminiTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GEMINI_TIER")), globalctx.ProviderTierFrom(ctx, "gemini", "free"))
-	groqTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GROQ_TIER")), globalctx.ProviderTierFrom(ctx, "groq", "free"))
+	geminiTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GEMINI_TIER")), "free")
+	groqTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GROQ_TIER")), "free")
 	if err := llmclient.RegisterGeminiModelsForTier(reg, geminiTier); err != nil {
 		return nil, "", err
 	}
@@ -52,7 +45,7 @@ func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, erro
 
 	dispatch := llm.NewModelDispatchClient(fallback)
 	client := llm.Wrap(dispatch,
-		llm.SelectModel(reg, tokenCap),
+		llm.SelectModel(reg, tokenCap, llm.ModelSelectionModePreferAvailable),
 		llm.RespectRateLimitSignals(llmclient.HeaderRateLimitControlAdapter{}),
 		llm.Retry(3, 300*time.Millisecond),
 		llm.WithHooks(),

@@ -8,8 +8,15 @@ import (
 	"strings"
 	"sync"
 
-	"insightify/internal/globalctx"
 	llmclient "insightify/internal/llmClient"
+)
+
+type ModelSelectionMode string
+
+const (
+	// ModelSelectionModePreferAvailable picks the model with the best known
+	// remaining provider quota when provider/model are not explicitly pinned.
+	ModelSelectionModePreferAvailable ModelSelectionMode = "prefer_available"
 )
 
 // ----------------------------------------------------------------------------
@@ -143,12 +150,13 @@ func selectedModelFrom(ctx context.Context) (selectedModel, bool) {
 // ----------------------------------------------------------------------------
 
 // SelectModel returns a middleware that resolves and caches model clients.
-func SelectModel(reg *InMemoryModelRegistry, tokenCap int) Middleware {
+func SelectModel(reg *InMemoryModelRegistry, tokenCap int, mode ModelSelectionMode) Middleware {
 	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		return &modelSelecting{
 			next:     next,
 			registry: reg,
 			tokenCap: tokenCap,
+			mode:     mode,
 			clients:  map[string]selectedModel{},
 		}
 	}
@@ -158,6 +166,7 @@ type modelSelecting struct {
 	next     llmclient.LLMClient
 	registry *InMemoryModelRegistry
 	tokenCap int
+	mode     ModelSelectionMode
 
 	mu      sync.Mutex
 	clients map[string]selectedModel
@@ -211,12 +220,12 @@ func (m *modelSelecting) resolve(ctx context.Context) (selectedModel, error) {
 	level := ModelLevelFrom(ctx)
 	provider := ModelProviderFrom(ctx)
 	model := ModelNameFrom(ctx)
-	mode := globalctx.ModelSelectionModeFrom(ctx)
+	mode := m.mode
 	if normalizeLevel(level) == "" {
 		return selectedModel{}, ErrModelLevelRequired
 	}
 
-	if mode == globalctx.ModelSelectionModePreferAvailable && provider == "" && model == "" {
+	if mode == ModelSelectionModePreferAvailable && provider == "" && model == "" {
 		return m.resolvePreferAvailable(ctx, role, level)
 	}
 	entry, err := m.registry.Resolve(role, level, provider, model)

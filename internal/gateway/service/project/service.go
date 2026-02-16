@@ -8,15 +8,16 @@ import (
 	"sync"
 	"time"
 
+	"insightify/internal/gateway/application/projectport"
 	"insightify/internal/gateway/entity"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
-	"insightify/internal/gateway/repository/projectstore"
 	runtimepkg "insightify/internal/workerruntime"
 )
 
 // Service implements Project business logic and owns all project state.
 type Service struct {
-	store    *projectstore.Store
+	repo     projectport.Repository
+	metaRepo projectport.ArtifactRepository
 	artifact artifactrepo.Store
 
 	runCtxMu sync.RWMutex
@@ -24,16 +25,14 @@ type Service struct {
 }
 
 // New creates a project service backed by the given store.
-func New(store *projectstore.Store, artifact artifactrepo.Store) *Service {
+func New(repo projectport.Repository, metaRepo projectport.ArtifactRepository, artifact artifactrepo.Store) *Service {
 	return &Service{
-		store:    store,
+		repo:     repo,
+		metaRepo: metaRepo,
 		artifact: artifact,
 		runCtx:   make(map[string]*runtimepkg.ProjectRuntime),
 	}
 }
-
-// Store returns the underlying project persistence store.
-func (s *Service) Store() *projectstore.Store { return s.store }
 
 // ---------------------------------------------------------------------------
 // Business Logic
@@ -49,13 +48,13 @@ type ArtifactView struct {
 
 // Entry is the public type for project entry (was unexported 'entry').
 type Entry struct {
-	State     projectstore.State
+	State     State
 	RunCtx    *runtimepkg.ProjectRuntime
 	Artifacts []ArtifactView
 }
 
 func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry, string, error) {
-	s.store.EnsureLoaded()
+	s.repo.EnsureLoaded()
 
 	projects := s.listByUser(userID)
 	// Sort by ProjectID
@@ -73,7 +72,7 @@ func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry
 }
 
 func (s *Service) CreateProject(_ context.Context, userID entity.UserID, projectName string) (Entry, error) {
-	s.store.EnsureLoaded()
+	s.repo.EnsureLoaded()
 
 	if projectName == "" {
 		projectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
@@ -89,10 +88,10 @@ func (s *Service) CreateProject(_ context.Context, userID entity.UserID, project
 	runCtx = ctx
 
 	p := Entry{
-		State: projectstore.State{
+		State: State{
 			ProjectID:   projectID,
 			ProjectName: projectName,
-			UserID:      userID.String(),
+			UserID:      userID,
 			Repo:        "",
 			IsActive:    true,
 		},
@@ -100,20 +99,20 @@ func (s *Service) CreateProject(_ context.Context, userID entity.UserID, project
 	}
 	s.put(p)
 	s.setActiveForUser(userID, projectID)
-	s.store.Save()
+	_ = s.repo.Save()
 
 	got, _ := s.get(projectID)
 	return got, nil
 }
 
 func (s *Service) SelectProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
-	s.store.EnsureLoaded()
+	s.repo.EnsureLoaded()
 
 	p, ok := s.get(projectID)
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
 	}
-	if strings.TrimSpace(p.State.UserID) != userID.String() {
+	if p.State.UserID != userID {
 		return Entry{}, fmt.Errorf("project %s does not belong to user %s", projectID, userID.String())
 	}
 
@@ -121,12 +120,12 @@ func (s *Service) SelectProject(_ context.Context, userID entity.UserID, project
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
 	}
-	s.store.Save()
+	_ = s.repo.Save()
 	return selected, nil
 }
 
 func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
-	s.store.EnsureLoaded()
+	s.repo.EnsureLoaded()
 
 	if userID.IsZero() {
 		userID = entity.DemoUserID
@@ -151,16 +150,16 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 			projectID = fmt.Sprintf("project-%d", time.Now().UnixNano())
 		}
 		p = Entry{
-			State: projectstore.State{
+			State: State{
 				ProjectID:   projectID,
 				ProjectName: fmt.Sprintf("Project %d", time.Now().Unix()%100000),
-				UserID:      userID.String(),
+				UserID:      userID,
 				IsActive:    true,
 			},
 		}
 	}
 
-	p.State.UserID = userID.String()
+	p.State.UserID = userID
 	p.State.ProjectID = projectID
 	if strings.TrimSpace(p.State.ProjectName) == "" {
 		p.State.ProjectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
@@ -176,8 +175,8 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 	}
 
 	s.put(p)
-	s.setActiveForUser(entity.NormalizeUserID(p.State.UserID), p.State.ProjectID)
-	s.store.Save()
+	s.setActiveForUser(p.State.UserID, p.State.ProjectID)
+	_ = s.repo.Save()
 
 	got, _ := s.get(projectID)
 	return got, nil
@@ -188,7 +187,7 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 // ---------------------------------------------------------------------------
 
 func (s *Service) get(projectID string) (Entry, bool) {
-	state, ok := s.store.Get(projectID)
+	repoState, ok := s.repo.Get(projectID)
 	if !ok {
 		return Entry{}, false
 	}
@@ -197,14 +196,14 @@ func (s *Service) get(projectID string) (Entry, bool) {
 	s.runCtxMu.RUnlock()
 
 	artifacts := s.resolveArtifacts(projectID)
-	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
+	return Entry{State: fromRepoState(repoState), RunCtx: ctx, Artifacts: artifacts}, true
 }
 
 func (s *Service) resolveArtifacts(projectID string) []ArtifactView {
-	if s.artifact == nil {
+	if s.artifact == nil || s.metaRepo == nil {
 		return nil
 	}
-	list, err := s.store.ListArtifacts(projectID)
+	list, err := s.metaRepo.ListArtifacts(projectID)
 	if err != nil {
 		// Log error? For now silence it to avoid disrupting main flow
 		return nil
@@ -228,51 +227,54 @@ func (s *Service) put(e Entry) {
 	if strings.TrimSpace(e.State.ProjectID) == "" {
 		return
 	}
-	s.store.Put(e.State)
+	s.repo.Put(toRepoState(e.State))
 	s.runCtxMu.Lock()
 	s.runCtx[e.State.ProjectID] = e.RunCtx
 	s.runCtxMu.Unlock()
 }
 
 func (s *Service) listByUser(userID entity.UserID) []Entry {
-	states := s.store.ListByUser(userID.String())
+	states := s.repo.ListByUser(userID)
 	out := make([]Entry, 0, len(states))
 	s.runCtxMu.RLock()
 	for _, st := range states {
-		if !isProjectID(st.ProjectID) {
+		state := fromRepoState(st)
+		if !isProjectID(state.ProjectID) {
 			continue
 		}
-		artifacts := s.resolveArtifacts(st.ProjectID)
-		out = append(out, Entry{State: st, RunCtx: s.runCtx[st.ProjectID], Artifacts: artifacts})
+		artifacts := s.resolveArtifacts(state.ProjectID)
+		out = append(out, Entry{State: state, RunCtx: s.runCtx[state.ProjectID], Artifacts: artifacts})
 	}
 	s.runCtxMu.RUnlock()
 	return out
 }
 
 func (s *Service) getActiveByUser(userID entity.UserID) (Entry, bool) {
-	st, ok := s.store.GetActiveByUser(userID.String())
+	st, ok := s.repo.GetActiveByUser(userID)
 	if !ok {
 		return Entry{}, false
 	}
 	s.runCtxMu.RLock()
-	ctx := s.runCtx[st.ProjectID]
+	state := fromRepoState(st)
+	ctx := s.runCtx[state.ProjectID]
 	s.runCtxMu.RUnlock()
 
-	artifacts := s.resolveArtifacts(st.ProjectID)
-	return Entry{State: st, RunCtx: ctx, Artifacts: artifacts}, true
+	artifacts := s.resolveArtifacts(state.ProjectID)
+	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
 }
 
 func (s *Service) setActiveForUser(userID entity.UserID, projectID string) (Entry, bool) {
-	st, ok := s.store.SetActiveForUser(userID.String(), projectID)
+	st, ok := s.repo.SetActiveForUser(userID, projectID)
 	if !ok {
 		return Entry{}, false
 	}
 	s.runCtxMu.RLock()
-	ctx := s.runCtx[st.ProjectID]
+	state := fromRepoState(st)
+	ctx := s.runCtx[state.ProjectID]
 	s.runCtxMu.RUnlock()
-	
-	artifacts := s.resolveArtifacts(st.ProjectID)
-	return Entry{State: st, RunCtx: ctx, Artifacts: artifacts}, true
+
+	artifacts := s.resolveArtifacts(state.ProjectID)
+	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
 }
 
 // ---------------------------------------------------------------------------
@@ -300,7 +302,7 @@ func (s *Service) GetEntry(projectID string) (State, bool) {
 	return State{
 		ProjectID:   e.State.ProjectID,
 		ProjectName: e.State.ProjectName,
-		UserID:      entity.NormalizeUserID(e.State.UserID),
+		UserID:      e.State.UserID,
 		Repo:        e.State.Repo,
 		IsActive:    e.State.IsActive,
 		RunCtx:      e.RunCtx,
@@ -346,4 +348,24 @@ type State struct {
 	Repo        string
 	IsActive    bool
 	RunCtx      *runtimepkg.ProjectRuntime
+}
+
+func fromRepoState(s projectport.ProjectState) State {
+	return State{
+		ProjectID:   s.ProjectID,
+		ProjectName: s.ProjectName,
+		UserID:      s.UserID,
+		Repo:        s.Repo,
+		IsActive:    s.IsActive,
+	}
+}
+
+func toRepoState(s State) projectport.ProjectState {
+	return projectport.ProjectState{
+		ProjectID:   s.ProjectID,
+		ProjectName: s.ProjectName,
+		UserID:      s.UserID,
+		Repo:        s.Repo,
+		IsActive:    s.IsActive,
+	}
 }

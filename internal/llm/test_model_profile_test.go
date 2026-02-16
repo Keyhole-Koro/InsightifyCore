@@ -92,11 +92,14 @@ func TestSelectModelMiddleware_UsesOverrideProviderModel(t *testing.T) {
 		t.Fatalf("set default: %v", err)
 	}
 
-	fallback := &testLLM{name: "fallback", tokenCap: 2048}
-	cli := Wrap(NewModelDispatchClient(fallback), SelectModel(reg, 2048))
+	fallback := &testLLM{name: "fallback", tokenCap: 4096}
+	// Test
+	client := Wrap(NewModelDispatchClient(fallback),
+		SelectModel(reg, 4096, ModelSelectionModePreferAvailable),
+	)
 
 	ctx := WithModelSelection(context.Background(), ModelRolePlanner, ModelLevelHigh, "", "")
-	raw, err := cli.GenerateJSON(ctx, "p", nil)
+	raw, err := client.GenerateJSON(ctx, "p", nil)
 	if err != nil {
 		t.Fatalf("generate planner high: %v", err)
 	}
@@ -105,7 +108,7 @@ func TestSelectModelMiddleware_UsesOverrideProviderModel(t *testing.T) {
 	}
 
 	ctx = WithModelSelection(context.Background(), ModelRoleWorker, ModelLevelMiddle, "a", "m-mid")
-	raw, err = cli.GenerateJSON(ctx, "p", nil)
+	raw, err = client.GenerateJSON(ctx, "p", nil)
 	if err != nil {
 		t.Fatalf("generate worker mid override: %v", err)
 	}
