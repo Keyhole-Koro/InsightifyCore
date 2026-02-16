@@ -2,6 +2,7 @@ package project
 
 import (
 	gatewayworker "insightify/internal/gateway/service/worker"
+	runtimepkg "insightify/internal/workerruntime"
 )
 
 // AsProjectReader returns an adapter that satisfies worker.ProjectReader.
@@ -24,6 +25,6 @@ func (a *projectReaderAdapter) GetEntry(projectID string) (gatewayworker.Project
 	}, true
 }
 
-func (a *projectReaderAdapter) EnsureRunContext(projectID string) (*gatewayworker.ProjectRuntime, error) {
+func (a *projectReaderAdapter) EnsureRunContext(projectID string) (*runtimepkg.ProjectRuntime, error) {
 	return a.svc.EnsureRunContext(projectID)
 }

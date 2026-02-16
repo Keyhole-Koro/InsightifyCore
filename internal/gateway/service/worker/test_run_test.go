@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	runtimepkg "insightify/internal/workerruntime"
 	"sync"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func (testProjectReader) GetEntry(projectID string) (ProjectView, bool) {
 	return ProjectView{ProjectID: projectID}, true
 }
 
-func (testProjectReader) EnsureRunContext(projectID string) (*ProjectRuntime, error) {
+func (testProjectReader) EnsureRunContext(projectID string) (*runtimepkg.ProjectRuntime, error) {
 	return nil, fmt.Errorf("test: no runtime for %s", projectID)
 }
 

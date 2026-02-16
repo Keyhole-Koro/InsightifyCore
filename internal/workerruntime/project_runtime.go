@@ -1,4 +1,4 @@
-package worker
+package runtime
 
 import (
 	"context"
@@ -77,13 +77,6 @@ func (r *ExecutionRuntime) GetForceFrom() string               { return r.forceF
 func (r *ExecutionRuntime) GetDepsUsage() runner.DepsUsageMode { return r.depsUsage }
 func (r *ExecutionRuntime) GetLLM() llmclient.LLMClient        { return r.project.LLM }
 
-type resolvedSources struct {
-	Name        string
-	SourcePaths []string
-	PrimaryPath string
-	PrimaryFS   *safeio.SafeFS
-}
-
 // NewProjectRuntime constructs the full runtime environment for a project.
 func NewProjectRuntime(repoName, projectID string) (*ProjectRuntime, error) {
 	repoFS := safeio.Default()
@@ -107,7 +100,7 @@ func NewProjectRuntime(repoName, projectID string) (*ProjectRuntime, error) {
 		return nil, err
 	}
 
-	llmCli, modelSalt, err := newGatewayLLMClient(context.Background())
+	llmCli, modelSalt, err := newRuntimeLLMClient(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -137,9 +130,4 @@ func NewProjectRuntime(repoName, projectID string) (*ProjectRuntime, error) {
 		runner.BuildRegistryTestWorker(runtimeView),
 	)
 	return rt, nil
-}
-
-// NewRunRuntime is kept as a compatibility alias.
-func NewRunRuntime(repoName, projectID string) (*ProjectRuntime, error) {
-	return NewProjectRuntime(repoName, projectID)
 }

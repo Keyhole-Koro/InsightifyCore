@@ -4,6 +4,7 @@ import (
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	gatewayui "insightify/internal/gateway/service/ui"
 	"insightify/internal/runner"
+	runtimepkg "insightify/internal/workerruntime"
 	"sync"
 	"sync/atomic"
 )
@@ -11,7 +12,7 @@ import (
 // ProjectReader is an interface to read project state without circular dependency on project service.
 type ProjectReader interface {
 	GetEntry(projectID string) (ProjectView, bool)
-	EnsureRunContext(projectID string) (*ProjectRuntime, error)
+	EnsureRunContext(projectID string) (*runtimepkg.ProjectRuntime, error)
 }
 
 type WorkspaceRunBinder interface {
@@ -21,7 +22,7 @@ type WorkspaceRunBinder interface {
 // ProjectView is a simplified view of a project.
 type ProjectView struct {
 	ProjectID string
-	RunCtx    *ProjectRuntime
+	RunCtx    *runtimepkg.ProjectRuntime
 }
 
 // Service manages runs and telemetry.

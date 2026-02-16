@@ -1,4 +1,4 @@
-package worker
+package runtime
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	llmclient "insightify/internal/llmClient"
 )
 
-func newGatewayLLMClient(ctx context.Context) (llmclient.LLMClient, string, error) {
+func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
