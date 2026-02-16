@@ -33,33 +33,3 @@ func (r MapResolver) List() []WorkerSpec {
 	sort.Slice(specs, func(i, j int) bool { return specs[i].Key < specs[j].Key })
 	return specs
 }
-
-// MergeRegistries flattens multiple worker registries into a single resolver.
-// It also computes downstream dependencies automatically from 'Requires'.
-func MergeRegistries(regs ...map[string]WorkerSpec) SpecResolver {
-	merged := make(map[string]WorkerSpec, 16)
-	downstream := make(map[string][]string)
-
-	for _, reg := range regs {
-		for k, v := range reg {
-			nk := normalizeKey(k)
-			merged[nk] = v
-			for _, req := range v.Requires {
-				nr := normalizeKey(req)
-				downstream[nr] = append(downstream[nr], nk)
-			}
-		}
-	}
-
-	// Update downstream fields in specs
-	for k, v := range merged {
-		if ds, ok := downstream[k]; ok {
-			// Sort for determinism
-			sort.Strings(ds)
-			v.Downstream = ds
-			merged[k] = v
-		}
-	}
-
-	return MapResolver{specs: merged}
-}
