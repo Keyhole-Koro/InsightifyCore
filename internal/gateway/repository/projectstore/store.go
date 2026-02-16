@@ -6,6 +6,9 @@ import (
 	"strings"
 	"sync"
 
+	"insightify/internal/gateway/ent"
+
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/hashicorp/golang-lru/v2"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -13,6 +16,7 @@ import (
 type Store struct {
 	path string
 	db   *sql.DB
+	ent  *ent.Client
 
 	loadOnce sync.Once
 	mu       sync.RWMutex
@@ -46,8 +50,13 @@ func NewPostgres(dsn string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	// Initialize Ent client
+	drv := entsql.OpenDB("pgx", db)
+	client := ent.NewClient(ent.Driver(drv))
+
 	return &Store{
 		db:            db,
+		ent:           client,
 		artifactCache: cache,
 	}, nil
 }
@@ -68,6 +77,10 @@ func (s *Store) EnsureLoaded() {
 	if s == nil {
 		return
 	}
+	if s.ent != nil {
+		_ = s.ensureEntSchema()
+		return
+	}
 	if s.db != nil {
 		_ = s.ensureSchema()
 		return
@@ -86,6 +99,9 @@ func (s *Store) Get(projectID string) (State, bool) {
 	if s == nil {
 		return State{}, false
 	}
+	if s.ent != nil {
+		return s.getEnt(projectID)
+	}
 	if s.db != nil {
 		return s.getDB(projectID)
 	}
@@ -94,6 +110,10 @@ func (s *Store) Get(projectID string) (State, bool) {
 
 func (s *Store) Put(state State) {
 	if s == nil {
+		return
+	}
+	if s.ent != nil {
+		s.putEnt(state)
 		return
 	}
 	if s.db != nil {
@@ -107,6 +127,9 @@ func (s *Store) Update(projectID string, update func(*State)) (State, bool) {
 	if s == nil {
 		return State{}, false
 	}
+	if s.ent != nil {
+		return s.updateEnt(projectID, update)
+	}
 	if s.db != nil {
 		return s.updateDB(projectID, update)
 	}
@@ -116,6 +139,9 @@ func (s *Store) Update(projectID string, update func(*State)) (State, bool) {
 func (s *Store) ListByUser(userID string) []State {
 	if s == nil {
 		return nil
+	}
+	if s.ent != nil {
+		return s.listByUserEnt(userID)
 	}
 	if s.db != nil {
 		return s.listByUserDB(userID)
@@ -127,6 +153,9 @@ func (s *Store) GetActiveByUser(userID string) (State, bool) {
 	if s == nil {
 		return State{}, false
 	}
+	if s.ent != nil {
+		return s.getActiveByUserEnt(userID)
+	}
 	if s.db != nil {
 		return s.getActiveByUserDB(userID)
 	}
@@ -137,6 +166,9 @@ func (s *Store) SetActiveForUser(userID, projectID string) (State, bool) {
 	if s == nil {
 		return State{}, false
 	}
+	if s.ent != nil {
+		return s.setActiveForUserEnt(userID, projectID)
+	}
 	if s.db != nil {
 		return s.setActiveForUserDB(userID, projectID)
 	}
@@ -146,6 +178,13 @@ func (s *Store) SetActiveForUser(userID, projectID string) (State, bool) {
 func (s *Store) AddArtifact(artifact ProjectArtifact) error {
 	if s == nil {
 		return nil
+	}
+	if s.ent != nil {
+		err := s.addArtifactEnt(artifact)
+		if err == nil && s.artifactCache != nil {
+			s.artifactCache.Remove(artifact.ProjectID)
+		}
+		return err
 	}
 	if s.db != nil {
 		err := s.addArtifactDB(artifact)
@@ -161,13 +200,26 @@ func (s *Store) ListArtifacts(projectID string) ([]ProjectArtifact, error) {
 	if s == nil {
 		return nil, nil
 	}
-	if s.db != nil {
-		if s.artifactCache != nil {
-			if cached, ok := s.artifactCache.Get(projectID); ok {
-				return cached, nil
-			}
+	
+	// Check cache first (Read-Through)
+	if s.artifactCache != nil {
+		if cached, ok := s.artifactCache.Get(projectID); ok {
+			return cached, nil
 		}
+	}
 
+	if s.ent != nil {
+		artifacts, err := s.listArtifactsEnt(projectID)
+		if err != nil {
+			return nil, err
+		}
+		if s.artifactCache != nil {
+			s.artifactCache.Add(projectID, artifacts)
+		}
+		return artifacts, nil
+	}
+
+	if s.db != nil {
 		artifacts, err := s.listArtifactsDB(projectID)
 		if err != nil {
 			return nil, err
