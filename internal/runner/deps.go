@@ -62,20 +62,16 @@ func (d *depsImpl) Artifact(key string, target any) error {
 	}
 	d.accessed[norm] = true
 
-	fs := ensureFS(d.runtime.GetArtifactFS())
-	path, label, err := resolveArtifactPath(d.runtime, key)
-	if err != nil {
-		return err
+	artifacts := d.runtime.Artifacts()
+	if artifacts == nil {
+		return fmt.Errorf("artifact access is not configured")
 	}
-	if fs == nil {
-		return fmt.Errorf("fs not configured")
-	}
-	b, err := fs.SafeReadFile(path)
+	b, err := artifacts.ReadWorker(key)
 	if err != nil {
-		return fmt.Errorf("read artifact %s: %w", label, err)
+		return fmt.Errorf("read artifact %s: %w", key, err)
 	}
 	if err := json.Unmarshal(b, target); err != nil {
-		return fmt.Errorf("decode artifact %s: %w", label, err)
+		return fmt.Errorf("decode artifact %s: %w", key, err)
 	}
 	return nil
 }

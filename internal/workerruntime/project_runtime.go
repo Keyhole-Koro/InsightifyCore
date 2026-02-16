@@ -43,6 +43,7 @@ type ExecutionRuntime struct {
 	outDir    string
 	forceFrom string
 	depsUsage runner.DepsUsageMode
+	artifact  runner.ArtifactAccess
 }
 
 // ProjectRuntime interface-style accessors.
@@ -58,18 +59,20 @@ func (r *ProjectRuntime) NewExecutionRuntime(opts ExecutionOptions) *ExecutionRu
 	if outDir == "" {
 		outDir = r.OutDir
 	}
-	return &ExecutionRuntime{
+	exec := &ExecutionRuntime{
 		project:   r,
 		outDir:    outDir,
 		forceFrom: opts.ForceFrom,
 		depsUsage: opts.DepsUsage,
 	}
+	exec.artifact = newLocalArtifactAccess(exec)
+	return exec
 }
 
 // runner.Runtime interface implementation.
 func (r *ExecutionRuntime) GetOutDir() string                  { return r.outDir }
 func (r *ExecutionRuntime) GetRepoFS() *safeio.SafeFS          { return r.project.RepoFS }
-func (r *ExecutionRuntime) GetArtifactFS() *safeio.SafeFS      { return r.project.ArtifactFS }
+func (r *ExecutionRuntime) Artifacts() runner.ArtifactAccess   { return r.artifact }
 func (r *ExecutionRuntime) GetResolver() runner.SpecResolver   { return r.project.Resolver }
 func (r *ExecutionRuntime) GetMCP() *mcp.Registry              { return r.project.MCP }
 func (r *ExecutionRuntime) GetModelSalt() string               { return r.project.ModelSalt }
@@ -122,12 +125,6 @@ func NewProjectRuntime(repoName, projectID string) (*ProjectRuntime, error) {
 	rt.MCP = mcp.NewRegistry()
 	mcp.RegisterDefaultTools(rt.MCP, mcp.Host{RepoRoot: repoFS.Root(), ReposRoot: scan.ReposDir(), RepoFS: repoFS, ArtifactFS: artifactFS})
 	runtimeView := rt.Runtime()
-	rt.Resolver = runner.MergeRegistries(
-		runner.BuildRegistryArchitecture(runtimeView),
-		runner.BuildRegistryCodebase(runtimeView),
-		runner.BuildRegistryExternal(runtimeView),
-		runner.BuildRegistryPlan(runtimeView),
-		runner.BuildRegistryTestWorker(runtimeView),
-	)
+	rt.Resolver = runner.BuildAllRegistries(runtimeView)
 	return rt, nil
 }

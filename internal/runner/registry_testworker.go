@@ -27,6 +27,10 @@ func (a *interactionAdapter) PublishOutput(ctx context.Context, message string) 
 }
 
 // BuildRegistryTestWorker wires test-only workers used for interaction prototyping.
+func init() {
+	RegisterBuilder(BuildRegistryTestWorker)
+}
+
 func BuildRegistryTestWorker(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 

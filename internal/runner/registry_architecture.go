@@ -10,6 +10,10 @@ import (
 
 // BuildRegistryArchitecture defines arch_design.
 // Add/modify phases here without touching main or execution logic.
+func init() {
+	RegisterBuilder(BuildRegistryArchitecture)
+}
+
 func BuildRegistryArchitecture(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 

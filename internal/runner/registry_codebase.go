@@ -12,6 +12,10 @@ import (
 
 // BuildRegistryCodebase defines code_roots-code_symbols.
 // code_roots uses versionedStrategy; c1 uses jsonStrategy; etc.
+func init() {
+	RegisterBuilder(BuildRegistryCodebase)
+}
+
 func BuildRegistryCodebase(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 	reg["code_roots"] = WorkerSpec{

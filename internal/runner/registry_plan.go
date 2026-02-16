@@ -10,6 +10,10 @@ import (
 )
 
 // BuildRegistryPlan builds workers for the plan pipeline.
+func init() {
+	RegisterBuilder(BuildRegistryPlan)
+}
+
 func BuildRegistryPlan(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 

@@ -9,6 +9,10 @@ import (
 )
 
 // BuildRegistryExternal wires the external (x*) pipeline stages.
+func init() {
+	RegisterBuilder(BuildRegistryExternal)
+}
+
 func BuildRegistryExternal(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 

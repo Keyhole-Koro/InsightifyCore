@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"insightify/internal/artifact"
@@ -24,17 +25,77 @@ type testRuntime struct {
 	forceFrom  string
 	depsUsage  DepsUsageMode
 	llm        llmclient.LLMClient
+	artifact   ArtifactAccess
 }
 
-func (r *testRuntime) GetOutDir() string             { return r.outDir }
-func (r *testRuntime) GetRepoFS() *safeio.SafeFS     { return r.repoFS }
-func (r *testRuntime) GetArtifactFS() *safeio.SafeFS { return r.artifactFS }
-func (r *testRuntime) GetResolver() SpecResolver     { return r.resolver }
-func (r *testRuntime) GetMCP() *mcp.Registry         { return r.mcp }
-func (r *testRuntime) GetModelSalt() string          { return r.modelSalt }
-func (r *testRuntime) GetForceFrom() string          { return r.forceFrom }
-func (r *testRuntime) GetDepsUsage() DepsUsageMode   { return r.depsUsage }
-func (r *testRuntime) GetLLM() llmclient.LLMClient   { return r.llm }
+func (r *testRuntime) GetOutDir() string         { return r.outDir }
+func (r *testRuntime) GetRepoFS() *safeio.SafeFS { return r.repoFS }
+func (r *testRuntime) Artifacts() ArtifactAccess {
+	if r.artifact != nil {
+		return r.artifact
+	}
+	return &testArtifactAccess{runtime: r}
+}
+func (r *testRuntime) GetResolver() SpecResolver   { return r.resolver }
+func (r *testRuntime) GetMCP() *mcp.Registry       { return r.mcp }
+func (r *testRuntime) GetModelSalt() string        { return r.modelSalt }
+func (r *testRuntime) GetForceFrom() string        { return r.forceFrom }
+func (r *testRuntime) GetDepsUsage() DepsUsageMode { return r.depsUsage }
+func (r *testRuntime) GetLLM() llmclient.LLMClient { return r.llm }
+
+type testArtifactAccess struct {
+	runtime *testRuntime
+}
+
+func (a *testArtifactAccess) ReadWorker(key string) ([]byte, error) {
+	if a == nil || a.runtime == nil {
+		return nil, os.ErrInvalid
+	}
+	k := normalizeKey(key)
+	if a.runtime.resolver != nil {
+		if s, ok := a.runtime.resolver.Get(key); ok {
+			if v := strings.TrimSpace(s.Key); v != "" {
+				k = v
+			}
+		}
+	}
+	return a.Read(k + ".json")
+}
+
+func (a *testArtifactAccess) Read(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(a.runtime.outDir, name))
+}
+
+func (a *testArtifactAccess) Write(name string, content []byte) error {
+	path := filepath.Join(a.runtime.outDir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, content, 0o644)
+}
+
+func (a *testArtifactAccess) Remove(name string) error {
+	path := filepath.Join(a.runtime.outDir, name)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func (a *testArtifactAccess) List() ([]string, error) {
+	entries, err := os.ReadDir(a.runtime.outDir)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		out = append(out, e.Name())
+	}
+	return out, nil
+}
 
 func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	outDir := t.TempDir()

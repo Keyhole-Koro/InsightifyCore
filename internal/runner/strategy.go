@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -30,41 +28,54 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, runtime Runt
 	if runtime.GetForceFrom() != "" && runtime.GetForceFrom() == strings.ToLower(spec.Key) {
 		return zero, false
 	}
-	fs := ensureFS(runtime.GetArtifactFS())
-	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
-	op := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
-	if !FileExists(fs, mp) || !FileExists(fs, op) {
+	artifacts := runtime.Artifacts()
+	if artifacts == nil {
+		return zero, false
+	}
+	metaName := spec.Key + ".meta.json"
+	outName := spec.Key + ".json"
+	mb, err := artifacts.Read(metaName)
+	if err != nil {
+		return zero, false
+	}
+	ob, err := artifacts.Read(outName)
+	if err != nil {
 		return zero, false
 	}
 	var m cacheMeta
-	if b, err := fs.SafeReadFile(mp); err == nil && json.Unmarshal(b, &m) == nil {
-		if m.Inputs == inputFP && m.Salt == runtime.GetModelSalt() {
-			var out any
-			if b, err := fs.SafeReadFile(op); err == nil && json.Unmarshal(b, &out) == nil {
-				log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), op)
-				return WorkerOutput{RuntimeState: out, ClientView: nil}, true
-			}
+	if json.Unmarshal(mb, &m) == nil && m.Inputs == inputFP && m.Salt == runtime.GetModelSalt() {
+		var out any
+		if json.Unmarshal(ob, &out) == nil {
+			log.Printf("%s: using cache → %s", strings.ToUpper(spec.Key), outName)
+			return WorkerOutput{RuntimeState: out, ClientView: nil}, true
 		}
 	}
 	return zero, false
 }
 
 func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runtime, out WorkerOutput, inputFP string) error {
-	_ = os.MkdirAll(runtime.GetOutDir(), 0755)
-	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
-	op := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
+	artifacts := runtime.Artifacts()
+	if artifacts == nil {
+		return fmt.Errorf("artifact access is nil")
+	}
+	metaName := spec.Key + ".meta.json"
+	outName := spec.Key + ".json"
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
-		_ = os.WriteFile(op, b, 0o644)
+		_ = artifacts.Write(outName, b)
 	}
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
-	_ = os.WriteFile(mp, mb, 0o644)
-	log.Printf("%s → %s", strings.ToUpper(spec.Key), op)
+	_ = artifacts.Write(metaName, mb)
+	log.Printf("%s → %s", strings.ToUpper(spec.Key), outName)
 	return nil
 }
 
 func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, runtime Runtime) error {
-	_ = os.Remove(filepath.Join(runtime.GetOutDir(), spec.Key+".json"))
-	_ = os.Remove(filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json"))
+	artifacts := runtime.Artifacts()
+	if artifacts == nil {
+		return nil
+	}
+	_ = artifacts.Remove(spec.Key + ".json")
+	_ = artifacts.Remove(spec.Key + ".meta.json")
 	return nil
 }
 
@@ -85,31 +96,30 @@ func (versionedStrategy) TryLoad(ctx context.Context, spec WorkerSpec, runtime R
 func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runtime, out WorkerOutput, inputFP string) error {
 	// Always start at v1 for each run; overwrite v1 and latest, and optionally prune older versions.
 	versioned := fmt.Sprintf("%s_v1.json", spec.Key)
-	versionedPath := filepath.Join(runtime.GetOutDir(), versioned)
-	latestPath := filepath.Join(runtime.GetOutDir(), spec.Key+".json")
+	latest := spec.Key + ".json"
+	artifacts := runtime.Artifacts()
+	if artifacts == nil {
+		return fmt.Errorf("artifact access is nil")
+	}
 
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
-		_ = os.WriteFile(versionedPath, b, 0o644)
-		_ = os.WriteFile(latestPath, b, 0o644)
+		_ = artifacts.Write(versioned, b)
+		_ = artifacts.Write(latest, b)
 	}
 	// meta is optional for versioned write; record last inputs for debugging
-	mp := filepath.Join(runtime.GetOutDir(), spec.Key+".meta.json")
+	metaName := spec.Key + ".meta.json"
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
-	_ = os.WriteFile(mp, mb, 0o644)
+	_ = artifacts.Write(metaName, mb)
 
 	// Best-effort pruning of other versions
-	entries, _ := ensureFS(runtime.GetArtifactFS()).SafeReadDir(runtime.GetOutDir())
+	entries, _ := artifacts.List()
 	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
+	for _, name := range entries {
 		if m := re.FindStringSubmatch(name); len(m) == 2 && name != versioned {
-			_ = os.Remove(filepath.Join(runtime.GetOutDir(), name))
+			_ = artifacts.Remove(name)
 		}
 	}
-	log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versionedPath, latestPath)
+	log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versioned, latest)
 	return nil
 }
 

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"insightify/internal/safeio"
 )
@@ -18,22 +17,17 @@ func Artifact[T any](runtime Runtime, key string) (T, error) {
 	if runtime == nil {
 		return zero, fmt.Errorf("runner: runtime is nil")
 	}
-	norm := normalizeKey(key)
-	if norm == "" {
-		return zero, fmt.Errorf("runner: empty worker key")
+	artifacts := runtime.Artifacts()
+	if artifacts == nil {
+		return zero, fmt.Errorf("runner: artifact access is nil")
 	}
-	fs := ensureFS(runtime.GetArtifactFS())
-	path, label, err := resolveArtifactPath(runtime, key)
+	b, err := artifacts.ReadWorker(key)
 	if err != nil {
-		return zero, err
-	}
-	b, err := fs.SafeReadFile(path)
-	if err != nil {
-		return zero, fmt.Errorf("runner: read artifact %s: %w", label, err)
+		return zero, fmt.Errorf("runner: read artifact %s: %w", key, err)
 	}
 	var out T
 	if err := json.Unmarshal(b, &out); err != nil {
-		return zero, fmt.Errorf("runner: decode artifact %s: %w", label, err)
+		return zero, fmt.Errorf("runner: decode artifact %s: %w", key, err)
 	}
 	return out, nil
 }
@@ -86,38 +80,4 @@ func NextVersion(outDir, key string) int {
 		}
 	}
 	return max + 1
-}
-
-func resolveArtifactPath(runtime Runtime, key string) (string, string, error) {
-	if runtime == nil {
-		return "", "", fmt.Errorf("runner: runtime is nil")
-	}
-	norm := normalizeKey(key)
-	if norm == "" {
-		return "", "", fmt.Errorf("runner: empty worker key")
-	}
-	filename := norm + ".json"
-	var specKey string
-	if runtime.GetResolver() != nil {
-		if s, ok := runtime.GetResolver().Get(key); ok {
-			specKey = strings.TrimSpace(s.Key)
-		}
-	}
-	if specKey != "" {
-		filename = specKey + ".json"
-	}
-	fs := ensureFS(runtime.GetArtifactFS())
-
-	primary := filepath.Join(runtime.GetOutDir(), filename)
-	if FileExists(fs, primary) {
-		return primary, filepath.Base(primary), nil
-	}
-	// Backward-compat: pre-key migration JSON artifacts were stored at <OutDir>/<key>/output.json.
-	if specKey != "" {
-		legacy := filepath.Join(runtime.GetOutDir(), specKey, "output.json")
-		if FileExists(fs, legacy) {
-			return legacy, filepath.Base(legacy), nil
-		}
-	}
-	return primary, filepath.Base(primary), nil
 }
