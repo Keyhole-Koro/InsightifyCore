@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"insightify/internal/gateway/entity"
 	"insightify/internal/gateway/repository/projectstore"
 	runtimepkg "insightify/internal/workerruntime"
 )
@@ -41,7 +42,7 @@ type Entry struct {
 	RunCtx *runtimepkg.ProjectRuntime
 }
 
-func (s *Service) ListProjects(_ context.Context, userID string) ([]Entry, string, error) {
+func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry, string, error) {
 	s.store.EnsureLoaded()
 
 	projects := s.listByUser(userID)
@@ -59,7 +60,7 @@ func (s *Service) ListProjects(_ context.Context, userID string) ([]Entry, strin
 	return projects, activeID, nil
 }
 
-func (s *Service) CreateProject(_ context.Context, userID, projectName string) (Entry, error) {
+func (s *Service) CreateProject(_ context.Context, userID entity.UserID, projectName string) (Entry, error) {
 	s.store.EnsureLoaded()
 
 	if projectName == "" {
@@ -79,7 +80,7 @@ func (s *Service) CreateProject(_ context.Context, userID, projectName string) (
 		State: projectstore.State{
 			ProjectID:   projectID,
 			ProjectName: projectName,
-			UserID:      userID,
+			UserID:      userID.String(),
 			Repo:        "",
 			IsActive:    true,
 		},
@@ -93,15 +94,15 @@ func (s *Service) CreateProject(_ context.Context, userID, projectName string) (
 	return got, nil
 }
 
-func (s *Service) SelectProject(_ context.Context, userID, projectID string) (Entry, error) {
+func (s *Service) SelectProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
 	s.store.EnsureLoaded()
 
 	p, ok := s.get(projectID)
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
 	}
-	if strings.TrimSpace(p.State.UserID) != userID {
-		return Entry{}, fmt.Errorf("project %s does not belong to user %s", projectID, userID)
+	if strings.TrimSpace(p.State.UserID) != userID.String() {
+		return Entry{}, fmt.Errorf("project %s does not belong to user %s", projectID, userID.String())
 	}
 
 	selected, ok := s.setActiveForUser(userID, projectID)
@@ -112,11 +113,11 @@ func (s *Service) SelectProject(_ context.Context, userID, projectID string) (En
 	return selected, nil
 }
 
-func (s *Service) EnsureProject(_ context.Context, userID, projectID string) (Entry, error) {
+func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
 	s.store.EnsureLoaded()
 
-	if userID == "" {
-		userID = "demo-user"
+	if userID.IsZero() {
+		userID = entity.DemoUserID
 	}
 
 	var (
@@ -141,13 +142,13 @@ func (s *Service) EnsureProject(_ context.Context, userID, projectID string) (En
 			State: projectstore.State{
 				ProjectID:   projectID,
 				ProjectName: fmt.Sprintf("Project %d", time.Now().Unix()%100000),
-				UserID:      userID,
+				UserID:      userID.String(),
 				IsActive:    true,
 			},
 		}
 	}
 
-	p.State.UserID = userID
+	p.State.UserID = userID.String()
 	p.State.ProjectID = projectID
 	if strings.TrimSpace(p.State.ProjectName) == "" {
 		p.State.ProjectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
@@ -163,7 +164,7 @@ func (s *Service) EnsureProject(_ context.Context, userID, projectID string) (En
 	}
 
 	s.put(p)
-	s.setActiveForUser(p.State.UserID, p.State.ProjectID)
+	s.setActiveForUser(entity.NormalizeUserID(p.State.UserID), p.State.ProjectID)
 	s.store.Save()
 
 	got, _ := s.get(projectID)
@@ -195,8 +196,8 @@ func (s *Service) put(e Entry) {
 	s.runCtxMu.Unlock()
 }
 
-func (s *Service) listByUser(userID string) []Entry {
-	states := s.store.ListByUser(userID)
+func (s *Service) listByUser(userID entity.UserID) []Entry {
+	states := s.store.ListByUser(userID.String())
 	out := make([]Entry, 0, len(states))
 	s.runCtxMu.RLock()
 	for _, st := range states {
@@ -209,8 +210,8 @@ func (s *Service) listByUser(userID string) []Entry {
 	return out
 }
 
-func (s *Service) getActiveByUser(userID string) (Entry, bool) {
-	st, ok := s.store.GetActiveByUser(userID)
+func (s *Service) getActiveByUser(userID entity.UserID) (Entry, bool) {
+	st, ok := s.store.GetActiveByUser(userID.String())
 	if !ok {
 		return Entry{}, false
 	}
@@ -220,8 +221,8 @@ func (s *Service) getActiveByUser(userID string) (Entry, bool) {
 	return Entry{State: st, RunCtx: ctx}, true
 }
 
-func (s *Service) setActiveForUser(userID, projectID string) (Entry, bool) {
-	st, ok := s.store.SetActiveForUser(userID, projectID)
+func (s *Service) setActiveForUser(userID entity.UserID, projectID string) (Entry, bool) {
+	st, ok := s.store.SetActiveForUser(userID.String(), projectID)
 	if !ok {
 		return Entry{}, false
 	}
@@ -256,7 +257,7 @@ func (s *Service) GetEntry(projectID string) (State, bool) {
 	return State{
 		ProjectID:   e.State.ProjectID,
 		ProjectName: e.State.ProjectName,
-		UserID:      e.State.UserID,
+		UserID:      entity.NormalizeUserID(e.State.UserID),
 		Repo:        e.State.Repo,
 		IsActive:    e.State.IsActive,
 		RunCtx:      e.RunCtx,
@@ -298,7 +299,7 @@ func isProjectID(id string) bool {
 type State struct {
 	ProjectID   string
 	ProjectName string
-	UserID      string
+	UserID      entity.UserID
 	Repo        string
 	IsActive    bool
 	RunCtx      *runtimepkg.ProjectRuntime

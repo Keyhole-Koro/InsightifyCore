@@ -6,13 +6,14 @@ import (
 	"insightify/gen/go/insightify/v1/insightifyv1connect"
 	"insightify/internal/gateway/handler"
 	"insightify/internal/gateway/handler/rpc"
+	"insightify/internal/gateway/handler/ws"
 	"insightify/internal/gateway/middleware"
 )
 
 func NewMux(
 	projectHandler *rpc.ProjectHandler,
 	runHandler *rpc.RunHandler,
-	userInteractionHandler *rpc.UserInteractionHandler,
+	userInteractionHandler *ws.UserInteractionHandler,
 	uiHandler *rpc.UiHandler,
 	uiWorkspaceHandler *rpc.UiWorkspaceHandler,
 	traceHandler *handler.TraceHandler,

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	"insightify/internal/gateway/entity"
 	"insightify/internal/gateway/service/project"
 
 	"connectrpc.com/connect"
@@ -20,8 +21,8 @@ func NewProjectHandler(svc *project.Service) *ProjectHandler {
 }
 
 func (h *ProjectHandler) ListProjects(ctx context.Context, req *connect.Request[insightifyv1.ListProjectsRequest]) (*connect.Response[insightifyv1.ListProjectsResponse], error) {
-	userID := strings.TrimSpace(req.Msg.GetUserId())
-	if userID == "" {
+	userID := entity.NormalizeUserID(req.Msg.GetUserId())
+	if userID.IsZero() {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id is required"))
 	}
 
@@ -41,8 +42,8 @@ func (h *ProjectHandler) ListProjects(ctx context.Context, req *connect.Request[
 }
 
 func (h *ProjectHandler) CreateProject(ctx context.Context, req *connect.Request[insightifyv1.CreateProjectRequest]) (*connect.Response[insightifyv1.CreateProjectResponse], error) {
-	userID := strings.TrimSpace(req.Msg.GetUserId())
-	if userID == "" {
+	userID := entity.NormalizeUserID(req.Msg.GetUserId())
+	if userID.IsZero() {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id is required"))
 	}
 	name := strings.TrimSpace(req.Msg.GetName())
@@ -56,9 +57,9 @@ func (h *ProjectHandler) CreateProject(ctx context.Context, req *connect.Request
 }
 
 func (h *ProjectHandler) SelectProject(ctx context.Context, req *connect.Request[insightifyv1.SelectProjectRequest]) (*connect.Response[insightifyv1.SelectProjectResponse], error) {
-	userID := strings.TrimSpace(req.Msg.GetUserId())
+	userID := entity.NormalizeUserID(req.Msg.GetUserId())
 	projectID := strings.TrimSpace(req.Msg.GetProjectId())
-	if userID == "" || projectID == "" {
+	if userID.IsZero() || projectID == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("user_id and project_id are required"))
 	}
 
@@ -71,7 +72,7 @@ func (h *ProjectHandler) SelectProject(ctx context.Context, req *connect.Request
 }
 
 func (h *ProjectHandler) EnsureProject(ctx context.Context, req *connect.Request[insightifyv1.EnsureProjectRequest]) (*connect.Response[insightifyv1.EnsureProjectResponse], error) {
-	userID := strings.TrimSpace(req.Msg.GetUserId())
+	userID := entity.NormalizeUserID(req.Msg.GetUserId())
 	projectID := strings.TrimSpace(req.Msg.GetProjectId())
 
 	p, err := h.svc.EnsureProject(ctx, userID, projectID)

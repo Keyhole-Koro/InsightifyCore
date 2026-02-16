@@ -3,20 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
-
-	"database/sql"
-	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"insightify/internal/gateway/config"
 	"insightify/internal/gateway/handler"
 	"insightify/internal/gateway/handler/rpc"
-	artifactrepo "insightify/internal/gateway/repository/artifact"
+	"insightify/internal/gateway/handler/ws"
 	"insightify/internal/gateway/repository/projectstore"
-	uirepo "insightify/internal/gateway/repository/ui"
-	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
 	"insightify/internal/gateway/server"
 	gatewayproject "insightify/internal/gateway/service/project"
 	gatewayui "insightify/internal/gateway/service/ui"
@@ -27,12 +21,6 @@ import (
 
 type App struct {
 	server *server.Server
-}
-
-type gatewayStores struct {
-	ui          uirepo.Store
-	artifact    artifactrepo.Store
-	uiWorkspace uiworkspacerepo.Store
 }
 
 func New() (*App, error) {
@@ -55,7 +43,7 @@ func New() (*App, error) {
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)
-	userInteractionHandler := rpc.NewUserInteractionHandler(userInteractionSvc)
+	userInteractionHandler := ws.NewUserInteractionHandler(userInteractionSvc)
 	uiHandler := rpc.NewUiHandler(uiSvc)
 	uiWorkspaceHandler := rpc.NewUiWorkspaceHandler(uiSvc)
 	traceHandler := handler.NewTraceHandler(workerSvc)
@@ -66,63 +54,6 @@ func New() (*App, error) {
 
 	return &App{
 		server: srv,
-	}, nil
-}
-
-func initStores(cfg *config.Config) (*gatewayStores, error) {
-	newArtifactS3Store := func() (artifactrepo.Store, error) {
-		s3Cfg := artifactrepo.S3Config{
-			Endpoint:  cfg.Artifact.Endpoint,
-			Region:    cfg.Artifact.Region,
-			AccessKey: cfg.Artifact.AccessKey,
-			SecretKey: cfg.Artifact.SecretKey,
-			Bucket:    cfg.Artifact.Bucket,
-			UseSSL:    cfg.Artifact.UseSSL,
-		}
-		s3Store, err := artifactrepo.NewS3Store(s3Cfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize artifact s3 store: %w", err)
-		}
-		log.Printf("artifact store: s3 bucket=%s endpoint=%s", s3Cfg.Bucket, s3Cfg.Endpoint)
-		return s3Store, nil
-	}
-
-	if dsn := os.Getenv("PROJECT_STORE_PG_DSN"); dsn != "" {
-		db, err := sql.Open("pgx", dsn)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open db: %w", err)
-		}
-		stores := &gatewayStores{
-			ui:          uirepo.NewPostgresStore(db),
-			artifact:    artifactrepo.NewPostgresStore(db),
-			uiWorkspace: uiworkspacerepo.NewPostgresStore(db),
-		}
-		if cfg.Artifact.CanUseS3() {
-			s3Store, err := newArtifactS3Store()
-			if err != nil {
-				return nil, err
-			}
-			stores.artifact = s3Store
-		} else if cfg.Artifact.Enabled {
-			log.Printf("artifact store: using postgres fallback (s3 config incomplete)")
-		}
-		return stores, nil
-	}
-
-	artifactStore := artifactrepo.Store(artifactrepo.NewMemoryStore())
-	if cfg.Artifact.CanUseS3() {
-		s3Store, err := newArtifactS3Store()
-		if err != nil {
-			return nil, err
-		}
-		artifactStore = s3Store
-	} else if cfg.Artifact.Enabled {
-		log.Printf("artifact store: using in-memory fallback (s3 config incomplete)")
-	}
-	return &gatewayStores{
-		ui:          uirepo.NewStore(),
-		artifact:    artifactStore,
-		uiWorkspace: uiworkspacerepo.NewMemoryStore(),
 	}, nil
 }
 

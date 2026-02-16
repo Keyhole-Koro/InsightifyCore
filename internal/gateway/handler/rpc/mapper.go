@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	"insightify/internal/gateway/entity"
 	"insightify/internal/gateway/service/project"
 )
 
@@ -15,7 +16,7 @@ func toProtoProject(e project.Entry) *insightifyv1.Project {
 	}
 	p := &insightifyv1.Project{
 		ProjectId: projectID,
-		UserId:    strings.TrimSpace(e.State.UserID),
+		UserId:    entity.NormalizeUserID(e.State.UserID).String(),
 		Name:      name,
 		IsActive:  e.State.IsActive,
 	}
