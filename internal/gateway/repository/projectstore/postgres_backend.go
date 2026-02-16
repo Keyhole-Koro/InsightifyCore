@@ -17,7 +17,19 @@ CREATE TABLE IF NOT EXISTS project_states (
   user_id TEXT NOT NULL DEFAULT '',
   repo TEXT NOT NULL DEFAULT '',
   is_active BOOLEAN NOT NULL DEFAULT FALSE
-);`)
+);
+
+CREATE TABLE IF NOT EXISTS project_artifacts (
+  id SERIAL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  path TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (run_id, path)
+);
+CREATE INDEX IF NOT EXISTS idx_project_artifacts_project_id ON project_artifacts (project_id);
+CREATE INDEX IF NOT EXISTS idx_project_artifacts_run_id ON project_artifacts (run_id);
+`)
 	})
 	return s.schemaErr
 }
@@ -181,4 +193,45 @@ FROM project_states WHERE project_id = $1 AND user_id = $2 FOR UPDATE`, pid, uid
 		return State{}, false
 	}
 	return target, true
+}
+
+func (s *Store) addArtifactDB(artifact ProjectArtifact) error {
+	if err := s.ensureSchema(); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(`
+INSERT INTO project_artifacts (project_id, run_id, path, created_at)
+VALUES ($1, $2, $3, NOW())
+ON CONFLICT (run_id, path) DO NOTHING`,
+		artifact.ProjectID, artifact.RunID, artifact.Path)
+	return err
+}
+
+func (s *Store) listArtifactsDB(projectID string) ([]ProjectArtifact, error) {
+	if err := s.ensureSchema(); err != nil {
+		return nil, err
+	}
+	pid := strings.TrimSpace(projectID)
+	if pid == "" {
+		return nil, nil
+	}
+	rows, err := s.db.Query(`
+SELECT id, project_id, run_id, path, created_at
+FROM project_artifacts
+WHERE project_id = $1
+ORDER BY created_at DESC`, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []ProjectArtifact
+	for rows.Next() {
+		var a ProjectArtifact
+		if err := rows.Scan(&a.ID, &a.ProjectID, &a.RunID, &a.Path, &a.CreatedAt); err != nil {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out, nil
 }

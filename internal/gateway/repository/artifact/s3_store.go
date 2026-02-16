@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"time"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -171,6 +173,19 @@ func (s *S3Store) List(ctx context.Context, runID string) ([]string, error) {
 	}
 	sort.Strings(paths)
 	return paths, nil
+}
+
+func (s *S3Store) GetURL(ctx context.Context, runID, path string) (string, error) {
+	if s.client == nil {
+		return "", fmt.Errorf("store is nil")
+	}
+	key := objectKey(runID, path)
+	// Expiry: 1 hour
+	u, err := s.client.PresignedGetObject(ctx, s.bucketName, key, time.Hour, nil)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
 }
 
 func objectKey(runID, path string) string {

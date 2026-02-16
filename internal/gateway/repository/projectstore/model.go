@@ -1,13 +1,25 @@
 package projectstore
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type State struct {
 	ProjectID   string `json:"project_id,omitempty"`
 	ProjectName string `json:"project_name,omitempty"`
 	UserID      string `json:"user_id"`
-	Repo        string `json:"repo"`
-	IsActive    bool   `json:"is_active,omitempty"`
+	Repo        string            `json:"repo"`
+	IsActive    bool              `json:"is_active,omitempty"`
+	Artifacts   []ProjectArtifact `json:"artifacts,omitempty"`
+}
+
+type ProjectArtifact struct {
+	ID        int       `json:"id"`
+	ProjectID string    `json:"project_id"`
+	RunID     string    `json:"run_id"`
+	Path      string    `json:"path"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func normalizeState(state State) State {

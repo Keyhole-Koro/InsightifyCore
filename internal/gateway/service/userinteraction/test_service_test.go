@@ -233,6 +233,10 @@ func (m *memoryArtifactStore) List(_ context.Context, runID string) ([]string, e
 	return nil, nil
 }
 
+func (m *memoryArtifactStore) GetURL(ctx context.Context, runID, path string) (string, error) {
+	return "", nil
+}
+
 func readWaitState(t *testing.T, sub <-chan *SubscriptionEvent) *insightifyv1.WaitResponse {
 	t.Helper()
 	select {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	"insightify/internal/gateway/repository/projectstore"
 	"insightify/internal/runner"
 	"io/fs"
 	"os"
@@ -99,14 +100,14 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			defer cancel()
-			if err := s.syncArtifacts(ctx, runID, runEnv.GetOutDir()); err != nil {
+			if err := s.syncArtifacts(ctx, runID, projectID, runEnv.GetOutDir()); err != nil {
 				log.Printf("failed to sync artifacts for run %s: %v", runID, err)
 			}
 		}()
 	}
 }
 
-func (s *Service) syncArtifacts(ctx context.Context, runID, outDir string) error {
+func (s *Service) syncArtifacts(ctx context.Context, runID, projectID, outDir string) error {
 	return filepath.WalkDir(outDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip errors
@@ -125,6 +126,18 @@ func (s *Service) syncArtifacts(ctx context.Context, runID, outDir string) error
 		}
 		// Normalize path to forward slashes
 		rel = filepath.ToSlash(rel)
-		return s.artifact.Put(ctx, runID, rel, content)
+		if err := s.artifact.Put(ctx, runID, rel, content); err != nil {
+			return err
+		}
+
+		if s.projectStore != nil {
+			// Save metadata to project store
+			_ = s.projectStore.AddArtifact(projectstore.ProjectArtifact{
+				ProjectID: projectID,
+				RunID:     runID,
+				Path:      rel,
+			})
+		}
+		return nil
 	})
 }

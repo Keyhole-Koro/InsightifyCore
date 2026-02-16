@@ -2,6 +2,7 @@ package worker
 
 import (
 	artifactrepo "insightify/internal/gateway/repository/artifact"
+	projectstore "insightify/internal/gateway/repository/projectstore"
 	gatewayui "insightify/internal/gateway/service/ui"
 	"insightify/internal/runner"
 	runtimepkg "insightify/internal/workerruntime"
@@ -27,21 +28,23 @@ type ProjectView struct {
 
 // Service manages runs and telemetry.
 type Service struct {
-	project     ProjectReader
-	workspaces  WorkspaceRunBinder
-	ui          *gatewayui.Service
-	interaction runner.InteractionWaiter
-	artifact    artifactrepo.Store
-	telemetry   *TelemetryStore
+	project      ProjectReader
+	projectStore *projectstore.Store
+	workspaces   WorkspaceRunBinder
+	ui           *gatewayui.Service
+	interaction  runner.InteractionWaiter
+	artifact     artifactrepo.Store
+	telemetry    *TelemetryStore
 
 	runMu      sync.RWMutex
 	runs       map[string]*WorkerRuntime
 	runCounter atomic.Uint64
 }
 
-func New(project ProjectReader, workspaces WorkspaceRunBinder, ui *gatewayui.Service, interaction runner.InteractionWaiter, artifact artifactrepo.Store) *Service {
+func New(project ProjectReader, projectStore *projectstore.Store, workspaces WorkspaceRunBinder, ui *gatewayui.Service, interaction runner.InteractionWaiter, artifact artifactrepo.Store) *Service {
 	return &Service{
-		project:     project,
+		project:      project,
+		projectStore: projectStore,
 		workspaces:  workspaces,
 		ui:          ui,
 		interaction: interaction,

@@ -35,11 +35,11 @@ func New() (*App, error) {
 		return nil, err
 	}
 
-	projectSvc := gatewayproject.New(defaultProjectStore)
+	projectSvc := gatewayproject.New(defaultProjectStore, stores.artifact)
 	uiWorkspaceSvc := gatewayuiworkspace.New(stores.uiWorkspace)
 	uiSvc := gatewayui.New(stores.ui, uiWorkspaceSvc, stores.artifact, cfg.Interaction.ConversationArtifactPath)
 	userInteractionSvc := gatewayuserinteraction.New(stores.artifact, cfg.Interaction.ConversationArtifactPath)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), uiWorkspaceSvc, uiSvc, userInteractionSvc, stores.artifact)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), defaultProjectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, stores.artifact)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

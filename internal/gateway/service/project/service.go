@@ -9,23 +9,26 @@ import (
 	"time"
 
 	"insightify/internal/gateway/entity"
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 	"insightify/internal/gateway/repository/projectstore"
 	runtimepkg "insightify/internal/workerruntime"
 )
 
 // Service implements Project business logic and owns all project state.
 type Service struct {
-	store *projectstore.Store
+	store    *projectstore.Store
+	artifact artifactrepo.Store
 
 	runCtxMu sync.RWMutex
 	runCtx   map[string]*runtimepkg.ProjectRuntime
 }
 
 // New creates a project service backed by the given store.
-func New(store *projectstore.Store) *Service {
+func New(store *projectstore.Store, artifact artifactrepo.Store) *Service {
 	return &Service{
-		store:  store,
-		runCtx: make(map[string]*runtimepkg.ProjectRuntime),
+		store:    store,
+		artifact: artifact,
+		runCtx:   make(map[string]*runtimepkg.ProjectRuntime),
 	}
 }
 
@@ -36,10 +39,19 @@ func (s *Service) Store() *projectstore.Store { return s.store }
 // Business Logic
 // ---------------------------------------------------------------------------
 
+type ArtifactView struct {
+	ID        string
+	RunID     string
+	Path      string
+	URL       string
+	CreatedAt time.Time
+}
+
 // Entry is the public type for project entry (was unexported 'entry').
 type Entry struct {
-	State  projectstore.State
-	RunCtx *runtimepkg.ProjectRuntime
+	State     projectstore.State
+	RunCtx    *runtimepkg.ProjectRuntime
+	Artifacts []ArtifactView
 }
 
 func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry, string, error) {
@@ -183,7 +195,33 @@ func (s *Service) get(projectID string) (Entry, bool) {
 	s.runCtxMu.RLock()
 	ctx := s.runCtx[strings.TrimSpace(projectID)]
 	s.runCtxMu.RUnlock()
-	return Entry{State: state, RunCtx: ctx}, true
+
+	artifacts := s.resolveArtifacts(projectID)
+	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
+}
+
+func (s *Service) resolveArtifacts(projectID string) []ArtifactView {
+	if s.artifact == nil {
+		return nil
+	}
+	list, err := s.store.ListArtifacts(projectID)
+	if err != nil {
+		// Log error? For now silence it to avoid disrupting main flow
+		return nil
+	}
+	out := make([]ArtifactView, 0, len(list))
+	for _, a := range list {
+		url, _ := s.artifact.GetURL(context.Background(), a.RunID, a.Path)
+		// ID is int in DB, converting to string for View/Proto
+		out = append(out, ArtifactView{
+			ID:        fmt.Sprintf("%d", a.ID),
+			RunID:     a.RunID,
+			Path:      a.Path,
+			URL:       url,
+			CreatedAt: a.CreatedAt,
+		})
+	}
+	return out
 }
 
 func (s *Service) put(e Entry) {
@@ -204,7 +242,8 @@ func (s *Service) listByUser(userID entity.UserID) []Entry {
 		if !isProjectID(st.ProjectID) {
 			continue
 		}
-		out = append(out, Entry{State: st, RunCtx: s.runCtx[st.ProjectID]})
+		artifacts := s.resolveArtifacts(st.ProjectID)
+		out = append(out, Entry{State: st, RunCtx: s.runCtx[st.ProjectID], Artifacts: artifacts})
 	}
 	s.runCtxMu.RUnlock()
 	return out
@@ -218,7 +257,9 @@ func (s *Service) getActiveByUser(userID entity.UserID) (Entry, bool) {
 	s.runCtxMu.RLock()
 	ctx := s.runCtx[st.ProjectID]
 	s.runCtxMu.RUnlock()
-	return Entry{State: st, RunCtx: ctx}, true
+
+	artifacts := s.resolveArtifacts(st.ProjectID)
+	return Entry{State: st, RunCtx: ctx, Artifacts: artifacts}, true
 }
 
 func (s *Service) setActiveForUser(userID entity.UserID, projectID string) (Entry, bool) {
@@ -229,7 +270,9 @@ func (s *Service) setActiveForUser(userID entity.UserID, projectID string) (Entr
 	s.runCtxMu.RLock()
 	ctx := s.runCtx[st.ProjectID]
 	s.runCtxMu.RUnlock()
-	return Entry{State: st, RunCtx: ctx}, true
+	
+	artifacts := s.resolveArtifacts(st.ProjectID)
+	return Entry{State: st, RunCtx: ctx, Artifacts: artifacts}, true
 }
 
 // ---------------------------------------------------------------------------

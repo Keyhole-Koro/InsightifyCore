@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func (s *Store) ensureLoadedFile() {
@@ -150,4 +151,81 @@ func (s *Store) setActiveForUserFile(userID, projectID string) (State, bool) {
 		s.byID[key] = normalizeState(state)
 	}
 	return normalizeState(selected), found
+}
+
+func (s *Store) addArtifactFile(artifact ProjectArtifact) error {
+	s.ensureLoadedFile()
+	if artifact.ProjectID == "" {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.saveFile() // saveFile unlocks
+	// saveFile calls ensureLoadedFile -> RLock/RUnlock
+	// Wait, saveFile calls mu.RLock() so we should be careful about locking.
+	// saveFile implementation:
+	// func (s *Store) saveFile() {
+	// 	s.ensureLoadedFile()
+	// 	s.mu.RLock() ... s.mu.RUnlock() ...
+	// }
+	// So we should NOT hold Lock when calling saveFile if saveFile takes RLock.
+	// Actually saveFile logic in file_backend.go (lines 32-47) takes RLock.
+	// We hold Lock here. RLock while holding Lock is generally okay in RWMutex if it's the same goroutine? No, RWMutex doesn't allow recursive read locks if write lock is held.
+	// So we must Unlock before calling saveFile.
+	
+	state, ok := s.byID[artifact.ProjectID]
+	if !ok {
+		// If project doesn't exist, maybe we shouldn't add artifact? 
+		// Or creating a stub state? For now let's assume project exists.
+		s.mu.Unlock()
+		return nil
+	}
+	
+	// Check for duplicates
+	for _, a := range state.Artifacts {
+		if a.RunID == artifact.RunID && a.Path == artifact.Path {
+			s.mu.Unlock()
+			return nil
+		}
+	}
+	
+	// Add artifact
+	artifact.CreatedAt = time.Now()
+	// ID generation simplified
+	artifact.ID = len(state.Artifacts) + 1 
+	state.Artifacts = append(state.Artifacts, artifact)
+	s.byID[artifact.ProjectID] = state
+	
+	s.mu.Unlock()
+	s.saveFile()
+	return nil
+}
+
+func (s *Store) listArtifactsFile(projectID string) ([]ProjectArtifact, error) {
+	s.ensureLoadedFile()
+	pid := strings.TrimSpace(projectID)
+	if pid == "" {
+		return nil, nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	state, ok := s.byID[pid]
+	if !ok {
+		return nil, nil
+	}
+	
+	// Sort by CreatedAt DESC
+	// coping to avoid mutation issues if we sort in place (though slice is copy, elements are shared, but here struct is by value)
+	out := make([]ProjectArtifact, len(state.Artifacts))
+	copy(out, state.Artifacts)
+	
+	// Simple bubble sort or just return as is? 
+	// The requirement says "ORDER BY created_at DESC".
+	// Since we append, it is ASC. We can verify or just reverse.
+	// Let's do a reverse iterate to return.
+	
+	reversed := make([]ProjectArtifact, 0, len(out))
+	for i := len(out) - 1; i >= 0; i-- {
+		reversed = append(reversed, out[i])
+	}
+	return reversed, nil
 }

@@ -14,6 +14,7 @@ import (
 type Store interface {
 	Put(ctx context.Context, runID, path string, content []byte) error
 	Get(ctx context.Context, runID, path string) ([]byte, error)
+	GetURL(ctx context.Context, runID, path string) (string, error)
 	List(ctx context.Context, runID string) ([]string, error)
 }
 
@@ -131,4 +132,9 @@ func (s *PostgresStore) List(ctx context.Context, runID string) ([]string, error
 		return nil, err
 	}
 	return paths, nil
+}
+
+func (s *PostgresStore) GetURL(ctx context.Context, runID, path string) (string, error) {
+	// Postgres store doesn't support URLs (content is stored as BLOB)
+	return "", nil
 }

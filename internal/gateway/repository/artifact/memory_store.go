@@ -81,3 +81,8 @@ func (s *MemoryStore) List(_ context.Context, runID string) ([]string, error) {
 	sort.Strings(out)
 	return out, nil
 }
+
+func (s *MemoryStore) GetURL(ctx context.Context, runID, path string) (string, error) {
+	// Memory store doesn't support URLs, return path as fallback or empty
+	return "", nil
+}

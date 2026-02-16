@@ -46,7 +46,7 @@ func (b *testWorkspaceRunBinder) snapshot() (calls int, project string, runID st
 func TestStartRunAssignsRunToCurrentTabImmediately(t *testing.T) {
 	project := testProjectReader{}
 	binder := &testWorkspaceRunBinder{}
-	svc := New(project, binder, nil, nil, nil)
+	svc := New(project, nil, binder, nil, nil, nil)
 
 	res, err := svc.StartRun(context.Background(), &insightifyv1.StartRunRequest{
 		ProjectId: "project-1",

@@ -123,7 +123,7 @@ type Project struct {
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	Artifacts     map[string]string      `protobuf:"bytes,5,rep,name=artifacts,proto3" json:"artifacts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Artifacts     []*Artifact            `protobuf:"bytes,5,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -186,11 +186,87 @@ func (x *Project) GetIsActive() bool {
 	return false
 }
 
-func (x *Project) GetArtifacts() map[string]string {
+func (x *Project) GetArtifacts() []*Artifact {
 	if x != nil {
 		return x.Artifacts
 	}
 	return nil
+}
+
+type Artifact struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RunId         string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Path          string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Url           string                 `protobuf:"bytes,4,opt,name=url,proto3" json:"url,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Artifact) Reset() {
+	*x = Artifact{}
+	mi := &file_insightify_v1_project_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Artifact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Artifact) ProtoMessage() {}
+
+func (x *Artifact) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_project_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Artifact.ProtoReflect.Descriptor instead.
+func (*Artifact) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Artifact) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Artifact) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *Artifact) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Artifact) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Artifact) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
 }
 
 type ListProjectsRequest struct {
@@ -202,7 +278,7 @@ type ListProjectsRequest struct {
 
 func (x *ListProjectsRequest) Reset() {
 	*x = ListProjectsRequest{}
-	mi := &file_insightify_v1_project_proto_msgTypes[3]
+	mi := &file_insightify_v1_project_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -214,7 +290,7 @@ func (x *ListProjectsRequest) String() string {
 func (*ListProjectsRequest) ProtoMessage() {}
 
 func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[3]
+	mi := &file_insightify_v1_project_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -227,7 +303,7 @@ func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{3}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListProjectsRequest) GetUserId() string {
@@ -247,7 +323,7 @@ type ListProjectsResponse struct {
 
 func (x *ListProjectsResponse) Reset() {
 	*x = ListProjectsResponse{}
-	mi := &file_insightify_v1_project_proto_msgTypes[4]
+	mi := &file_insightify_v1_project_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -259,7 +335,7 @@ func (x *ListProjectsResponse) String() string {
 func (*ListProjectsResponse) ProtoMessage() {}
 
 func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[4]
+	mi := &file_insightify_v1_project_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -272,7 +348,7 @@ func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{4}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListProjectsResponse) GetProjects() []*Project {
@@ -299,7 +375,7 @@ type CreateProjectRequest struct {
 
 func (x *CreateProjectRequest) Reset() {
 	*x = CreateProjectRequest{}
-	mi := &file_insightify_v1_project_proto_msgTypes[5]
+	mi := &file_insightify_v1_project_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -311,7 +387,7 @@ func (x *CreateProjectRequest) String() string {
 func (*CreateProjectRequest) ProtoMessage() {}
 
 func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[5]
+	mi := &file_insightify_v1_project_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -324,7 +400,7 @@ func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
 func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{5}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateProjectRequest) GetUserId() string {
@@ -350,7 +426,7 @@ type CreateProjectResponse struct {
 
 func (x *CreateProjectResponse) Reset() {
 	*x = CreateProjectResponse{}
-	mi := &file_insightify_v1_project_proto_msgTypes[6]
+	mi := &file_insightify_v1_project_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -362,7 +438,7 @@ func (x *CreateProjectResponse) String() string {
 func (*CreateProjectResponse) ProtoMessage() {}
 
 func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[6]
+	mi := &file_insightify_v1_project_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -375,7 +451,7 @@ func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
 func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{6}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateProjectResponse) GetProject() *Project {
@@ -395,7 +471,7 @@ type SelectProjectRequest struct {
 
 func (x *SelectProjectRequest) Reset() {
 	*x = SelectProjectRequest{}
-	mi := &file_insightify_v1_project_proto_msgTypes[7]
+	mi := &file_insightify_v1_project_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -407,7 +483,7 @@ func (x *SelectProjectRequest) String() string {
 func (*SelectProjectRequest) ProtoMessage() {}
 
 func (x *SelectProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[7]
+	mi := &file_insightify_v1_project_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -420,7 +496,7 @@ func (x *SelectProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SelectProjectRequest.ProtoReflect.Descriptor instead.
 func (*SelectProjectRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{7}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SelectProjectRequest) GetUserId() string {
@@ -446,7 +522,7 @@ type SelectProjectResponse struct {
 
 func (x *SelectProjectResponse) Reset() {
 	*x = SelectProjectResponse{}
-	mi := &file_insightify_v1_project_proto_msgTypes[8]
+	mi := &file_insightify_v1_project_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -458,7 +534,7 @@ func (x *SelectProjectResponse) String() string {
 func (*SelectProjectResponse) ProtoMessage() {}
 
 func (x *SelectProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_project_proto_msgTypes[8]
+	mi := &file_insightify_v1_project_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -471,7 +547,7 @@ func (x *SelectProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SelectProjectResponse.ProtoReflect.Descriptor instead.
 func (*SelectProjectResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_project_proto_rawDescGZIP(), []int{8}
+	return file_insightify_v1_project_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SelectProjectResponse) GetProject() *Project {
@@ -492,17 +568,21 @@ const file_insightify_v1_project_proto_rawDesc = "" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\"6\n" +
 	"\x15EnsureProjectResponse\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\"\xf5\x01\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\xa9\x01\n" +
 	"\aProject\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n" +
-	"\tis_active\x18\x04 \x01(\bR\bisActive\x12C\n" +
-	"\tartifacts\x18\x05 \x03(\v2%.insightify.v1.Project.ArtifactsEntryR\tartifacts\x1a<\n" +
-	"\x0eArtifactsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\".\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x125\n" +
+	"\tartifacts\x18\x05 \x03(\v2\x17.insightify.v1.ArtifactR\tartifacts\"v\n" +
+	"\bArtifact\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12\x10\n" +
+	"\x03url\x18\x04 \x01(\tR\x03url\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\tR\tcreatedAt\".\n" +
 	"\x13ListProjectsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"v\n" +
 	"\x14ListProjectsResponse\x122\n" +
@@ -543,27 +623,27 @@ var file_insightify_v1_project_proto_goTypes = []any{
 	(*EnsureProjectRequest)(nil),  // 0: insightify.v1.EnsureProjectRequest
 	(*EnsureProjectResponse)(nil), // 1: insightify.v1.EnsureProjectResponse
 	(*Project)(nil),               // 2: insightify.v1.Project
-	(*ListProjectsRequest)(nil),   // 3: insightify.v1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),  // 4: insightify.v1.ListProjectsResponse
-	(*CreateProjectRequest)(nil),  // 5: insightify.v1.CreateProjectRequest
-	(*CreateProjectResponse)(nil), // 6: insightify.v1.CreateProjectResponse
-	(*SelectProjectRequest)(nil),  // 7: insightify.v1.SelectProjectRequest
-	(*SelectProjectResponse)(nil), // 8: insightify.v1.SelectProjectResponse
-	nil,                           // 9: insightify.v1.Project.ArtifactsEntry
+	(*Artifact)(nil),              // 3: insightify.v1.Artifact
+	(*ListProjectsRequest)(nil),   // 4: insightify.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),  // 5: insightify.v1.ListProjectsResponse
+	(*CreateProjectRequest)(nil),  // 6: insightify.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil), // 7: insightify.v1.CreateProjectResponse
+	(*SelectProjectRequest)(nil),  // 8: insightify.v1.SelectProjectRequest
+	(*SelectProjectResponse)(nil), // 9: insightify.v1.SelectProjectResponse
 }
 var file_insightify_v1_project_proto_depIdxs = []int32{
-	9, // 0: insightify.v1.Project.artifacts:type_name -> insightify.v1.Project.ArtifactsEntry
+	3, // 0: insightify.v1.Project.artifacts:type_name -> insightify.v1.Artifact
 	2, // 1: insightify.v1.ListProjectsResponse.projects:type_name -> insightify.v1.Project
 	2, // 2: insightify.v1.CreateProjectResponse.project:type_name -> insightify.v1.Project
 	2, // 3: insightify.v1.SelectProjectResponse.project:type_name -> insightify.v1.Project
 	0, // 4: insightify.v1.ProjectService.EnsureProject:input_type -> insightify.v1.EnsureProjectRequest
-	3, // 5: insightify.v1.ProjectService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
-	5, // 6: insightify.v1.ProjectService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
-	7, // 7: insightify.v1.ProjectService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
+	4, // 5: insightify.v1.ProjectService.ListProjects:input_type -> insightify.v1.ListProjectsRequest
+	6, // 6: insightify.v1.ProjectService.CreateProject:input_type -> insightify.v1.CreateProjectRequest
+	8, // 7: insightify.v1.ProjectService.SelectProject:input_type -> insightify.v1.SelectProjectRequest
 	1, // 8: insightify.v1.ProjectService.EnsureProject:output_type -> insightify.v1.EnsureProjectResponse
-	4, // 9: insightify.v1.ProjectService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
-	6, // 10: insightify.v1.ProjectService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
-	8, // 11: insightify.v1.ProjectService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
+	5, // 9: insightify.v1.ProjectService.ListProjects:output_type -> insightify.v1.ListProjectsResponse
+	7, // 10: insightify.v1.ProjectService.CreateProject:output_type -> insightify.v1.CreateProjectResponse
+	9, // 11: insightify.v1.ProjectService.SelectProject:output_type -> insightify.v1.SelectProjectResponse
 	8, // [8:12] is the sub-list for method output_type
 	4, // [4:8] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
