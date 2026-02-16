@@ -13,12 +13,14 @@ type Artifact struct {
 	ent.Schema
 }
 
-// Fields of the Artifact.
+	// Fields of the Artifact.
 func (Artifact) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("id").
 			Unique().
 			Immutable(),
+		field.String("project_id").
+			NotEmpty(),
 		field.String("run_id").
 			NotEmpty(),
 		field.String("path").
@@ -33,7 +35,9 @@ func (Artifact) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).
 			Ref("artifacts").
-			Unique(),
+			Field("project_id").
+			Unique().
+			Required(),
 	}
 }
 

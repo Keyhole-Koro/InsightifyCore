@@ -14,7 +14,7 @@ var (
 		{Name: "run_id", Type: field.TypeString},
 		{Name: "path", Type: field.TypeString},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "project_artifacts", Type: field.TypeString, Nullable: true},
+		{Name: "project_id", Type: field.TypeString},
 	}
 	// ArtifactsTable holds the schema information for the "artifacts" table.
 	ArtifactsTable = &schema.Table{
@@ -26,7 +26,7 @@ var (
 				Symbol:     "artifacts_projects_artifacts",
 				Columns:    []*schema.Column{ArtifactsColumns[4]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -51,13 +51,78 @@ var (
 		Columns:    ProjectsColumns,
 		PrimaryKey: []*schema.Column{ProjectsColumns[0]},
 	}
+	// UserInteractionsColumns holds the columns for the "user_interactions" table.
+	UserInteractionsColumns = []*schema.Column{
+		{Name: "run_id", Type: field.TypeString, Unique: true},
+		{Name: "version", Type: field.TypeInt64, Default: 0},
+		{Name: "nodes", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// UserInteractionsTable holds the schema information for the "user_interactions" table.
+	UserInteractionsTable = &schema.Table{
+		Name:       "user_interactions",
+		Columns:    UserInteractionsColumns,
+		PrimaryKey: []*schema.Column{UserInteractionsColumns[0]},
+	}
+	// WorkspacesColumns holds the columns for the "workspaces" table.
+	WorkspacesColumns = []*schema.Column{
+		{Name: "workspace_id", Type: field.TypeString, Unique: true},
+		{Name: "project_id", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString, Default: "Workspace"},
+		{Name: "active_tab_id", Type: field.TypeString, Default: ""},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// WorkspacesTable holds the schema information for the "workspaces" table.
+	WorkspacesTable = &schema.Table{
+		Name:       "workspaces",
+		Columns:    WorkspacesColumns,
+		PrimaryKey: []*schema.Column{WorkspacesColumns[0]},
+	}
+	// WorkspaceTabsColumns holds the columns for the "workspace_tabs" table.
+	WorkspaceTabsColumns = []*schema.Column{
+		{Name: "tab_id", Type: field.TypeString, Unique: true},
+		{Name: "title", Type: field.TypeString, Default: "Tab"},
+		{Name: "run_id", Type: field.TypeString, Default: ""},
+		{Name: "order_index", Type: field.TypeInt, Default: 0},
+		{Name: "is_pinned", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "workspace_id", Type: field.TypeString},
+	}
+	// WorkspaceTabsTable holds the schema information for the "workspace_tabs" table.
+	WorkspaceTabsTable = &schema.Table{
+		Name:       "workspace_tabs",
+		Columns:    WorkspaceTabsColumns,
+		PrimaryKey: []*schema.Column{WorkspaceTabsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "workspace_tabs_workspaces_tabs",
+				Columns:    []*schema.Column{WorkspaceTabsColumns[7]},
+				RefColumns: []*schema.Column{WorkspacesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "workspacetab_workspace_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkspaceTabsColumns[7]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ArtifactsTable,
 		ProjectsTable,
+		UserInteractionsTable,
+		WorkspacesTable,
+		WorkspaceTabsTable,
 	}
 )
 
 func init() {
 	ArtifactsTable.ForeignKeys[0].RefTable = ProjectsTable
+	WorkspaceTabsTable.ForeignKeys[0].RefTable = WorkspacesTable
 }

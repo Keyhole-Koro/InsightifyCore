@@ -11,3 +11,12 @@ type Artifact func(*sql.Selector)
 
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
+
+// UserInteraction is the predicate function for userinteraction builders.
+type UserInteraction func(*sql.Selector)
+
+// Workspace is the predicate function for workspace builders.
+type Workspace func(*sql.Selector)
+
+// WorkspaceTab is the predicate function for workspacetab builders.
+type WorkspaceTab func(*sql.Selector)

@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"insightify/internal/gateway/config"
+	"insightify/internal/gateway/ent"
+	entsql "entgo.io/ent/dialect/sql"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
 	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
@@ -52,10 +54,14 @@ func initPostgresStores(dsn string, cfg *config.Config, s3Factory func() (artifa
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
+	// Initialize Ent client
+	drv := entsql.OpenDB("pgx", db)
+	client := ent.NewClient(ent.Driver(drv))
+
 	stores := &gatewayStores{
-		ui:          uirepo.NewPostgresStore(db),
+		ui:          uirepo.NewPostgresStore(client),
 		artifact:    artifactrepo.NewPostgresStore(db),
-		uiWorkspace: uiworkspacerepo.NewPostgresStore(db),
+		uiWorkspace: uiworkspacerepo.NewPostgresStore(client),
 	}
 	artifactStore, err := chooseArtifactStore(cfg, stores.artifact, "postgres", s3Factory)
 	if err != nil {

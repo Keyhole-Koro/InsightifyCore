@@ -23,6 +23,12 @@ type ArtifactCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetProjectID sets the "project_id" field.
+func (_c *ArtifactCreate) SetProjectID(v string) *ArtifactCreate {
+	_c.mutation.SetProjectID(v)
+	return _c
+}
+
 // SetRunID sets the "run_id" field.
 func (_c *ArtifactCreate) SetRunID(v string) *ArtifactCreate {
 	_c.mutation.SetRunID(v)
@@ -52,20 +58,6 @@ func (_c *ArtifactCreate) SetNillableCreatedAt(v *time.Time) *ArtifactCreate {
 // SetID sets the "id" field.
 func (_c *ArtifactCreate) SetID(v int) *ArtifactCreate {
 	_c.mutation.SetID(v)
-	return _c
-}
-
-// SetProjectID sets the "project" edge to the Project entity by ID.
-func (_c *ArtifactCreate) SetProjectID(id string) *ArtifactCreate {
-	_c.mutation.SetProjectID(id)
-	return _c
-}
-
-// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
-func (_c *ArtifactCreate) SetNillableProjectID(id *string) *ArtifactCreate {
-	if id != nil {
-		_c = _c.SetProjectID(*id)
-	}
 	return _c
 }
 
@@ -117,6 +109,14 @@ func (_c *ArtifactCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *ArtifactCreate) check() error {
+	if _, ok := _c.mutation.ProjectID(); !ok {
+		return &ValidationError{Name: "project_id", err: errors.New(`ent: missing required field "Artifact.project_id"`)}
+	}
+	if v, ok := _c.mutation.ProjectID(); ok {
+		if err := artifact.ProjectIDValidator(v); err != nil {
+			return &ValidationError{Name: "project_id", err: fmt.Errorf(`ent: validator failed for field "Artifact.project_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.RunID(); !ok {
 		return &ValidationError{Name: "run_id", err: errors.New(`ent: missing required field "Artifact.run_id"`)}
 	}
@@ -135,6 +135,9 @@ func (_c *ArtifactCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Artifact.created_at"`)}
+	}
+	if len(_c.mutation.ProjectIDs()) == 0 {
+		return &ValidationError{Name: "project", err: errors.New(`ent: missing required edge "Artifact.project"`)}
 	}
 	return nil
 }
@@ -195,7 +198,7 @@ func (_c *ArtifactCreate) createSpec() (*Artifact, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.project_artifacts = &nodes[0]
+		_node.ProjectID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -205,7 +208,7 @@ func (_c *ArtifactCreate) createSpec() (*Artifact, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.Artifact.Create().
-//		SetRunID(v).
+//		SetProjectID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -214,7 +217,7 @@ func (_c *ArtifactCreate) createSpec() (*Artifact, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ArtifactUpsert) {
-//			SetRunID(v+v).
+//			SetProjectID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *ArtifactCreate) OnConflict(opts ...sql.ConflictOption) *ArtifactUpsertOne {
@@ -249,6 +252,18 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetProjectID sets the "project_id" field.
+func (u *ArtifactUpsert) SetProjectID(v string) *ArtifactUpsert {
+	u.Set(artifact.FieldProjectID, v)
+	return u
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ArtifactUpsert) UpdateProjectID() *ArtifactUpsert {
+	u.SetExcluded(artifact.FieldProjectID)
+	return u
+}
 
 // SetRunID sets the "run_id" field.
 func (u *ArtifactUpsert) SetRunID(v string) *ArtifactUpsert {
@@ -332,6 +347,20 @@ func (u *ArtifactUpsertOne) Update(set func(*ArtifactUpsert)) *ArtifactUpsertOne
 		set(&ArtifactUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetProjectID sets the "project_id" field.
+func (u *ArtifactUpsertOne) SetProjectID(v string) *ArtifactUpsertOne {
+	return u.Update(func(s *ArtifactUpsert) {
+		s.SetProjectID(v)
+	})
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ArtifactUpsertOne) UpdateProjectID() *ArtifactUpsertOne {
+	return u.Update(func(s *ArtifactUpsert) {
+		s.UpdateProjectID()
+	})
 }
 
 // SetRunID sets the "run_id" field.
@@ -511,7 +540,7 @@ func (_c *ArtifactCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ArtifactUpsert) {
-//			SetRunID(v+v).
+//			SetProjectID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *ArtifactCreateBulk) OnConflict(opts ...sql.ConflictOption) *ArtifactUpsertBulk {
@@ -588,6 +617,20 @@ func (u *ArtifactUpsertBulk) Update(set func(*ArtifactUpsert)) *ArtifactUpsertBu
 		set(&ArtifactUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetProjectID sets the "project_id" field.
+func (u *ArtifactUpsertBulk) SetProjectID(v string) *ArtifactUpsertBulk {
+	return u.Update(func(s *ArtifactUpsert) {
+		s.SetProjectID(v)
+	})
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ArtifactUpsertBulk) UpdateProjectID() *ArtifactUpsertBulk {
+	return u.Update(func(s *ArtifactUpsert) {
+		s.UpdateProjectID()
+	})
 }
 
 // SetRunID sets the "run_id" field.

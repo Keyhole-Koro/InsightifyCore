@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"insightify/internal/gateway/ent/artifact"
 	"insightify/internal/gateway/ent/project"
+	"insightify/internal/gateway/ent/userinteraction"
+	"insightify/internal/gateway/ent/workspace"
+	"insightify/internal/gateway/ent/workspacetab"
 	"reflect"
 	"sync"
 
@@ -74,8 +77,11 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			artifact.Table: artifact.ValidColumn,
-			project.Table:  project.ValidColumn,
+			artifact.Table:        artifact.ValidColumn,
+			project.Table:         project.ValidColumn,
+			userinteraction.Table: userinteraction.ValidColumn,
+			workspace.Table:       workspace.ValidColumn,
+			workspacetab.Table:    workspacetab.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

@@ -14,6 +14,8 @@ const (
 	Label = "artifact"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
 	// FieldRunID holds the string denoting the run_id field in the database.
 	FieldRunID = "run_id"
 	// FieldPath holds the string denoting the path field in the database.
@@ -32,21 +34,16 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "project" package.
 	ProjectInverseTable = "projects"
 	// ProjectColumn is the table column denoting the project relation/edge.
-	ProjectColumn = "project_artifacts"
+	ProjectColumn = "project_id"
 )
 
 // Columns holds all SQL columns for artifact fields.
 var Columns = []string{
 	FieldID,
+	FieldProjectID,
 	FieldRunID,
 	FieldPath,
 	FieldCreatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "artifacts"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"project_artifacts",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -56,15 +53,12 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
-			return true
-		}
-	}
 	return false
 }
 
 var (
+	// ProjectIDValidator is a validator for the "project_id" field. It is called by the builders before save.
+	ProjectIDValidator func(string) error
 	// RunIDValidator is a validator for the "run_id" field. It is called by the builders before save.
 	RunIDValidator func(string) error
 	// PathValidator is a validator for the "path" field. It is called by the builders before save.
@@ -79,6 +73,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
 }
 
 // ByRunID orders the results by the run_id field.

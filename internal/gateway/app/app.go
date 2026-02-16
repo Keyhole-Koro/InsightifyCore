@@ -5,12 +5,18 @@ import (
 	"fmt"
 	"path/filepath"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	entsql "entgo.io/ent/dialect/sql"
 	"insightify/internal/gateway/config"
+	"insightify/internal/gateway/ent"
 	"insightify/internal/gateway/handler"
 	"insightify/internal/gateway/handler/rpc"
 	"insightify/internal/gateway/handler/ws"
+	"insightify/internal/gateway/repository/artifact"
 	"insightify/internal/gateway/repository/projectstore"
+	"insightify/internal/gateway/repository/ui"
+	"insightify/internal/gateway/repository/uiworkspace"
 	"insightify/internal/gateway/server"
 	gatewayproject "insightify/internal/gateway/service/project"
 	gatewayui "insightify/internal/gateway/service/ui"
@@ -21,6 +27,7 @@ import (
 
 type App struct {
 	server *server.Server
+	entClient *ent.Client // Add Ent client to App struct for proper shutdown
 }
 
 func New() (*App, error) {
@@ -29,17 +36,58 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	defaultProjectStore := projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json"))
-	stores, err := initStores(cfg)
+	// Initialize Postgres connection pool
+	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+	db := stdlib.OpenDBFromPool(pool)
+
+	// Initialize Ent client
+	drv := entsql.OpenDB("pgx", db)
+	client := ent.NewClient(ent.Driver(drv))
+
+	// Run Ent migrations
+	if err := client.Schema.Create(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
 
-	projectSvc := gatewayproject.New(defaultProjectStore, stores.artifact)
-	uiWorkspaceSvc := gatewayuiworkspace.New(stores.uiWorkspace)
-	uiSvc := gatewayui.New(stores.ui, uiWorkspaceSvc, stores.artifact, cfg.Interaction.ConversationArtifactPath)
-	userInteractionSvc := gatewayuserinteraction.New(stores.artifact, cfg.Interaction.ConversationArtifactPath)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), defaultProjectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, stores.artifact)
+	// Repositories
+	// Artifacts (mixed)
+	artifactConfig := artifact.S3Config{
+		Endpoint:  cfg.Artifact.Endpoint,
+		AccessKey: cfg.Artifact.AccessKey,
+		SecretKey: cfg.Artifact.SecretKey,
+		Bucket:    cfg.Artifact.Bucket,
+		Region:    cfg.Artifact.Region,
+		UseSSL:    cfg.Artifact.UseSSL,
+	}
+	artifactStore, err := artifact.NewS3Store(artifactConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create artifact store: %w", err)
+	}
+
+	// Project Store (Ent) with Cache (nil for now or initialize if needed)
+	// Passing nil for cache as we haven't initialized it here, or we can use generic LRU if import available.
+	// For simplicity and to fix build, we pass nil. Store handles nil cache gracefully.
+	projectStore, err := projectstore.NewPostgresStore(client, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create project store: %w", err)
+	}
+
+	// UI Store (Ent)
+	uiStore := ui.NewPostgresStore(client)
+
+	// Workspace Store (Ent)
+	uiWorkspaceStore := uiworkspace.NewPostgresStore(client)
+
+	defaultProjectStore := projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json")) // This seems to be a fallback/local store
+
+	projectSvc := gatewayproject.New(projectStore, artifactStore) // Use the Ent-backed projectStore
+	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore) // Use the Ent-backed uiWorkspaceStore
+	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStore, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
+	userInteractionSvc := gatewayuserinteraction.New(artifactStore, cfg.Interaction.ConversationArtifactPath)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), defaultProjectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

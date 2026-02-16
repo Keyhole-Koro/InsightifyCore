@@ -16,6 +16,12 @@ type Tx struct {
 	Artifact *ArtifactClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// UserInteraction is the client for interacting with the UserInteraction builders.
+	UserInteraction *UserInteractionClient
+	// Workspace is the client for interacting with the Workspace builders.
+	Workspace *WorkspaceClient
+	// WorkspaceTab is the client for interacting with the WorkspaceTab builders.
+	WorkspaceTab *WorkspaceTabClient
 
 	// lazily loaded.
 	client     *Client
@@ -149,6 +155,9 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Artifact = NewArtifactClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.UserInteraction = NewUserInteractionClient(tx.config)
+	tx.Workspace = NewWorkspaceClient(tx.config)
+	tx.WorkspaceTab = NewWorkspaceTabClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

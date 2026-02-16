@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Port        string
 	Env         string
+	DatabaseURL string
 	Artifact    ArtifactConfig
 	Interaction InteractionConfig
 }
@@ -59,9 +60,16 @@ func Load() (*Config, error) {
 		env = "local"
 	}
 
+	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if dbURL == "" {
+		// Default for local development if not set?
+		dbURL = "postgres://insightify:insightify@localhost:5432/insightify?sslmode=disable"
+	}
+
 	return &Config{
 		Port:        *port,
 		Env:         env,
+		DatabaseURL: dbURL,
 		Artifact:    loadArtifactConfig(env),
 		Interaction: loadInteractionConfig(),
 	}, nil

@@ -29,6 +29,20 @@ func (_u *ArtifactUpdate) Where(ps ...predicate.Artifact) *ArtifactUpdate {
 	return _u
 }
 
+// SetProjectID sets the "project_id" field.
+func (_u *ArtifactUpdate) SetProjectID(v string) *ArtifactUpdate {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *ArtifactUpdate) SetNillableProjectID(v *string) *ArtifactUpdate {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
 // SetRunID sets the "run_id" field.
 func (_u *ArtifactUpdate) SetRunID(v string) *ArtifactUpdate {
 	_u.mutation.SetRunID(v)
@@ -67,20 +81,6 @@ func (_u *ArtifactUpdate) SetCreatedAt(v time.Time) *ArtifactUpdate {
 func (_u *ArtifactUpdate) SetNillableCreatedAt(v *time.Time) *ArtifactUpdate {
 	if v != nil {
 		_u.SetCreatedAt(*v)
-	}
-	return _u
-}
-
-// SetProjectID sets the "project" edge to the Project entity by ID.
-func (_u *ArtifactUpdate) SetProjectID(id string) *ArtifactUpdate {
-	_u.mutation.SetProjectID(id)
-	return _u
-}
-
-// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
-func (_u *ArtifactUpdate) SetNillableProjectID(id *string) *ArtifactUpdate {
-	if id != nil {
-		_u = _u.SetProjectID(*id)
 	}
 	return _u
 }
@@ -130,6 +130,11 @@ func (_u *ArtifactUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ArtifactUpdate) check() error {
+	if v, ok := _u.mutation.ProjectID(); ok {
+		if err := artifact.ProjectIDValidator(v); err != nil {
+			return &ValidationError{Name: "project_id", err: fmt.Errorf(`ent: validator failed for field "Artifact.project_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RunID(); ok {
 		if err := artifact.RunIDValidator(v); err != nil {
 			return &ValidationError{Name: "run_id", err: fmt.Errorf(`ent: validator failed for field "Artifact.run_id": %w`, err)}
@@ -139,6 +144,9 @@ func (_u *ArtifactUpdate) check() error {
 		if err := artifact.PathValidator(v); err != nil {
 			return &ValidationError{Name: "path", err: fmt.Errorf(`ent: validator failed for field "Artifact.path": %w`, err)}
 		}
+	}
+	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Artifact.project"`)
 	}
 	return nil
 }
@@ -213,6 +221,20 @@ type ArtifactUpdateOne struct {
 	mutation *ArtifactMutation
 }
 
+// SetProjectID sets the "project_id" field.
+func (_u *ArtifactUpdateOne) SetProjectID(v string) *ArtifactUpdateOne {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *ArtifactUpdateOne) SetNillableProjectID(v *string) *ArtifactUpdateOne {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
 // SetRunID sets the "run_id" field.
 func (_u *ArtifactUpdateOne) SetRunID(v string) *ArtifactUpdateOne {
 	_u.mutation.SetRunID(v)
@@ -251,20 +273,6 @@ func (_u *ArtifactUpdateOne) SetCreatedAt(v time.Time) *ArtifactUpdateOne {
 func (_u *ArtifactUpdateOne) SetNillableCreatedAt(v *time.Time) *ArtifactUpdateOne {
 	if v != nil {
 		_u.SetCreatedAt(*v)
-	}
-	return _u
-}
-
-// SetProjectID sets the "project" edge to the Project entity by ID.
-func (_u *ArtifactUpdateOne) SetProjectID(id string) *ArtifactUpdateOne {
-	_u.mutation.SetProjectID(id)
-	return _u
-}
-
-// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
-func (_u *ArtifactUpdateOne) SetNillableProjectID(id *string) *ArtifactUpdateOne {
-	if id != nil {
-		_u = _u.SetProjectID(*id)
 	}
 	return _u
 }
@@ -327,6 +335,11 @@ func (_u *ArtifactUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ArtifactUpdateOne) check() error {
+	if v, ok := _u.mutation.ProjectID(); ok {
+		if err := artifact.ProjectIDValidator(v); err != nil {
+			return &ValidationError{Name: "project_id", err: fmt.Errorf(`ent: validator failed for field "Artifact.project_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RunID(); ok {
 		if err := artifact.RunIDValidator(v); err != nil {
 			return &ValidationError{Name: "run_id", err: fmt.Errorf(`ent: validator failed for field "Artifact.run_id": %w`, err)}
@@ -336,6 +349,9 @@ func (_u *ArtifactUpdateOne) check() error {
 		if err := artifact.PathValidator(v); err != nil {
 			return &ValidationError{Name: "path", err: fmt.Errorf(`ent: validator failed for field "Artifact.path": %w`, err)}
 		}
+	}
+	if _u.mutation.ProjectCleared() && len(_u.mutation.ProjectIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Artifact.project"`)
 	}
 	return nil
 }

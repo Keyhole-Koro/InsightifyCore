@@ -24,7 +24,6 @@ type ArtifactQuery struct {
 	inters      []Interceptor
 	predicates  []predicate.Artifact
 	withProject *ProjectQuery
-	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -299,12 +298,12 @@ func (_q *ArtifactQuery) WithProject(opts ...func(*ProjectQuery)) *ArtifactQuery
 // Example:
 //
 //	var v []struct {
-//		RunID string `json:"run_id,omitempty"`
+//		ProjectID string `json:"project_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Artifact.Query().
-//		GroupBy(artifact.FieldRunID).
+//		GroupBy(artifact.FieldProjectID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ArtifactQuery) GroupBy(field string, fields ...string) *ArtifactGroupBy {
@@ -322,11 +321,11 @@ func (_q *ArtifactQuery) GroupBy(field string, fields ...string) *ArtifactGroupB
 // Example:
 //
 //	var v []struct {
-//		RunID string `json:"run_id,omitempty"`
+//		ProjectID string `json:"project_id,omitempty"`
 //	}
 //
 //	client.Artifact.Query().
-//		Select(artifact.FieldRunID).
+//		Select(artifact.FieldProjectID).
 //		Scan(ctx, &v)
 func (_q *ArtifactQuery) Select(fields ...string) *ArtifactSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -370,18 +369,11 @@ func (_q *ArtifactQuery) prepareQuery(ctx context.Context) error {
 func (_q *ArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artifact, error) {
 	var (
 		nodes       = []*Artifact{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withProject != nil,
 		}
 	)
-	if _q.withProject != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, artifact.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Artifact).scanValues(nil, columns)
 	}
@@ -413,10 +405,7 @@ func (_q *ArtifactQuery) loadProject(ctx context.Context, query *ProjectQuery, n
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*Artifact)
 	for i := range nodes {
-		if nodes[i].project_artifacts == nil {
-			continue
-		}
-		fk := *nodes[i].project_artifacts
+		fk := nodes[i].ProjectID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -433,7 +422,7 @@ func (_q *ArtifactQuery) loadProject(ctx context.Context, query *ProjectQuery, n
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "project_artifacts" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "project_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -466,6 +455,9 @@ func (_q *ArtifactQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != artifact.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withProject != nil {
+			_spec.Node.AddColumnOnce(artifact.FieldProjectID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

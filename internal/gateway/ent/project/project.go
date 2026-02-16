@@ -32,7 +32,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "artifact" package.
 	ArtifactsInverseTable = "artifacts"
 	// ArtifactsColumn is the table column denoting the artifacts relation/edge.
-	ArtifactsColumn = "project_artifacts"
+	ArtifactsColumn = "project_id"
 )
 
 // Columns holds all SQL columns for project fields.

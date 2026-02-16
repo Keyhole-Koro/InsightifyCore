@@ -18,6 +18,8 @@ type Artifact struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// ProjectID holds the value of the "project_id" field.
+	ProjectID string `json:"project_id,omitempty"`
 	// RunID holds the value of the "run_id" field.
 	RunID string `json:"run_id,omitempty"`
 	// Path holds the value of the "path" field.
@@ -26,9 +28,8 @@ type Artifact struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtifactQuery when eager-loading is set.
-	Edges             ArtifactEdges `json:"edges"`
-	project_artifacts *string
-	selectValues      sql.SelectValues
+	Edges        ArtifactEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // ArtifactEdges holds the relations/edges for other nodes in the graph.
@@ -58,12 +59,10 @@ func (*Artifact) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case artifact.FieldID:
 			values[i] = new(sql.NullInt64)
-		case artifact.FieldRunID, artifact.FieldPath:
+		case artifact.FieldProjectID, artifact.FieldRunID, artifact.FieldPath:
 			values[i] = new(sql.NullString)
 		case artifact.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case artifact.ForeignKeys[0]: // project_artifacts
-			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -85,6 +84,12 @@ func (_m *Artifact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
+		case artifact.FieldProjectID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
+			} else if value.Valid {
+				_m.ProjectID = value.String
+			}
 		case artifact.FieldRunID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field run_id", values[i])
@@ -102,13 +107,6 @@ func (_m *Artifact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
-			}
-		case artifact.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field project_artifacts", values[i])
-			} else if value.Valid {
-				_m.project_artifacts = new(string)
-				*_m.project_artifacts = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -151,6 +149,9 @@ func (_m *Artifact) String() string {
 	var builder strings.Builder
 	builder.WriteString("Artifact(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("project_id=")
+	builder.WriteString(_m.ProjectID)
+	builder.WriteString(", ")
 	builder.WriteString("run_id=")
 	builder.WriteString(_m.RunID)
 	builder.WriteString(", ")

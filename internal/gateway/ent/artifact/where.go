@@ -55,6 +55,11 @@ func IDLTE(id int) predicate.Artifact {
 	return predicate.Artifact(sql.FieldLTE(FieldID, id))
 }
 
+// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
+func ProjectID(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldEQ(FieldProjectID, v))
+}
+
 // RunID applies equality check predicate on the "run_id" field. It's identical to RunIDEQ.
 func RunID(v string) predicate.Artifact {
 	return predicate.Artifact(sql.FieldEQ(FieldRunID, v))
@@ -68,6 +73,71 @@ func Path(v string) predicate.Artifact {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Artifact {
 	return predicate.Artifact(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// ProjectIDEQ applies the EQ predicate on the "project_id" field.
+func ProjectIDEQ(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldEQ(FieldProjectID, v))
+}
+
+// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
+func ProjectIDNEQ(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldNEQ(FieldProjectID, v))
+}
+
+// ProjectIDIn applies the In predicate on the "project_id" field.
+func ProjectIDIn(vs ...string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldIn(FieldProjectID, vs...))
+}
+
+// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
+func ProjectIDNotIn(vs ...string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldNotIn(FieldProjectID, vs...))
+}
+
+// ProjectIDGT applies the GT predicate on the "project_id" field.
+func ProjectIDGT(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldGT(FieldProjectID, v))
+}
+
+// ProjectIDGTE applies the GTE predicate on the "project_id" field.
+func ProjectIDGTE(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldGTE(FieldProjectID, v))
+}
+
+// ProjectIDLT applies the LT predicate on the "project_id" field.
+func ProjectIDLT(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldLT(FieldProjectID, v))
+}
+
+// ProjectIDLTE applies the LTE predicate on the "project_id" field.
+func ProjectIDLTE(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldLTE(FieldProjectID, v))
+}
+
+// ProjectIDContains applies the Contains predicate on the "project_id" field.
+func ProjectIDContains(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldContains(FieldProjectID, v))
+}
+
+// ProjectIDHasPrefix applies the HasPrefix predicate on the "project_id" field.
+func ProjectIDHasPrefix(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldHasPrefix(FieldProjectID, v))
+}
+
+// ProjectIDHasSuffix applies the HasSuffix predicate on the "project_id" field.
+func ProjectIDHasSuffix(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldHasSuffix(FieldProjectID, v))
+}
+
+// ProjectIDEqualFold applies the EqualFold predicate on the "project_id" field.
+func ProjectIDEqualFold(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldEqualFold(FieldProjectID, v))
+}
+
+// ProjectIDContainsFold applies the ContainsFold predicate on the "project_id" field.
+func ProjectIDContainsFold(v string) predicate.Artifact {
+	return predicate.Artifact(sql.FieldContainsFold(FieldProjectID, v))
 }
 
 // RunIDEQ applies the EQ predicate on the "run_id" field.

@@ -6,6 +6,9 @@ import (
 	"insightify/internal/gateway/ent/artifact"
 	"insightify/internal/gateway/ent/project"
 	"insightify/internal/gateway/ent/schema"
+	"insightify/internal/gateway/ent/userinteraction"
+	"insightify/internal/gateway/ent/workspace"
+	"insightify/internal/gateway/ent/workspacetab"
 	"time"
 )
 
@@ -15,16 +18,20 @@ import (
 func init() {
 	artifactFields := schema.Artifact{}.Fields()
 	_ = artifactFields
+	// artifactDescProjectID is the schema descriptor for project_id field.
+	artifactDescProjectID := artifactFields[1].Descriptor()
+	// artifact.ProjectIDValidator is a validator for the "project_id" field. It is called by the builders before save.
+	artifact.ProjectIDValidator = artifactDescProjectID.Validators[0].(func(string) error)
 	// artifactDescRunID is the schema descriptor for run_id field.
-	artifactDescRunID := artifactFields[1].Descriptor()
+	artifactDescRunID := artifactFields[2].Descriptor()
 	// artifact.RunIDValidator is a validator for the "run_id" field. It is called by the builders before save.
 	artifact.RunIDValidator = artifactDescRunID.Validators[0].(func(string) error)
 	// artifactDescPath is the schema descriptor for path field.
-	artifactDescPath := artifactFields[2].Descriptor()
+	artifactDescPath := artifactFields[3].Descriptor()
 	// artifact.PathValidator is a validator for the "path" field. It is called by the builders before save.
 	artifact.PathValidator = artifactDescPath.Validators[0].(func(string) error)
 	// artifactDescCreatedAt is the schema descriptor for created_at field.
-	artifactDescCreatedAt := artifactFields[3].Descriptor()
+	artifactDescCreatedAt := artifactFields[4].Descriptor()
 	// artifact.DefaultCreatedAt holds the default value on creation for the created_at field.
 	artifact.DefaultCreatedAt = artifactDescCreatedAt.Default.(func() time.Time)
 	projectFields := schema.Project{}.Fields()
@@ -45,4 +52,80 @@ func init() {
 	projectDescIsActive := projectFields[4].Descriptor()
 	// project.DefaultIsActive holds the default value on creation for the is_active field.
 	project.DefaultIsActive = projectDescIsActive.Default.(bool)
+	userinteractionFields := schema.UserInteraction{}.Fields()
+	_ = userinteractionFields
+	// userinteractionDescVersion is the schema descriptor for version field.
+	userinteractionDescVersion := userinteractionFields[1].Descriptor()
+	// userinteraction.DefaultVersion holds the default value on creation for the version field.
+	userinteraction.DefaultVersion = userinteractionDescVersion.Default.(int64)
+	// userinteractionDescNodes is the schema descriptor for nodes field.
+	userinteractionDescNodes := userinteractionFields[2].Descriptor()
+	// userinteraction.DefaultNodes holds the default value on creation for the nodes field.
+	userinteraction.DefaultNodes = userinteractionDescNodes.Default.(map[string]interface{})
+	// userinteractionDescCreatedAt is the schema descriptor for created_at field.
+	userinteractionDescCreatedAt := userinteractionFields[3].Descriptor()
+	// userinteraction.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userinteraction.DefaultCreatedAt = userinteractionDescCreatedAt.Default.(func() time.Time)
+	// userinteractionDescUpdatedAt is the schema descriptor for updated_at field.
+	userinteractionDescUpdatedAt := userinteractionFields[4].Descriptor()
+	// userinteraction.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	userinteraction.DefaultUpdatedAt = userinteractionDescUpdatedAt.Default.(func() time.Time)
+	// userinteraction.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	userinteraction.UpdateDefaultUpdatedAt = userinteractionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	workspaceFields := schema.Workspace{}.Fields()
+	_ = workspaceFields
+	// workspaceDescProjectID is the schema descriptor for project_id field.
+	workspaceDescProjectID := workspaceFields[1].Descriptor()
+	// workspace.ProjectIDValidator is a validator for the "project_id" field. It is called by the builders before save.
+	workspace.ProjectIDValidator = workspaceDescProjectID.Validators[0].(func(string) error)
+	// workspaceDescName is the schema descriptor for name field.
+	workspaceDescName := workspaceFields[2].Descriptor()
+	// workspace.DefaultName holds the default value on creation for the name field.
+	workspace.DefaultName = workspaceDescName.Default.(string)
+	// workspaceDescActiveTabID is the schema descriptor for active_tab_id field.
+	workspaceDescActiveTabID := workspaceFields[3].Descriptor()
+	// workspace.DefaultActiveTabID holds the default value on creation for the active_tab_id field.
+	workspace.DefaultActiveTabID = workspaceDescActiveTabID.Default.(string)
+	// workspaceDescCreatedAt is the schema descriptor for created_at field.
+	workspaceDescCreatedAt := workspaceFields[4].Descriptor()
+	// workspace.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workspace.DefaultCreatedAt = workspaceDescCreatedAt.Default.(func() time.Time)
+	// workspaceDescUpdatedAt is the schema descriptor for updated_at field.
+	workspaceDescUpdatedAt := workspaceFields[5].Descriptor()
+	// workspace.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workspace.DefaultUpdatedAt = workspaceDescUpdatedAt.Default.(func() time.Time)
+	// workspace.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workspace.UpdateDefaultUpdatedAt = workspaceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	workspacetabFields := schema.WorkspaceTab{}.Fields()
+	_ = workspacetabFields
+	// workspacetabDescWorkspaceID is the schema descriptor for workspace_id field.
+	workspacetabDescWorkspaceID := workspacetabFields[1].Descriptor()
+	// workspacetab.WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
+	workspacetab.WorkspaceIDValidator = workspacetabDescWorkspaceID.Validators[0].(func(string) error)
+	// workspacetabDescTitle is the schema descriptor for title field.
+	workspacetabDescTitle := workspacetabFields[2].Descriptor()
+	// workspacetab.DefaultTitle holds the default value on creation for the title field.
+	workspacetab.DefaultTitle = workspacetabDescTitle.Default.(string)
+	// workspacetabDescRunID is the schema descriptor for run_id field.
+	workspacetabDescRunID := workspacetabFields[3].Descriptor()
+	// workspacetab.DefaultRunID holds the default value on creation for the run_id field.
+	workspacetab.DefaultRunID = workspacetabDescRunID.Default.(string)
+	// workspacetabDescOrderIndex is the schema descriptor for order_index field.
+	workspacetabDescOrderIndex := workspacetabFields[4].Descriptor()
+	// workspacetab.DefaultOrderIndex holds the default value on creation for the order_index field.
+	workspacetab.DefaultOrderIndex = workspacetabDescOrderIndex.Default.(int)
+	// workspacetabDescIsPinned is the schema descriptor for is_pinned field.
+	workspacetabDescIsPinned := workspacetabFields[5].Descriptor()
+	// workspacetab.DefaultIsPinned holds the default value on creation for the is_pinned field.
+	workspacetab.DefaultIsPinned = workspacetabDescIsPinned.Default.(bool)
+	// workspacetabDescCreatedAt is the schema descriptor for created_at field.
+	workspacetabDescCreatedAt := workspacetabFields[6].Descriptor()
+	// workspacetab.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workspacetab.DefaultCreatedAt = workspacetabDescCreatedAt.Default.(func() time.Time)
+	// workspacetabDescUpdatedAt is the schema descriptor for updated_at field.
+	workspacetabDescUpdatedAt := workspacetabFields[7].Descriptor()
+	// workspacetab.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workspacetab.DefaultUpdatedAt = workspacetabDescUpdatedAt.Default.(func() time.Time)
+	// workspacetab.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workspacetab.UpdateDefaultUpdatedAt = workspacetabDescUpdatedAt.UpdateDefault.(func() time.Time)
 }
