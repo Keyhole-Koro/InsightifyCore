@@ -15,7 +15,7 @@ This document summarizes the entity boundaries in `internal/gateway`.
   - Identifier: `UserID`
   - Helpers: `NormalizeUserID`, `IsZero`, `DemoUserID`
 - `Project`
-  - Persisted shape is currently held by `projectstore.State`
+  - Persisted shape is currently held by `project.State`
   - `user_id` is converted to `UserID` at the `project.Service` boundary
 
 ## Structure Diagram
@@ -47,7 +47,7 @@ classDiagram
 flowchart LR
   RPC[handler/rpc\nuser_id:string] -->|Normalize| E[entity.UserID]
   E --> S[service/project\nbusiness logic with UserID]
-  S --> R[repository/projectstore\npersist as string]
+  S --> R[repository/project\npersist as string]
   R --> S
   S --> RPC
 ```
@@ -56,10 +56,10 @@ flowchart LR
 
 - Always normalize RPC `user_id` using `entity.NormalizeUserID`.
 - Public methods in `project.Service` should accept `entity.UserID`.
-- Keep `projectstore` string-based for compatibility.
+- Keep `project` string-based for compatibility.
 - Convert `UserID -> string` when returning proto responses.
 
 ## Future Extensions
 
 - Add `User` repository/service and explicitly model `Project` ownership.
-- Split `projectstore.State` into entity/DTO layers to remove persistence-model coupling from services.
+- Split `project.State` into entity/DTO layers to remove persistence-model coupling from services.

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
-	"insightify/internal/gateway/application/projectport"
+	projectrepo "insightify/internal/gateway/repository/project"
 	"insightify/internal/runner"
 	"io/fs"
 	"os"
@@ -132,7 +132,7 @@ func (s *Service) syncArtifacts(ctx context.Context, runID, projectID, outDir st
 
 		if s.projectStore != nil {
 			// Save metadata to project store
-			_ = s.projectStore.AddArtifact(projectport.ProjectArtifact{
+			_ = s.projectStore.AddArtifact(projectrepo.ProjectArtifact{
 				ProjectID: projectID,
 				RunID:     runID,
 				Path:      rel,

@@ -14,7 +14,7 @@ import (
 	"insightify/internal/gateway/handler/rpc"
 	"insightify/internal/gateway/handler/ws"
 	"insightify/internal/gateway/repository/artifact"
-	"insightify/internal/gateway/repository/projectstore"
+	projectrepo "insightify/internal/gateway/repository/project"
 	"insightify/internal/gateway/repository/ui"
 	"insightify/internal/gateway/repository/uiworkspace"
 	"insightify/internal/gateway/server"
@@ -70,7 +70,7 @@ func New() (*App, error) {
 	// Project Store (Ent) with Cache (nil for now or initialize if needed)
 	// Passing nil for cache as we haven't initialized it here, or we can use generic LRU if import available.
 	// For simplicity and to fix build, we pass nil. Store handles nil cache gracefully.
-	projectStore, err := projectstore.NewPostgresStore(client, nil)
+	projectStore, err := projectrepo.NewPostgresStore(client, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create project store: %w", err)
 	}
@@ -81,14 +81,13 @@ func New() (*App, error) {
 	// Workspace Store (Ent)
 	uiWorkspaceStore := uiworkspace.NewPostgresStore(client)
 
-	_ = projectstore.NewFromEnv(filepath.Join("tmp", "project_states.json")) // kept for local fallback wiring evolution
-	projectStoreAdapter := projectstore.NewAdapter(projectStore)
+	_ = projectrepo.NewFromEnv(filepath.Join("tmp", "project_states.json")) // kept for local fallback wiring evolution
 
-	projectSvc := gatewayproject.New(projectStoreAdapter, projectStoreAdapter, artifactStore)
+	projectSvc := gatewayproject.New(projectStore, projectStore, artifactStore)
 	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore)                                               // Use the Ent-backed uiWorkspaceStore
 	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStore, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
 	userInteractionSvc := gatewayuserinteraction.New(artifactStore, cfg.Interaction.ConversationArtifactPath)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStoreAdapter, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

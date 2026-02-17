@@ -8,16 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"insightify/internal/gateway/application/projectport"
 	"insightify/internal/gateway/entity"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
+	projectrepo "insightify/internal/gateway/repository/project"
 	runtimepkg "insightify/internal/workerruntime"
 )
 
 // Service implements Project business logic and owns all project state.
 type Service struct {
-	repo     projectport.Repository
-	metaRepo projectport.ArtifactRepository
+	repo     projectrepo.Repository
+	metaRepo projectrepo.ArtifactRepository
 	artifact artifactrepo.Store
 
 	runCtxMu sync.RWMutex
@@ -25,7 +25,7 @@ type Service struct {
 }
 
 // New creates a project service backed by the given store.
-func New(repo projectport.Repository, metaRepo projectport.ArtifactRepository, artifact artifactrepo.Store) *Service {
+func New(repo projectrepo.Repository, metaRepo projectrepo.ArtifactRepository, artifact artifactrepo.Store) *Service {
 	return &Service{
 		repo:     repo,
 		metaRepo: metaRepo,
@@ -350,7 +350,7 @@ type State struct {
 	RunCtx      *runtimepkg.ProjectRuntime
 }
 
-func fromRepoState(s projectport.ProjectState) State {
+func fromRepoState(s projectrepo.State) State {
 	return State{
 		ProjectID:   s.ProjectID,
 		ProjectName: s.ProjectName,
@@ -360,8 +360,8 @@ func fromRepoState(s projectport.ProjectState) State {
 	}
 }
 
-func toRepoState(s State) projectport.ProjectState {
-	return projectport.ProjectState{
+func toRepoState(s State) projectrepo.State {
+	return projectrepo.State{
 		ProjectID:   s.ProjectID,
 		ProjectName: s.ProjectName,
 		UserID:      s.UserID,
