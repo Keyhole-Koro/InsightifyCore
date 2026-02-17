@@ -1,11 +1,12 @@
-package llm
+package model
 
 import (
 	"context"
 	"encoding/json"
 	"testing"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
 )
 
 type awareTestLLM struct {
@@ -84,7 +85,7 @@ func TestSelectModel_DefaultModePrefersAvailableHeaders(t *testing.T) {
 	}
 
 	fallback := &awareTestLLM{name: "fallback", tokenCap: 4096} // Test
-	client := Wrap(NewModelDispatchClient(fallback),
+	client := llmmiddleware.Wrap(NewModelDispatchClient(fallback),
 		SelectModel(reg, 4096, ModelSelectionModePreferAvailable),
 	)
 

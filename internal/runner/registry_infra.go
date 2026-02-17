@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 	extpipe "insightify/internal/workers/external"
 )
 

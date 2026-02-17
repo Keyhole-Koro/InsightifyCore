@@ -1,7 +1,7 @@
 package runner
 
 import (
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 	"insightify/internal/mcp"
 	"insightify/internal/common/safeio"
 )

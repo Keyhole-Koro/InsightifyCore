@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 	archpipe "insightify/internal/workers/architecture"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 // PromptHook defines callbacks around LLM requests.

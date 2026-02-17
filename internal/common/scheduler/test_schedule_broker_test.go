@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 	"insightify/internal/tester"
 )
 

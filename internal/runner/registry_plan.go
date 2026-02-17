@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 	"insightify/internal/workers/plan"
 )
 

@@ -8,9 +8,10 @@ import (
 
 	workerv1 "insightify/gen/go/worker/v1"
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
-	llmclient "insightify/internal/llmclient"
-	"insightify/internal/llmtool"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
+	llmmodel "insightify/internal/llm/model"
+	"insightify/internal/llm/tool"
 )
 
 // BootstrapIn is the input for the bootstrap pipeline.
@@ -127,7 +128,7 @@ func (p *BootstrapPipeline) runBootstrap(ctx context.Context, in BootstrapIn) (a
 		return artifact.InitPurposeOut{}, fmt.Errorf("bootstrap: llm client is nil")
 	}
 
-	ctx = llm.WithWorker(ctx, "bootstrap")
+	ctx = llmmiddleware.WithWorker(ctx, "bootstrap")
 	scout := p.resolveScout(ctx, input)
 	extractedRepo := strings.TrimSpace(scout.RecommendedRepoURL)
 	scoutExplanation := strings.TrimSpace(scout.Explanation)
@@ -168,7 +169,7 @@ func (p *BootstrapPipeline) runBootstrapLLM(ctx context.Context, userInput, dete
 		"detected_repo_url": detectedRepoURL,
 		"scout_explanation": scoutExplanation,
 	}
-	llmCtx := llm.WithModelSelection(ctx, llm.ModelRoleWorker, llm.ModelLevelLow, "", "")
+	llmCtx := llmmodel.WithModelSelection(ctx, llmmodel.ModelRoleWorker, llmmodel.ModelLevelLow, "", "")
 	prompt, err := llmtool.StructuredPromptBuilder(initPurposePromptSpec)(llmCtx, &llmtool.ToolState{Input: payload}, nil)
 	if err != nil {
 		return artifact.InitPurposeOut{}, err
@@ -191,7 +192,7 @@ func (p *BootstrapPipeline) runScoutLLM(ctx context.Context, userInput string) (
 	payload := map[string]any{
 		"user_input": strings.TrimSpace(userInput),
 	}
-	llmCtx := llm.WithModelSelection(llm.WithWorker(ctx, "source_scout"), llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "")
+	llmCtx := llmmodel.WithModelSelection(llmmiddleware.WithWorker(ctx, "source_scout"), llmmodel.ModelRoleWorker, llmmodel.ModelLevelMiddle, "", "")
 	prompt, err := llmtool.StructuredPromptBuilder(bootstrapScoutPromptSpec)(llmCtx, &llmtool.ToolState{Input: payload}, nil)
 	if err != nil {
 		return bootstrapScoutResult{}, err

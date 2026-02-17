@@ -1,10 +1,11 @@
-package llm
+package model
 
 import (
 	"context"
 	"encoding/json"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
 )
 
 // ----------------------------------------------------------------------------
@@ -35,7 +36,7 @@ func (f *FakeClient) CountTokens(text string) int {
 func (f *FakeClient) TokenCapacity() int { return f.tokenCap }
 
 func (f *FakeClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-	worker := WorkerFrom(ctx)
+	worker := llmmiddleware.WorkerFrom(ctx)
 	var obj any
 	switch worker {
 	case "code_roots":

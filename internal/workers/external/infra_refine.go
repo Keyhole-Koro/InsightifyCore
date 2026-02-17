@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	llmclient "insightify/internal/llmclient"
-	"insightify/internal/llmtool"
+	llmclient "insightify/internal/llm/client"
+	"insightify/internal/llm/tool"
 )
 
 type infraRefinePromptOut struct {

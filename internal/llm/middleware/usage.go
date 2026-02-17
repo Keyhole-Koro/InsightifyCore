@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 // UsageLedger tracks LLM usage statistics to a JSON file.
@@ -89,8 +89,8 @@ func (u *usageLedgerClient) writeUsage(ctx context.Context, tokens int, err erro
 		return
 	}
 	modelKey := "unknown"
-	if sel, ok := selectedModelFrom(ctx); ok && sel.client != nil {
-		modelKey = sel.client.Name()
+	if selected, ok := SelectedClientFrom(ctx); ok {
+		modelKey = selected.Name()
 	}
 	u.ledger.record(modelKey, int64(tokens), err != nil)
 }

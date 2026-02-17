@@ -7,7 +7,7 @@ import (
 	"math/bits"
 	"sort"
 
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 )
 
 //

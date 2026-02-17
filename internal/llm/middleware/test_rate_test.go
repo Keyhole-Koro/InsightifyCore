@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 	"insightify/internal/tester"
 )
 

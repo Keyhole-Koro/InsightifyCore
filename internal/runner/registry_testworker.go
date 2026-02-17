@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"insightify/internal/llm"
+	"insightify/internal/llm/middleware"
 	"insightify/internal/workers/plan"
 	testpipe "insightify/internal/workers/testworker"
 )

@@ -1,4 +1,4 @@
-package llm
+package model
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
 )
 
 // ModelLevel represents the capability tier of a model.
@@ -272,17 +273,17 @@ func (r *InMemoryModelRegistry) BuildClient(
 		return nil, err
 	}
 
-	if rl := entry.Profile.RateLimit; rl != nil {
-		if rl.RPM > 0 || rl.RPD > 0 || rl.TPM > 0 {
-			cli = MultiLimit(rl.RPM, rl.RPD, rl.TPM)(cli)
+		if rl := entry.Profile.RateLimit; rl != nil {
+			if rl.RPM > 0 || rl.RPD > 0 || rl.TPM > 0 {
+				cli = llmmiddleware.MultiLimit(rl.RPM, rl.RPD, rl.TPM)(cli)
+			}
+			if rl.TPD > 0 {
+				cli = llmmiddleware.TokenDayLimit(rl.TPD)(cli)
+			}
+			if rl.RPS > 0 || rl.Burst > 0 {
+				cli = llmmiddleware.RateLimit(rl.RPS, rl.Burst)(cli)
+			}
 		}
-		if rl.TPD > 0 {
-			cli = TokenDayLimit(rl.TPD)(cli)
-		}
-		if rl.RPS > 0 || rl.Burst > 0 {
-			cli = RateLimit(rl.RPS, rl.Burst)(cli)
-		}
-	}
 	return cli, nil
 }
 

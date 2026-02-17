@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
-	llmclient "insightify/internal/llmclient"
-	"insightify/internal/llmtool"
+	"insightify/internal/llm/middleware"
+	llmclient "insightify/internal/llm/client"
+	"insightify/internal/llm/tool"
 	"insightify/internal/common/safeio"
 	"insightify/internal/common/scheduler"
 )

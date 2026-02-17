@@ -1,4 +1,4 @@
-package llm
+package model
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
 )
 
 type ModelSelectionMode string
@@ -116,33 +117,8 @@ func ModelNameFrom(ctx context.Context) string {
 	return ""
 }
 
-// ----------------------------------------------------------------------------
-// Selected model – stored in context after selection
-// ----------------------------------------------------------------------------
-
-type ctxKeySelectedModel struct{}
-
 type selectedModel struct {
 	client llmclient.LLMClient
-}
-
-func withSelectedModel(ctx context.Context, sel selectedModel) context.Context {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return context.WithValue(ctx, ctxKeySelectedModel{}, sel)
-}
-
-func selectedModelFrom(ctx context.Context) (selectedModel, bool) {
-	if ctx == nil {
-		return selectedModel{}, false
-	}
-	if v := ctx.Value(ctxKeySelectedModel{}); v != nil {
-		if sel, ok := v.(selectedModel); ok {
-			return sel, true
-		}
-	}
-	return selectedModel{}, false
 }
 
 // ----------------------------------------------------------------------------
@@ -150,7 +126,7 @@ func selectedModelFrom(ctx context.Context) (selectedModel, bool) {
 // ----------------------------------------------------------------------------
 
 // SelectModel returns a middleware that resolves and caches model clients.
-func SelectModel(reg *InMemoryModelRegistry, tokenCap int, mode ModelSelectionMode) Middleware {
+func SelectModel(reg *InMemoryModelRegistry, tokenCap int, mode ModelSelectionMode) llmmiddleware.Middleware {
 	return func(next llmclient.LLMClient) llmclient.LLMClient {
 		return &modelSelecting{
 			next:     next,
@@ -199,7 +175,7 @@ func (m *modelSelecting) GenerateJSON(ctx context.Context, prompt string, input 
 	if err != nil {
 		return nil, err
 	}
-	ctx = withSelectedModel(ctx, sel)
+	ctx = llmmiddleware.WithSelectedClient(ctx, sel.client)
 	return m.next.GenerateJSON(ctx, prompt, input)
 }
 
@@ -208,7 +184,7 @@ func (m *modelSelecting) GenerateJSONStream(ctx context.Context, prompt string, 
 	if err != nil {
 		return nil, err
 	}
-	ctx = withSelectedModel(ctx, sel)
+	ctx = llmmiddleware.WithSelectedClient(ctx, sel.client)
 	return m.next.GenerateJSONStream(ctx, prompt, input, onChunk)
 }
 
@@ -324,15 +300,15 @@ func (d *modelDispatchClient) TokenCapacity() int {
 }
 
 func (d *modelDispatchClient) GenerateJSON(ctx context.Context, prompt string, input any) (json.RawMessage, error) {
-	if sel, ok := selectedModelFrom(ctx); ok && sel.client != nil {
-		return sel.client.GenerateJSON(ctx, prompt, input)
+	if selected, ok := llmmiddleware.SelectedClientFrom(ctx); ok {
+		return selected.GenerateJSON(ctx, prompt, input)
 	}
 	return d.fallback.GenerateJSON(ctx, prompt, input)
 }
 
 func (d *modelDispatchClient) GenerateJSONStream(ctx context.Context, prompt string, input any, onChunk func(chunk string)) (json.RawMessage, error) {
-	if sel, ok := selectedModelFrom(ctx); ok && sel.client != nil {
-		return sel.client.GenerateJSONStream(ctx, prompt, input, onChunk)
+	if selected, ok := llmmiddleware.SelectedClientFrom(ctx); ok {
+		return selected.GenerateJSONStream(ctx, prompt, input, onChunk)
 	}
 	return d.fallback.GenerateJSONStream(ctx, prompt, input, onChunk)
 }

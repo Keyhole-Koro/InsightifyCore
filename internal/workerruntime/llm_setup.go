@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"insightify/internal/llm"
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
+	llmmodel "insightify/internal/llm/model"
 )
 
 func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, error) {
@@ -18,7 +19,7 @@ func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, erro
 	}
 	// Removed globalctx usage
 
-	reg := llm.NewInMemoryModelRegistry()
+	reg := llmmodel.NewInMemoryModelRegistry()
 	geminiTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GEMINI_TIER")), "free")
 	groqTier := firstNonEmpty(strings.TrimSpace(os.Getenv("LLM_GROQ_TIER")), "free")
 	if err := llmclient.RegisterGeminiModelsForTier(reg, geminiTier); err != nil {
@@ -27,7 +28,7 @@ func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, erro
 	if err := llmclient.RegisterGroqModelsForTier(reg, groqTier); err != nil {
 		return nil, "", err
 	}
-	if err := llm.RegisterFakeModels(reg); err != nil {
+	if err := llmmodel.RegisterFakeModels(reg); err != nil {
 		return nil, "", err
 	}
 
@@ -38,17 +39,17 @@ func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, erro
 		}
 	}
 
-	fallback, err := reg.BuildClient(ctx, llm.ModelRoleWorker, llm.ModelLevelMiddle, "", "", tokenCap)
+	fallback, err := reg.BuildClient(ctx, llmmodel.ModelRoleWorker, llmmodel.ModelLevelMiddle, "", "", tokenCap)
 	if err != nil {
 		return nil, "", fmt.Errorf("llm fallback client failed: %w", err)
 	}
 
-	dispatch := llm.NewModelDispatchClient(fallback)
-	client := llm.Wrap(dispatch,
-		llm.SelectModel(reg, tokenCap, llm.ModelSelectionModePreferAvailable),
-		llm.RespectRateLimitSignals(llmclient.HeaderRateLimitControlAdapter{}),
-		llm.Retry(3, 300*time.Millisecond),
-		llm.WithHooks(),
+	dispatch := llmmodel.NewModelDispatchClient(fallback)
+	client := llmmiddleware.Wrap(dispatch,
+		llmmodel.SelectModel(reg, tokenCap, llmmodel.ModelSelectionModePreferAvailable),
+		llmmiddleware.RespectRateLimitSignals(llmclient.HeaderRateLimitControlAdapter{}),
+		llmmiddleware.Retry(3, 300*time.Millisecond),
+		llmmiddleware.WithHooks(),
 	)
 	modelSalt := strings.TrimSpace(os.Getenv("CACHE_SALT")) + "|" + reg.DefaultsSalt()
 	return client, modelSalt, nil

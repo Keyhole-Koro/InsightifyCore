@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"insightify/internal/artifact"
-	"insightify/internal/llm"
-	llmclient "insightify/internal/llmclient"
-	"insightify/internal/llmtool"
+	llmclient "insightify/internal/llm/client"
+	llmmiddleware "insightify/internal/llm/middleware"
+	llmmodel "insightify/internal/llm/model"
+	"insightify/internal/llm/tool"
 	"insightify/internal/workers/plan"
 )
 
@@ -162,10 +163,10 @@ func (p *LLMChatNodePipeline) generateReply(ctx context.Context, userInput strin
 		"user_input": strings.TrimSpace(userInput),
 		"history":    history,
 	}
-	llmCtx := llm.WithModelSelection(
-		llm.WithWorker(ctx, testChatWorkerKey),
-		llm.ModelRoleWorker,
-		llm.ModelLevelLow,
+	llmCtx := llmmodel.WithModelSelection(
+		llmmiddleware.WithWorker(ctx, testChatWorkerKey),
+		llmmodel.ModelRoleWorker,
+		llmmodel.ModelLevelLow,
 		"",
 		"",
 	)

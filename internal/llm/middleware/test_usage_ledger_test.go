@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 type usageMockClient struct {
@@ -56,7 +56,7 @@ func TestUsageLedgerDaily_AggregatesAndPersists(t *testing.T) {
 	base := &usageMockClient{name: "mock:model-a", tokenCap: 1024}
 	cli := Wrap(base, WithUsageLedger(path))
 
-	ctx := withSelectedModel(context.Background(), selectedModel{client: base})
+	ctx := WithSelectedClient(context.Background(), base)
 	if _, err := cli.GenerateJSON(ctx, "prompt", map[string]any{"k": "v"}); err != nil {
 		t.Fatalf("generate success call: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestUsageLedgerDaily_AggregatesAndPersists(t *testing.T) {
 	// New wrapped instance should append to same JSON file.
 	base2 := &usageMockClient{name: "mock:model-b", tokenCap: 1024}
 	cli2 := Wrap(base2, WithUsageLedger(path))
-	ctx2 := withSelectedModel(context.Background(), selectedModel{client: base2})
+	ctx2 := WithSelectedClient(context.Background(), base2)
 	if _, err := cli2.GenerateJSON(ctx2, "prompt", map[string]any{"z": 1}); err != nil {
 		t.Fatalf("generate second model: %v", err)
 	}

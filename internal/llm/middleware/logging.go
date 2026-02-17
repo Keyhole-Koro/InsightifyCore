@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 // WithLogging logs request size and errors. Provide a custom logger or nil

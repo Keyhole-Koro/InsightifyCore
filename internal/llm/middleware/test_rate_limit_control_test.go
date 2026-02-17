@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 type passthroughClient struct{}
@@ -55,7 +55,7 @@ func TestRespectRateLimitSignals_WaitsByAdapter(t *testing.T) {
 	cli := Wrap(inner, RespectRateLimitSignals(fixedWaitAdapter{wait: 25 * time.Millisecond}))
 
 	sel := &awareWaitClient{headers: llmclient.RateLimitHeaders{RetryAfterSeconds: 1}, has: true}
-	ctx := withSelectedModel(context.Background(), selectedModel{client: sel})
+	ctx := WithSelectedClient(context.Background(), sel)
 
 	start := time.Now()
 	if _, err := cli.GenerateJSON(ctx, "p", nil); err != nil {

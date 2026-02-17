@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 // ----------------------------------------------------------------------------
@@ -523,11 +523,11 @@ func (m *rateLimitSignalControlled) wait(ctx context.Context) error {
 	if m.adapter == nil {
 		return nil
 	}
-	sel, ok := selectedModelFrom(ctx)
-	if !ok || sel.client == nil {
+	selected, ok := SelectedClientFrom(ctx)
+	if !ok || selected == nil {
 		return nil
 	}
-	aware, ok := sel.client.(llmclient.RateLimitHeaderAwareClient)
+	aware, ok := selected.(llmclient.RateLimitHeaderAwareClient)
 	if !ok {
 		return nil
 	}

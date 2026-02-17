@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"insightify/internal/artifact"
-	llmclient "insightify/internal/llmclient"
+	llmclient "insightify/internal/llm/client"
 )
 
 type CodeTasks struct {
