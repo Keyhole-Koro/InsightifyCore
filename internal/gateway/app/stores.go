@@ -60,7 +60,7 @@ func initPostgresStores(dsn string, cfg *config.Config, s3Factory func() (artifa
 
 	stores := &gatewayStores{
 		ui:          uirepo.NewPostgresStore(client),
-		artifact:    artifactrepo.NewPostgresStore(db),
+		artifact:    artifactrepo.NewPostgresStore(client),
 		uiWorkspace: uiworkspacerepo.NewPostgresStore(client),
 	}
 	artifactStore, err := chooseArtifactStore(cfg, stores.artifact, "postgres", s3Factory)

@@ -9,6 +9,9 @@ import (
 // Artifact is the predicate function for artifact builders.
 type Artifact func(*sql.Selector)
 
+// ArtifactFile is the predicate function for artifactfile builders.
+type ArtifactFile func(*sql.Selector)
+
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 

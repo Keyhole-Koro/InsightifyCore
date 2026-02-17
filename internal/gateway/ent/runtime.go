@@ -4,6 +4,7 @@ package ent
 
 import (
 	"insightify/internal/gateway/ent/artifact"
+	"insightify/internal/gateway/ent/artifactfile"
 	"insightify/internal/gateway/ent/project"
 	"insightify/internal/gateway/ent/schema"
 	"insightify/internal/gateway/ent/userinteraction"
@@ -34,6 +35,34 @@ func init() {
 	artifactDescCreatedAt := artifactFields[4].Descriptor()
 	// artifact.DefaultCreatedAt holds the default value on creation for the created_at field.
 	artifact.DefaultCreatedAt = artifactDescCreatedAt.Default.(func() time.Time)
+	artifactfileFields := schema.ArtifactFile{}.Fields()
+	_ = artifactfileFields
+	// artifactfileDescRunID is the schema descriptor for run_id field.
+	artifactfileDescRunID := artifactfileFields[1].Descriptor()
+	// artifactfile.RunIDValidator is a validator for the "run_id" field. It is called by the builders before save.
+	artifactfile.RunIDValidator = artifactfileDescRunID.Validators[0].(func(string) error)
+	// artifactfileDescPath is the schema descriptor for path field.
+	artifactfileDescPath := artifactfileFields[2].Descriptor()
+	// artifactfile.PathValidator is a validator for the "path" field. It is called by the builders before save.
+	artifactfile.PathValidator = artifactfileDescPath.Validators[0].(func(string) error)
+	// artifactfileDescContent is the schema descriptor for content field.
+	artifactfileDescContent := artifactfileFields[3].Descriptor()
+	// artifactfile.DefaultContent holds the default value on creation for the content field.
+	artifactfile.DefaultContent = artifactfileDescContent.Default.([]byte)
+	// artifactfileDescSize is the schema descriptor for size field.
+	artifactfileDescSize := artifactfileFields[4].Descriptor()
+	// artifactfile.SizeValidator is a validator for the "size" field. It is called by the builders before save.
+	artifactfile.SizeValidator = artifactfileDescSize.Validators[0].(func(int64) error)
+	// artifactfileDescCreatedAt is the schema descriptor for created_at field.
+	artifactfileDescCreatedAt := artifactfileFields[5].Descriptor()
+	// artifactfile.DefaultCreatedAt holds the default value on creation for the created_at field.
+	artifactfile.DefaultCreatedAt = artifactfileDescCreatedAt.Default.(func() time.Time)
+	// artifactfileDescUpdatedAt is the schema descriptor for updated_at field.
+	artifactfileDescUpdatedAt := artifactfileFields[6].Descriptor()
+	// artifactfile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	artifactfile.DefaultUpdatedAt = artifactfileDescUpdatedAt.Default.(func() time.Time)
+	// artifactfile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	artifactfile.UpdateDefaultUpdatedAt = artifactfileDescUpdatedAt.UpdateDefault.(func() time.Time)
 	projectFields := schema.Project{}.Fields()
 	_ = projectFields
 	// projectDescName is the schema descriptor for name field.

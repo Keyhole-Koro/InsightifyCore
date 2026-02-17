@@ -12,6 +12,7 @@ import (
 	"insightify/internal/gateway/ent/migrate"
 
 	"insightify/internal/gateway/ent/artifact"
+	"insightify/internal/gateway/ent/artifactfile"
 	"insightify/internal/gateway/ent/project"
 	"insightify/internal/gateway/ent/userinteraction"
 	"insightify/internal/gateway/ent/workspace"
@@ -30,6 +31,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// Artifact is the client for interacting with the Artifact builders.
 	Artifact *ArtifactClient
+	// ArtifactFile is the client for interacting with the ArtifactFile builders.
+	ArtifactFile *ArtifactFileClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// UserInteraction is the client for interacting with the UserInteraction builders.
@@ -50,6 +53,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Artifact = NewArtifactClient(c.config)
+	c.ArtifactFile = NewArtifactFileClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.UserInteraction = NewUserInteractionClient(c.config)
 	c.Workspace = NewWorkspaceClient(c.config)
@@ -147,6 +151,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:             ctx,
 		config:          cfg,
 		Artifact:        NewArtifactClient(cfg),
+		ArtifactFile:    NewArtifactFileClient(cfg),
 		Project:         NewProjectClient(cfg),
 		UserInteraction: NewUserInteractionClient(cfg),
 		Workspace:       NewWorkspaceClient(cfg),
@@ -171,6 +176,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:             ctx,
 		config:          cfg,
 		Artifact:        NewArtifactClient(cfg),
+		ArtifactFile:    NewArtifactFileClient(cfg),
 		Project:         NewProjectClient(cfg),
 		UserInteraction: NewUserInteractionClient(cfg),
 		Workspace:       NewWorkspaceClient(cfg),
@@ -203,21 +209,23 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Artifact.Use(hooks...)
-	c.Project.Use(hooks...)
-	c.UserInteraction.Use(hooks...)
-	c.Workspace.Use(hooks...)
-	c.WorkspaceTab.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.Artifact, c.ArtifactFile, c.Project, c.UserInteraction, c.Workspace,
+		c.WorkspaceTab,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Artifact.Intercept(interceptors...)
-	c.Project.Intercept(interceptors...)
-	c.UserInteraction.Intercept(interceptors...)
-	c.Workspace.Intercept(interceptors...)
-	c.WorkspaceTab.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.Artifact, c.ArtifactFile, c.Project, c.UserInteraction, c.Workspace,
+		c.WorkspaceTab,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -225,6 +233,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *ArtifactMutation:
 		return c.Artifact.mutate(ctx, m)
+	case *ArtifactFileMutation:
+		return c.ArtifactFile.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
 	case *UserInteractionMutation:
@@ -384,6 +394,139 @@ func (c *ArtifactClient) mutate(ctx context.Context, m *ArtifactMutation) (Value
 		return (&ArtifactDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Artifact mutation op: %q", m.Op())
+	}
+}
+
+// ArtifactFileClient is a client for the ArtifactFile schema.
+type ArtifactFileClient struct {
+	config
+}
+
+// NewArtifactFileClient returns a client for the ArtifactFile from the given config.
+func NewArtifactFileClient(c config) *ArtifactFileClient {
+	return &ArtifactFileClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `artifactfile.Hooks(f(g(h())))`.
+func (c *ArtifactFileClient) Use(hooks ...Hook) {
+	c.hooks.ArtifactFile = append(c.hooks.ArtifactFile, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `artifactfile.Intercept(f(g(h())))`.
+func (c *ArtifactFileClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ArtifactFile = append(c.inters.ArtifactFile, interceptors...)
+}
+
+// Create returns a builder for creating a ArtifactFile entity.
+func (c *ArtifactFileClient) Create() *ArtifactFileCreate {
+	mutation := newArtifactFileMutation(c.config, OpCreate)
+	return &ArtifactFileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ArtifactFile entities.
+func (c *ArtifactFileClient) CreateBulk(builders ...*ArtifactFileCreate) *ArtifactFileCreateBulk {
+	return &ArtifactFileCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ArtifactFileClient) MapCreateBulk(slice any, setFunc func(*ArtifactFileCreate, int)) *ArtifactFileCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ArtifactFileCreateBulk{err: fmt.Errorf("calling to ArtifactFileClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ArtifactFileCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ArtifactFileCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ArtifactFile.
+func (c *ArtifactFileClient) Update() *ArtifactFileUpdate {
+	mutation := newArtifactFileMutation(c.config, OpUpdate)
+	return &ArtifactFileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ArtifactFileClient) UpdateOne(_m *ArtifactFile) *ArtifactFileUpdateOne {
+	mutation := newArtifactFileMutation(c.config, OpUpdateOne, withArtifactFile(_m))
+	return &ArtifactFileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ArtifactFileClient) UpdateOneID(id int) *ArtifactFileUpdateOne {
+	mutation := newArtifactFileMutation(c.config, OpUpdateOne, withArtifactFileID(id))
+	return &ArtifactFileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ArtifactFile.
+func (c *ArtifactFileClient) Delete() *ArtifactFileDelete {
+	mutation := newArtifactFileMutation(c.config, OpDelete)
+	return &ArtifactFileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ArtifactFileClient) DeleteOne(_m *ArtifactFile) *ArtifactFileDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ArtifactFileClient) DeleteOneID(id int) *ArtifactFileDeleteOne {
+	builder := c.Delete().Where(artifactfile.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ArtifactFileDeleteOne{builder}
+}
+
+// Query returns a query builder for ArtifactFile.
+func (c *ArtifactFileClient) Query() *ArtifactFileQuery {
+	return &ArtifactFileQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeArtifactFile},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ArtifactFile entity by its id.
+func (c *ArtifactFileClient) Get(ctx context.Context, id int) (*ArtifactFile, error) {
+	return c.Query().Where(artifactfile.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ArtifactFileClient) GetX(ctx context.Context, id int) *ArtifactFile {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ArtifactFileClient) Hooks() []Hook {
+	return c.hooks.ArtifactFile
+}
+
+// Interceptors returns the client interceptors.
+func (c *ArtifactFileClient) Interceptors() []Interceptor {
+	return c.inters.ArtifactFile
+}
+
+func (c *ArtifactFileClient) mutate(ctx context.Context, m *ArtifactFileMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ArtifactFileCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ArtifactFileUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ArtifactFileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ArtifactFileDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ArtifactFile mutation op: %q", m.Op())
 	}
 }
 
@@ -970,9 +1113,11 @@ func (c *WorkspaceTabClient) mutate(ctx context.Context, m *WorkspaceTabMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Artifact, Project, UserInteraction, Workspace, WorkspaceTab []ent.Hook
+		Artifact, ArtifactFile, Project, UserInteraction, Workspace,
+		WorkspaceTab []ent.Hook
 	}
 	inters struct {
-		Artifact, Project, UserInteraction, Workspace, WorkspaceTab []ent.Interceptor
+		Artifact, ArtifactFile, Project, UserInteraction, Workspace,
+		WorkspaceTab []ent.Interceptor
 	}
 )

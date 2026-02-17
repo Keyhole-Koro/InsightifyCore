@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// Artifact is the client for interacting with the Artifact builders.
 	Artifact *ArtifactClient
+	// ArtifactFile is the client for interacting with the ArtifactFile builders.
+	ArtifactFile *ArtifactFileClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// UserInteraction is the client for interacting with the UserInteraction builders.
@@ -154,6 +156,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Artifact = NewArtifactClient(tx.config)
+	tx.ArtifactFile = NewArtifactFileClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.UserInteraction = NewUserInteractionClient(tx.config)
 	tx.Workspace = NewWorkspaceClient(tx.config)

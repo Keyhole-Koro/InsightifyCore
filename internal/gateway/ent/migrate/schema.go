@@ -37,6 +37,34 @@ var (
 			},
 		},
 	}
+	// ArtifactFilesColumns holds the columns for the "artifact_files" table.
+	ArtifactFilesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "run_id", Type: field.TypeString},
+		{Name: "path", Type: field.TypeString},
+		{Name: "content", Type: field.TypeBytes},
+		{Name: "size", Type: field.TypeInt64},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ArtifactFilesTable holds the schema information for the "artifact_files" table.
+	ArtifactFilesTable = &schema.Table{
+		Name:       "artifact_files",
+		Columns:    ArtifactFilesColumns,
+		PrimaryKey: []*schema.Column{ArtifactFilesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "artifactfile_run_id_path",
+				Unique:  true,
+				Columns: []*schema.Column{ArtifactFilesColumns[1], ArtifactFilesColumns[2]},
+			},
+			{
+				Name:    "artifactfile_run_id",
+				Unique:  false,
+				Columns: []*schema.Column{ArtifactFilesColumns[1]},
+			},
+		},
+	}
 	// ProjectsColumns holds the columns for the "projects" table.
 	ProjectsColumns = []*schema.Column{
 		{Name: "project_id", Type: field.TypeString, Unique: true},
@@ -115,6 +143,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ArtifactsTable,
+		ArtifactFilesTable,
 		ProjectsTable,
 		UserInteractionsTable,
 		WorkspacesTable,

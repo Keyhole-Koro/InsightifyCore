@@ -2,48 +2,27 @@ package artifact
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
-	"sync"
-	"time"
+
+	"insightify/internal/gateway/ent"
+	"insightify/internal/gateway/ent/artifactfile"
 )
 
 type PostgresStore struct {
-	db         *sql.DB
-	schemaOnce sync.Once
-	schemaErr  error
+	client *ent.Client
 }
 
-func NewPostgresStore(db *sql.DB) *PostgresStore {
-	return &PostgresStore{db: db}
-}
-
-func (s *PostgresStore) ensureSchema() error {
-	if s == nil || s.db == nil {
-		return fmt.Errorf("db is nil")
-	}
-	s.schemaOnce.Do(func() {
-		_, s.schemaErr = s.db.Exec(`
-CREATE TABLE IF NOT EXISTS artifact_files (
-    id SERIAL PRIMARY KEY,
-    run_id TEXT NOT NULL,
-    path TEXT NOT NULL,
-    content BYTEA NOT NULL DEFAULT ''::bytea,
-    size BIGINT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(run_id, path)
-);
-CREATE INDEX IF NOT EXISTS idx_artifacts_run_id ON artifact_files(run_id);
-`)
-	})
-	return s.schemaErr
+func NewPostgresStore(client *ent.Client) *PostgresStore {
+	return &PostgresStore{client: client}
 }
 
 func (s *PostgresStore) Put(ctx context.Context, runID, path string, content []byte) error {
 	if s == nil {
 		return fmt.Errorf("store is nil")
+	}
+	if s.client == nil {
+		return fmt.Errorf("ent client is nil")
 	}
 	runID = strings.TrimSpace(runID)
 	path = strings.TrimSpace(path)
@@ -53,25 +32,26 @@ func (s *PostgresStore) Put(ctx context.Context, runID, path string, content []b
 	if path == "" {
 		return fmt.Errorf("path is required")
 	}
-	if err := s.ensureSchema(); err != nil {
-		return err
-	}
 	if content == nil {
 		content = []byte{}
 	}
 	size := int64(len(content))
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO artifact_files (run_id, path, content, size, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (run_id, path)
-DO UPDATE SET content=EXCLUDED.content, size=EXCLUDED.size, updated_at=EXCLUDED.updated_at
-`, runID, path, content, size, time.Now())
-	return err
+	return s.client.ArtifactFile.Create().
+		SetRunID(runID).
+		SetPath(path).
+		SetContent(content).
+		SetSize(size).
+		OnConflictColumns(artifactfile.FieldRunID, artifactfile.FieldPath).
+		UpdateNewValues().
+		Exec(ctx)
 }
 
 func (s *PostgresStore) Get(ctx context.Context, runID, path string) ([]byte, error) {
 	if s == nil {
 		return nil, fmt.Errorf("store is nil")
+	}
+	if s.client == nil {
+		return nil, fmt.Errorf("ent client is nil")
 	}
 	runID = strings.TrimSpace(runID)
 	path = strings.TrimSpace(path)
@@ -81,44 +61,45 @@ func (s *PostgresStore) Get(ctx context.Context, runID, path string) ([]byte, er
 	if path == "" {
 		return nil, fmt.Errorf("path is required")
 	}
-	if err := s.ensureSchema(); err != nil {
+	item, err := s.client.ArtifactFile.Query().
+		Where(
+			artifactfile.RunID(runID),
+			artifactfile.Path(path),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
-	var content []byte
-	err := s.db.QueryRowContext(ctx, `SELECT content FROM artifact_files WHERE run_id=$1 AND path=$2`, runID, path).Scan(&content)
-	if err == sql.ErrNoRows {
+	if item == nil {
 		return nil, ErrNotFound
 	}
-	return content, err
+	return append([]byte(nil), item.Content...), nil
 }
 
 func (s *PostgresStore) List(ctx context.Context, runID string) ([]string, error) {
 	if s == nil {
 		return nil, fmt.Errorf("store is nil")
 	}
+	if s.client == nil {
+		return nil, fmt.Errorf("ent client is nil")
+	}
 	runID = strings.TrimSpace(runID)
 	if runID == "" {
 		return nil, fmt.Errorf("run_id is required")
 	}
-	if err := s.ensureSchema(); err != nil {
-		return nil, err
-	}
-	rows, err := s.db.QueryContext(ctx, `SELECT path FROM artifact_files WHERE run_id=$1 ORDER BY path`, runID)
+	items, err := s.client.ArtifactFile.Query().
+		Where(artifactfile.RunID(runID)).
+		Order(ent.Asc(artifactfile.FieldPath)).
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var paths []string
-	for rows.Next() {
-		var p string
-		if err := rows.Scan(&p); err != nil {
-			continue
-		}
-		paths = append(paths, p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	paths := make([]string, 0, len(items))
+	for _, item := range items {
+		paths = append(paths, item.Path)
 	}
 	return paths, nil
 }
