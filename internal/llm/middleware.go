@@ -1,7 +1,7 @@
 package llm
 
 import (
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // Middleware decorates an LLMClient to inject cross-cutting concerns

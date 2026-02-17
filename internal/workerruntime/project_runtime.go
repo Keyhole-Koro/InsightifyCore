@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/mcp"
 	"insightify/internal/runner"
 	"insightify/internal/common/safeio"

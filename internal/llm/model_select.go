@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 type ModelSelectionMode string

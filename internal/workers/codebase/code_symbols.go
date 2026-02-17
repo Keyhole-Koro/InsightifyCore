@@ -10,7 +10,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/llmtool"
 	"insightify/internal/common/safeio"
 	"insightify/internal/common/scheduler"

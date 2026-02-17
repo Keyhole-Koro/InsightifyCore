@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"insightify/internal/llm"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 func newRuntimeLLMClient(ctx context.Context) (llmclient.LLMClient, string, error) {

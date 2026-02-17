@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // UsageLedger tracks LLM usage statistics to a JSON file.

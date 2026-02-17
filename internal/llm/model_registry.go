@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // ModelLevel represents the capability tier of a model.

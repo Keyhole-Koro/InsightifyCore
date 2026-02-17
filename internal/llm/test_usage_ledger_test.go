@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 type usageMockClient struct {

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // Retry retries GenerateJSON up to maxAttempts with exponential backoff

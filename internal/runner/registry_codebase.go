@@ -5,7 +5,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/llm"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/llmtool"
 	codepipe "insightify/internal/workers/codebase"
 )

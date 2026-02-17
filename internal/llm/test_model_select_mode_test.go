@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 type awareTestLLM struct {

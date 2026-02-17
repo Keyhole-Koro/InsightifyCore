@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // ----------------------------------------------------------------------------

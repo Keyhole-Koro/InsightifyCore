@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 )
 
 // ----------------------------------------------------------------------------

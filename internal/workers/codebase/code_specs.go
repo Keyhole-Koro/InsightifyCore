@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/llmtool"
 	"insightify/internal/common/scan"
 )

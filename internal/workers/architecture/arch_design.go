@@ -8,7 +8,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/common/delta"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/llmtool"
 	"insightify/internal/common/scan"
 	"insightify/internal/common/utils"

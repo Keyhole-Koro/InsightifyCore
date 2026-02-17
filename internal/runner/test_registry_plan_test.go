@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"insightify/internal/artifact"
-	llmclient "insightify/internal/llmClient"
+	llmclient "insightify/internal/llmclient"
 	"insightify/internal/mcp"
 	"insightify/internal/common/safeio"
 	"insightify/internal/workers/plan"
