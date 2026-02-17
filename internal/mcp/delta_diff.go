@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"insightify/internal/artifact"
-	"insightify/internal/delta"
+	"insightify/internal/common/delta"
 )
 
 // --------------------- delta.diff ---------------------

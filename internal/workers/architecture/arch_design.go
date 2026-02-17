@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/delta"
+	"insightify/internal/common/delta"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
 	"insightify/internal/common/scan"
