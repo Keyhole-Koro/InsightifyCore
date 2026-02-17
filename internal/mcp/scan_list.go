@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/scan"
+	"insightify/internal/common/scan"
 )
 
 // --------------------- scan.list ---------------------

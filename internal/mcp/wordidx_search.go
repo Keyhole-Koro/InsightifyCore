@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/wordidx"
+	"insightify/internal/common/wordidx"
 )
 
 // --------------------- wordidx.search ---------------------

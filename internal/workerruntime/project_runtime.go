@@ -8,8 +8,8 @@ import (
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
 	"insightify/internal/runner"
-	"insightify/internal/safeio"
-	"insightify/internal/scan"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scan"
 )
 
 // ProjectRuntime holds long-lived runtime dependencies for a project.

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 // Host wires repo/artifact access for tools.

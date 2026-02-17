@@ -8,7 +8,7 @@ import (
 
 	"insightify/internal/artifact"
 	"insightify/internal/workers/codebase"
-	"insightify/internal/snippet"
+	"insightify/internal/common/snippet"
 )
 
 // --------------------- snippet.collect ---------------------

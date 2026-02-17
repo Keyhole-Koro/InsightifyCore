@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"insightify/internal/safeio"
-	"insightify/internal/scan"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scan"
 )
 
 func setupRepo(t *testing.T) (repoRoot string, repoFS *safeio.SafeFS, artifactFS *safeio.SafeFS) {

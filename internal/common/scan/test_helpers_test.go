@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 var testReposMu sync.Mutex

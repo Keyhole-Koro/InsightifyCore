@@ -7,7 +7,7 @@ import (
 	"log"
 	"strings"
 
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 // JSONFingerprint computes a stable hash of any JSON-serializable value.

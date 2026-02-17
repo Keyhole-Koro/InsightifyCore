@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"insightify/internal/safeio"
-	"insightify/internal/scan"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scan"
 )
 
 func setupWordidxRepos(t *testing.T) string {

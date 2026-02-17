@@ -1,7 +1,7 @@
 package artifact
 
 import (
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 // CodeSymbolsIn drives identifier extraction tasks via the scheduler.

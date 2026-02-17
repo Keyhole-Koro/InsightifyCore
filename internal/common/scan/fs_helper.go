@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 var (

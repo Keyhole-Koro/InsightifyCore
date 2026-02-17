@@ -3,7 +3,7 @@ package runner
 import (
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/mcp"
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 type ArtifactAccess interface {

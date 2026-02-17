@@ -1,6 +1,6 @@
 package artifact
 
-import "insightify/internal/safeio"
+import "insightify/internal/common/safeio"
 
 // CodeTasksIn converts the dependency graph into scheduler-friendly tasks.
 type CodeTasksIn struct {

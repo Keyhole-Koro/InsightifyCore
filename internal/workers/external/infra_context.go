@@ -8,7 +8,7 @@ import (
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 var infraContextPromptSpec = llmtool.ApplyPresets(llmtool.StructuredPromptSpec{

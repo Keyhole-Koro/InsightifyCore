@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/safeio"
+	"insightify/internal/common/safeio"
 )
 
 // --------------------- fs.read ---------------------

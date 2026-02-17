@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/safeio"
-	"insightify/internal/utils"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/utils"
 )
 
 func CollectInfraSamples(fs *safeio.SafeFS, repoRoot string, roots artifact.CodeRootsOut, maxFiles, maxBytes int) []artifact.OpenedFile {

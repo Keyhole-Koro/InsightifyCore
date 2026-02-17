@@ -11,7 +11,7 @@ import (
 	"insightify/internal/artifact"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/scan"
+	"insightify/internal/common/scan"
 )
 
 // CodeSpecs prompt — imports/includes only, plus normalization hints for later post-processing.

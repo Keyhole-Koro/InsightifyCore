@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/safeio"
-	"insightify/internal/scan"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scan"
 
-	"insightify/internal/wordidx"
+	"insightify/internal/common/wordidx"
 )
 
 // ---- Internal models (optional middle-layer types) ----

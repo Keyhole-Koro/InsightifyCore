@@ -12,8 +12,8 @@ import (
 	"insightify/internal/llm"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/safeio"
-	"insightify/internal/scheduler"
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scheduler"
 )
 
 type codeSymbolsOutput struct {

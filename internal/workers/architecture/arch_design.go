@@ -10,8 +10,8 @@ import (
 	"insightify/internal/delta"
 	llmclient "insightify/internal/llmClient"
 	"insightify/internal/llmtool"
-	"insightify/internal/scan"
-	"insightify/internal/utils"
+	"insightify/internal/common/scan"
+	"insightify/internal/common/utils"
 )
 
 type archDesignDeltaOut struct {

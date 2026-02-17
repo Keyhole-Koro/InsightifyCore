@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"insightify/internal/artifact"
-	"insightify/internal/snippet"
+	"insightify/internal/common/snippet"
 )
 
 // CodeSymbolsSnippetProvider implements snippet.Provider backed by a CodeSymbolsOut value.

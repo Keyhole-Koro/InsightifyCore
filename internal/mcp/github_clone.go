@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"insightify/internal/artifact"
-	"insightify/internal/scan"
+	"insightify/internal/common/scan"
 )
 
 type githubCloneTool struct{ host Host }
