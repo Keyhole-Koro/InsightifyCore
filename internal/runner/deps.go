@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // DepsUsageMode controls how strictly to enforce declared dependency usage.
@@ -66,7 +67,8 @@ func (d *depsImpl) Artifact(key string, target any) error {
 	if artifacts == nil {
 		return fmt.Errorf("artifact access is not configured")
 	}
-	b, err := artifacts.ReadWorker(key)
+	artifactName := resolveArtifactName(d.runtime, key)
+	b, err := artifacts.Read(artifactName)
 	if err != nil {
 		return fmt.Errorf("read artifact %s: %w", key, err)
 	}
@@ -108,4 +110,16 @@ func (d *depsImpl) verifyUsage() []string {
 	}
 	sort.Strings(unused)
 	return unused
+}
+
+func resolveArtifactName(runtime Runtime, key string) string {
+	artifactKey := normalizeKey(key)
+	if runtime != nil && runtime.GetResolver() != nil {
+		if spec, ok := runtime.GetResolver().Get(key); ok {
+			if v := strings.TrimSpace(spec.Key); v != "" {
+				artifactKey = v
+			}
+		}
+	}
+	return artifactKey + ".json"
 }

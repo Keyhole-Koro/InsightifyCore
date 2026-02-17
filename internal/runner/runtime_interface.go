@@ -7,7 +7,6 @@ import (
 )
 
 type ArtifactAccess interface {
-	ReadWorker(key string) ([]byte, error)
 	Read(name string) ([]byte, error)
 	Write(name string, content []byte) error
 	Remove(name string) error

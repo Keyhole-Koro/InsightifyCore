@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"insightify/internal/artifact"
@@ -45,21 +44,6 @@ func (r *testRuntime) GetLLM() llmclient.LLMClient { return r.llm }
 
 type testArtifactAccess struct {
 	runtime *testRuntime
-}
-
-func (a *testArtifactAccess) ReadWorker(key string) ([]byte, error) {
-	if a == nil || a.runtime == nil {
-		return nil, os.ErrInvalid
-	}
-	k := normalizeKey(key)
-	if a.runtime.resolver != nil {
-		if s, ok := a.runtime.resolver.Get(key); ok {
-			if v := strings.TrimSpace(s.Key); v != "" {
-				k = v
-			}
-		}
-	}
-	return a.Read(k + ".json")
 }
 
 func (a *testArtifactAccess) Read(name string) ([]byte, error) {

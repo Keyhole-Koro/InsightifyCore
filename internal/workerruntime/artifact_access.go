@@ -15,25 +15,6 @@ func newLocalArtifactAccess(rt *ExecutionRuntime) *localArtifactAccess {
 	return &localArtifactAccess{runtime: rt}
 }
 
-func (a *localArtifactAccess) ReadWorker(key string) ([]byte, error) {
-	if a == nil || a.runtime == nil {
-		return nil, fmt.Errorf("artifact access is not configured")
-	}
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return nil, fmt.Errorf("worker key is required")
-	}
-	artifactKey := strings.ToLower(key)
-	if a.runtime.GetResolver() != nil {
-		if spec, ok := a.runtime.GetResolver().Get(key); ok {
-			if v := strings.TrimSpace(spec.Key); v != "" {
-				artifactKey = v
-			}
-		}
-	}
-	return a.Read(artifactKey + ".json")
-}
-
 func (a *localArtifactAccess) Read(name string) ([]byte, error) {
 	path, err := a.pathFor(name)
 	if err != nil {
