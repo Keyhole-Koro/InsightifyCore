@@ -25,14 +25,6 @@ func (h *UiWorkspaceHandler) GetWorkspace(ctx context.Context, req *connect.Requ
 	return connect.NewResponse(out), nil
 }
 
-func (h *UiWorkspaceHandler) ListTabs(ctx context.Context, req *connect.Request[insightifyv1.ListUiTabsRequest]) (*connect.Response[insightifyv1.ListUiTabsResponse], error) {
-	out, err := h.svc.ListTabs(ctx, req.Msg)
-	if err != nil {
-		return nil, toUIError(err)
-	}
-	return connect.NewResponse(out), nil
-}
-
 func (h *UiWorkspaceHandler) CreateTab(ctx context.Context, req *connect.Request[insightifyv1.CreateUiTabRequest]) (*connect.Response[insightifyv1.CreateUiTabResponse], error) {
 	out, err := h.svc.CreateTab(ctx, req.Msg)
 	if err != nil {

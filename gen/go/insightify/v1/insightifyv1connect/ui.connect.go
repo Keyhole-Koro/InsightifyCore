@@ -42,9 +42,6 @@ const (
 	// UiWorkspaceServiceGetWorkspaceProcedure is the fully-qualified name of the UiWorkspaceService's
 	// GetWorkspace RPC.
 	UiWorkspaceServiceGetWorkspaceProcedure = "/insightify.v1.UiWorkspaceService/GetWorkspace"
-	// UiWorkspaceServiceListTabsProcedure is the fully-qualified name of the UiWorkspaceService's
-	// ListTabs RPC.
-	UiWorkspaceServiceListTabsProcedure = "/insightify.v1.UiWorkspaceService/ListTabs"
 	// UiWorkspaceServiceCreateTabProcedure is the fully-qualified name of the UiWorkspaceService's
 	// CreateTab RPC.
 	UiWorkspaceServiceCreateTabProcedure = "/insightify.v1.UiWorkspaceService/CreateTab"
@@ -155,7 +152,6 @@ func (UnimplementedUiServiceHandler) ApplyOps(context.Context, *connect.Request[
 // UiWorkspaceServiceClient is a client for the insightify.v1.UiWorkspaceService service.
 type UiWorkspaceServiceClient interface {
 	GetWorkspace(context.Context, *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error)
-	ListTabs(context.Context, *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error)
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
 	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
@@ -176,12 +172,6 @@ func NewUiWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			httpClient,
 			baseURL+UiWorkspaceServiceGetWorkspaceProcedure,
 			connect.WithSchema(uiWorkspaceServiceMethods.ByName("GetWorkspace")),
-			connect.WithClientOptions(opts...),
-		),
-		listTabs: connect.NewClient[v1.ListUiTabsRequest, v1.ListUiTabsResponse](
-			httpClient,
-			baseURL+UiWorkspaceServiceListTabsProcedure,
-			connect.WithSchema(uiWorkspaceServiceMethods.ByName("ListTabs")),
 			connect.WithClientOptions(opts...),
 		),
 		createTab: connect.NewClient[v1.CreateUiTabRequest, v1.CreateUiTabResponse](
@@ -208,7 +198,6 @@ func NewUiWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, 
 // uiWorkspaceServiceClient implements UiWorkspaceServiceClient.
 type uiWorkspaceServiceClient struct {
 	getWorkspace *connect.Client[v1.GetUiWorkspaceRequest, v1.GetUiWorkspaceResponse]
-	listTabs     *connect.Client[v1.ListUiTabsRequest, v1.ListUiTabsResponse]
 	createTab    *connect.Client[v1.CreateUiTabRequest, v1.CreateUiTabResponse]
 	selectTab    *connect.Client[v1.SelectUiTabRequest, v1.SelectUiTabResponse]
 	restore      *connect.Client[v1.RestoreUiRequest, v1.RestoreUiResponse]
@@ -217,11 +206,6 @@ type uiWorkspaceServiceClient struct {
 // GetWorkspace calls insightify.v1.UiWorkspaceService.GetWorkspace.
 func (c *uiWorkspaceServiceClient) GetWorkspace(ctx context.Context, req *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error) {
 	return c.getWorkspace.CallUnary(ctx, req)
-}
-
-// ListTabs calls insightify.v1.UiWorkspaceService.ListTabs.
-func (c *uiWorkspaceServiceClient) ListTabs(ctx context.Context, req *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error) {
-	return c.listTabs.CallUnary(ctx, req)
 }
 
 // CreateTab calls insightify.v1.UiWorkspaceService.CreateTab.
@@ -242,7 +226,6 @@ func (c *uiWorkspaceServiceClient) Restore(ctx context.Context, req *connect.Req
 // UiWorkspaceServiceHandler is an implementation of the insightify.v1.UiWorkspaceService service.
 type UiWorkspaceServiceHandler interface {
 	GetWorkspace(context.Context, *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error)
-	ListTabs(context.Context, *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error)
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
 	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
@@ -259,12 +242,6 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 		UiWorkspaceServiceGetWorkspaceProcedure,
 		svc.GetWorkspace,
 		connect.WithSchema(uiWorkspaceServiceMethods.ByName("GetWorkspace")),
-		connect.WithHandlerOptions(opts...),
-	)
-	uiWorkspaceServiceListTabsHandler := connect.NewUnaryHandler(
-		UiWorkspaceServiceListTabsProcedure,
-		svc.ListTabs,
-		connect.WithSchema(uiWorkspaceServiceMethods.ByName("ListTabs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	uiWorkspaceServiceCreateTabHandler := connect.NewUnaryHandler(
@@ -289,8 +266,6 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 		switch r.URL.Path {
 		case UiWorkspaceServiceGetWorkspaceProcedure:
 			uiWorkspaceServiceGetWorkspaceHandler.ServeHTTP(w, r)
-		case UiWorkspaceServiceListTabsProcedure:
-			uiWorkspaceServiceListTabsHandler.ServeHTTP(w, r)
 		case UiWorkspaceServiceCreateTabProcedure:
 			uiWorkspaceServiceCreateTabHandler.ServeHTTP(w, r)
 		case UiWorkspaceServiceSelectTabProcedure:
@@ -308,10 +283,6 @@ type UnimplementedUiWorkspaceServiceHandler struct{}
 
 func (UnimplementedUiWorkspaceServiceHandler) GetWorkspace(context.Context, *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.GetWorkspace is not implemented"))
-}
-
-func (UnimplementedUiWorkspaceServiceHandler) ListTabs(context.Context, *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.ListTabs is not implemented"))
 }
 
 func (UnimplementedUiWorkspaceServiceHandler) CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error) {

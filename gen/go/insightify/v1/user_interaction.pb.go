@@ -383,11 +383,7 @@ const file_insightify_v1_user_interaction_proto_rawDesc = "" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"'\n" +
 	"\rCloseResponse\x12\x16\n" +
-	"\x06closed\x18\x01 \x01(\bR\x06closed2\xde\x01\n" +
-	"\x16UserInteractionService\x12?\n" +
-	"\x04Wait\x12\x1a.insightify.v1.WaitRequest\x1a\x1b.insightify.v1.WaitResponse\x12?\n" +
-	"\x04Send\x12\x1a.insightify.v1.SendRequest\x1a\x1b.insightify.v1.SendResponse\x12B\n" +
-	"\x05Close\x12\x1b.insightify.v1.CloseRequest\x1a\x1c.insightify.v1.CloseResponseB\xac\x01\n" +
+	"\x06closed\x18\x01 \x01(\bR\x06closedB\xac\x01\n" +
 	"\x11com.insightify.v1B\x14UserInteractionProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -412,14 +408,8 @@ var file_insightify_v1_user_interaction_proto_goTypes = []any{
 	(*CloseResponse)(nil), // 5: insightify.v1.CloseResponse
 }
 var file_insightify_v1_user_interaction_proto_depIdxs = []int32{
-	0, // 0: insightify.v1.UserInteractionService.Wait:input_type -> insightify.v1.WaitRequest
-	2, // 1: insightify.v1.UserInteractionService.Send:input_type -> insightify.v1.SendRequest
-	4, // 2: insightify.v1.UserInteractionService.Close:input_type -> insightify.v1.CloseRequest
-	1, // 3: insightify.v1.UserInteractionService.Wait:output_type -> insightify.v1.WaitResponse
-	3, // 4: insightify.v1.UserInteractionService.Send:output_type -> insightify.v1.SendResponse
-	5, // 5: insightify.v1.UserInteractionService.Close:output_type -> insightify.v1.CloseResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -438,7 +428,7 @@ func file_insightify_v1_user_interaction_proto_init() {
 			NumEnums:      0,
 			NumMessages:   6,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
 		GoTypes:           file_insightify_v1_user_interaction_proto_goTypes,
 		DependencyIndexes: file_insightify_v1_user_interaction_proto_depIdxs,

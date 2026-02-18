@@ -117,24 +117,6 @@ func (s *Service) GetWorkspace(_ context.Context, req *insightifyv1.GetUiWorkspa
 	}, nil
 }
 
-func (s *Service) ListTabs(_ context.Context, req *insightifyv1.ListUiTabsRequest) (*insightifyv1.ListUiTabsResponse, error) {
-	if s == nil || s.workspaces == nil {
-		return nil, fmt.Errorf("ui workspace service is not available")
-	}
-	projectID := strings.TrimSpace(req.GetProjectId())
-	if projectID == "" {
-		return nil, fmt.Errorf("project_id is required")
-	}
-	view, err := s.workspaces.Ensure(projectID)
-	if err != nil {
-		return nil, err
-	}
-	return &insightifyv1.ListUiTabsResponse{
-		Workspace: toProtoWorkspace(view.Workspace),
-		Tabs:      toProtoTabs(view.Tabs),
-	}, nil
-}
-
 func (s *Service) CreateTab(_ context.Context, req *insightifyv1.CreateUiTabRequest) (*insightifyv1.CreateUiTabResponse, error) {
 	if s == nil || s.workspaces == nil {
 		return nil, fmt.Errorf("ui workspace service is not available")
