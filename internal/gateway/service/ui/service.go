@@ -33,7 +33,7 @@ func New(store uirepo.Store, workspaces *gatewayuiworkspace.Service, artifact ar
 	}
 }
 
-func (s *Service) GetDocument(_ context.Context, req *insightifyv1.GetUiDocumentRequest) (*insightifyv1.GetUiDocumentResponse, error) {
+func (s *Service) GetDocument(ctx context.Context, req *insightifyv1.GetUiDocumentRequest) (*insightifyv1.GetUiDocumentResponse, error) {
 	if s == nil || s.store == nil {
 		return nil, fmt.Errorf("ui service is not available")
 	}
@@ -41,15 +41,15 @@ func (s *Service) GetDocument(_ context.Context, req *insightifyv1.GetUiDocument
 	if runID == "" {
 		return nil, fmt.Errorf("run_id is required")
 	}
-	doc := s.store.GetDocument(runID)
-	if doc == nil {
-		doc = &insightifyv1.UiDocument{RunId: runID}
+	doc, err := s.store.GetDocument(ctx, runID)
+	if err != nil {
+		return nil, err
 	}
-	doc = s.withConversationHistory(context.Background(), runID, doc)
+	doc = s.withConversationHistory(ctx, runID, doc)
 	return &insightifyv1.GetUiDocumentResponse{Document: doc}, nil
 }
 
-func (s *Service) ApplyOps(_ context.Context, req *insightifyv1.ApplyUiOpsRequest) (*insightifyv1.ApplyUiOpsResponse, error) {
+func (s *Service) ApplyOps(ctx context.Context, req *insightifyv1.ApplyUiOpsRequest) (*insightifyv1.ApplyUiOpsResponse, error) {
 	if s == nil || s.store == nil {
 		return nil, fmt.Errorf("ui service is not available")
 	}
@@ -58,7 +58,7 @@ func (s *Service) ApplyOps(_ context.Context, req *insightifyv1.ApplyUiOpsReques
 		return nil, fmt.Errorf("run_id is required")
 	}
 
-	doc, conflict, err := s.store.ApplyOps(runID, req.GetBaseVersion(), req.GetOps())
+	doc, conflict, err := s.store.ApplyOps(ctx, runID, req.GetBaseVersion(), req.GetOps())
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (s *Service) ApplyOps(_ context.Context, req *insightifyv1.ApplyUiOpsReques
 	return res, nil
 }
 
-func (s *Service) GetProjectTabDocument(_ context.Context, req *insightifyv1.GetProjectUiDocumentRequest) (*insightifyv1.GetProjectUiDocumentResponse, error) {
+func (s *Service) GetProjectTabDocument(ctx context.Context, req *insightifyv1.GetProjectUiDocumentRequest) (*insightifyv1.GetProjectUiDocumentResponse, error) {
 	if s == nil || s.store == nil {
 		return nil, fmt.Errorf("ui service is not available")
 	}
@@ -109,11 +109,11 @@ func (s *Service) GetProjectTabDocument(_ context.Context, req *insightifyv1.Get
 			TabId:     tabID,
 		}, nil
 	}
-	doc := s.store.GetDocument(runID)
-	if doc == nil {
-		doc = &insightifyv1.UiDocument{RunId: runID}
+	doc, err := s.store.GetDocument(ctx, runID)
+	if err != nil {
+		return nil, err
 	}
-	doc = s.withConversationHistory(context.Background(), runID, doc)
+	doc = s.withConversationHistory(ctx, runID, doc)
 	return &insightifyv1.GetProjectUiDocumentResponse{
 		Found:     true,
 		ProjectId: projectID,
@@ -201,7 +201,7 @@ func (s *Service) Set(runID string, node *insightifyv1.UiNode) {
 	if s == nil || s.store == nil || strings.TrimSpace(runID) == "" || node == nil {
 		return
 	}
-	_, _, _ = s.store.ApplyOps(runID, 0, []*insightifyv1.UiOp{
+	_, _, _ = s.store.ApplyOps(context.Background(), runID, 0, []*insightifyv1.UiOp{
 		{
 			Action: &insightifyv1.UiOp_UpsertNode{
 				UpsertNode: &insightifyv1.UiUpsertNode{Node: node},
@@ -214,7 +214,10 @@ func (s *Service) Get(runID string) *insightifyv1.UiNode {
 	if s == nil || s.store == nil || strings.TrimSpace(runID) == "" {
 		return nil
 	}
-	doc := s.store.GetDocument(runID)
+	doc, err := s.store.GetDocument(context.Background(), runID)
+	if err != nil {
+		return nil
+	}
 	if doc == nil || len(doc.GetNodes()) == 0 {
 		return nil
 	}
@@ -225,7 +228,7 @@ func (s *Service) Clear(runID string) {
 	if s == nil || s.store == nil || strings.TrimSpace(runID) == "" {
 		return
 	}
-	_, _, _ = s.store.ApplyOps(runID, 0, []*insightifyv1.UiOp{
+	_, _, _ = s.store.ApplyOps(context.Background(), runID, 0, []*insightifyv1.UiOp{
 		{
 			Action: &insightifyv1.UiOp_ClearNodes{
 				ClearNodes: &insightifyv1.UiClearNodes{},

@@ -1,6 +1,8 @@
 package project
 
 import (
+	"context"
+
 	gatewayworker "insightify/internal/gateway/service/worker"
 	runtimepkg "insightify/internal/workerruntime"
 )
@@ -15,7 +17,7 @@ type projectReaderAdapter struct {
 }
 
 func (a *projectReaderAdapter) GetEntry(projectID string) (gatewayworker.ProjectView, bool) {
-	e, ok := a.svc.get(projectID)
+	e, ok := a.svc.get(context.Background(), projectID)
 	if !ok {
 		return gatewayworker.ProjectView{}, false
 	}

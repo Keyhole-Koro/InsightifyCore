@@ -3,11 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	artifactcache "insightify/internal/cache/artifact"
+	projectcache "insightify/internal/cache/project"
+	uicache "insightify/internal/cache/ui"
+	uiworkspacecache "insightify/internal/cache/uiworkspace"
 	"insightify/internal/gateway/config"
 	"insightify/internal/gateway/ent"
 	"insightify/internal/gateway/handler"
@@ -66,28 +69,30 @@ func New() (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create artifact store: %w", err)
 	}
+	artifactStoreWithCache := artifactcache.NewCachedStore(artifactStore, artifactcache.DefaultCacheConfig())
 
 	// Project Store (Ent) with Cache (nil for now or initialize if needed)
 	// Passing nil for cache as we haven't initialized it here, or we can use generic LRU if import available.
 	// For simplicity and to fix build, we pass nil. Store handles nil cache gracefully.
-	projectStore, err := projectrepo.NewPostgresStore(client, nil)
+	projectOrigin, err := projectrepo.NewPostgresStore(client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create project store: %w", err)
 	}
+	projectStore := projectcache.NewCachedStore(projectOrigin, projectOrigin, projectcache.DefaultCacheConfig())
 
 	// UI Store (Ent)
-	uiStore := ui.NewPostgresStore(client)
+	uiOrigin := ui.NewPostgresStore(client)
+	uiStore := uicache.NewCachedStore(uiOrigin, uicache.DefaultCacheConfig())
 
 	// Workspace Store (Ent)
-	uiWorkspaceStore := uiworkspace.NewPostgresStore(client)
+	uiWorkspaceOrigin := uiworkspace.NewPostgresStore(client)
+	uiWorkspaceStore := uiworkspacecache.NewCachedStore(uiWorkspaceOrigin, uiworkspacecache.DefaultCacheConfig())
 
-	_ = projectrepo.NewFromEnv(filepath.Join("tmp", "project_states.json")) // kept for local fallback wiring evolution
-
-	projectSvc := gatewayproject.New(projectStore, projectStore, artifactStore)
-	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore)                                               // Use the Ent-backed uiWorkspaceStore
-	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStore, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
-	userInteractionSvc := gatewayuserinteraction.New(artifactStore, cfg.Interaction.ConversationArtifactPath)
-	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStore)
+	projectSvc := gatewayproject.New(projectStore, projectStore, artifactStoreWithCache)
+	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore)                                                        // Use the Ent-backed uiWorkspaceStore
+	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStoreWithCache, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
+	userInteractionSvc := gatewayuserinteraction.New(artifactStoreWithCache, cfg.Interaction.ConversationArtifactPath)
+	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStoreWithCache)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)

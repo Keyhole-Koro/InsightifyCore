@@ -1,6 +1,7 @@
 package uiworkspace
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -32,16 +33,16 @@ func (s *Service) Ensure(projectID string) (WorkspaceView, error) {
 	if pid == "" {
 		return WorkspaceView{}, fmt.Errorf("project_id is required")
 	}
-	ws, err := s.store.EnsureWorkspace(pid)
+	ws, err := s.store.EnsureWorkspace(context.Background(), pid)
 	if err != nil {
 		return WorkspaceView{}, err
 	}
-	tabs, err := s.store.ListTabs(ws.WorkspaceID)
+	tabs, err := s.store.ListTabs(context.Background(), ws.WorkspaceID)
 	if err != nil {
 		return WorkspaceView{}, err
 	}
 	if len(tabs) == 0 {
-		tab, err := s.store.CreateTab(ws.WorkspaceID, defaultTabTitle)
+		tab, err := s.store.CreateTab(context.Background(), ws.WorkspaceID, defaultTabTitle)
 		if err != nil {
 			return WorkspaceView{}, err
 		}
@@ -52,7 +53,7 @@ func (s *Service) Ensure(projectID string) (WorkspaceView, error) {
 	}
 	if strings.TrimSpace(ws.ActiveTabID) == "" {
 		ws.ActiveTabID = tabs[len(tabs)-1].TabID
-		_ = s.store.SelectTab(ws.WorkspaceID, ws.ActiveTabID)
+		_ = s.store.SelectTab(context.Background(), ws.WorkspaceID, ws.ActiveTabID)
 	}
 	return WorkspaceView{Workspace: ws, Tabs: tabs}, nil
 }
@@ -70,11 +71,11 @@ func (s *Service) ResolveTab(projectID, preferredTabID string) (repo.Workspace, 
 		if defaultTab, ok := findDefaultTab(view.Tabs); ok {
 			return view.Workspace, defaultTab, true, nil
 		}
-		created, err := s.store.CreateTab(view.Workspace.WorkspaceID, defaultTabTitle)
+		created, err := s.store.CreateTab(context.Background(), view.Workspace.WorkspaceID, defaultTabTitle)
 		if err != nil {
 			return repo.Workspace{}, repo.Tab{}, false, err
 		}
-		_ = s.store.SelectTab(view.Workspace.WorkspaceID, created.TabID)
+		_ = s.store.SelectTab(context.Background(), view.Workspace.WorkspaceID, created.TabID)
 		view.Workspace.ActiveTabID = created.TabID
 		return view.Workspace, created, true, nil
 	}
@@ -113,7 +114,7 @@ func (s *Service) AttachRunToCurrentTab(projectID, runID string) (repo.Tab, erro
 	if !ok {
 		return repo.Tab{}, fmt.Errorf("no tab available")
 	}
-	if err := s.store.UpdateTabRun(tab.TabID, runID); err != nil {
+	if err := s.store.UpdateTabRun(context.Background(), tab.TabID, runID); err != nil {
 		return repo.Tab{}, err
 	}
 	tab.RunID = strings.TrimSpace(runID)
@@ -130,11 +131,11 @@ func (s *Service) CreateTab(projectID, title string) (WorkspaceView, repo.Tab, e
 	if err != nil {
 		return WorkspaceView{}, repo.Tab{}, err
 	}
-	tab, err := s.store.CreateTab(view.Workspace.WorkspaceID, title)
+	tab, err := s.store.CreateTab(context.Background(), view.Workspace.WorkspaceID, title)
 	if err != nil {
 		return WorkspaceView{}, repo.Tab{}, err
 	}
-	_ = s.store.SelectTab(view.Workspace.WorkspaceID, tab.TabID)
+	_ = s.store.SelectTab(context.Background(), view.Workspace.WorkspaceID, tab.TabID)
 	updated, err := s.Ensure(projectID)
 	if err != nil {
 		return WorkspaceView{}, repo.Tab{}, err
@@ -147,7 +148,7 @@ func (s *Service) SelectTab(projectID, tabID string) (WorkspaceView, error) {
 	if err != nil {
 		return WorkspaceView{}, err
 	}
-	if err := s.store.SelectTab(view.Workspace.WorkspaceID, tabID); err != nil {
+	if err := s.store.SelectTab(context.Background(), view.Workspace.WorkspaceID, tabID); err != nil {
 		return WorkspaceView{}, err
 	}
 	return s.Ensure(projectID)

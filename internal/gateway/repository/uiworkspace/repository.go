@@ -1,6 +1,9 @@
 package uiworkspace
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 // Workspace is a project-scoped UI container.
 type Workspace struct {
@@ -23,13 +26,13 @@ type Tab struct {
 
 // Store defines workspace/tab persistence operations.
 type Store interface {
-	EnsureWorkspace(projectID string) (Workspace, error)
-	GetWorkspaceByProject(projectID string) (Workspace, bool, error)
-	ListTabs(workspaceID string) ([]Tab, error)
-	GetTab(workspaceID, tabID string) (Tab, bool, error)
-	CreateTab(workspaceID, title string) (Tab, error)
-	SelectTab(workspaceID, tabID string) error
-	UpdateTabRun(tabID, runID string) error
+	EnsureWorkspace(ctx context.Context, projectID string) (Workspace, error)
+	GetWorkspaceByProject(ctx context.Context, projectID string) (Workspace, bool, error)
+	ListTabs(ctx context.Context, workspaceID string) ([]Tab, error)
+	GetTab(ctx context.Context, workspaceID, tabID string) (Tab, bool, error)
+	CreateTab(ctx context.Context, workspaceID, title string) (Tab, error)
+	SelectTab(ctx context.Context, workspaceID, tabID string) error
+	UpdateTabRun(ctx context.Context, tabID, runID string) error
 }
 
 func normalizeProjectID(v string) string   { return strings.TrimSpace(v) }

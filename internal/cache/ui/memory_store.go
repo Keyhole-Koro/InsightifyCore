@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -17,39 +18,35 @@ type docState struct {
 }
 
 // MemoryStore manages the latest UI document for active runs in memory.
-// It is thread-safe.
 type MemoryStore struct {
 	mu   sync.RWMutex
 	docs map[string]*docState
 }
 
-// NewStore creates a new in-memory UI document store.
-// Note: This returns Store interface, but implementation is MemoryStore.
-func NewStore() *MemoryStore {
+func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		docs: make(map[string]*docState),
 	}
 }
 
-func (s *MemoryStore) GetDocument(runID string) *insightifyv1.UiDocument {
+func (s *MemoryStore) GetDocument(_ context.Context, runID string) (*insightifyv1.UiDocument, error) {
 	if s == nil {
-		return nil
+		return nil, fmt.Errorf("store is nil")
 	}
 	key := normalizeRunID(runID)
 	if key == "" {
-		return nil
+		return nil, fmt.Errorf("run_id is required")
 	}
-
 	s.mu.RLock()
 	st := s.docs[key]
 	s.mu.RUnlock()
 	if st == nil {
-		return &insightifyv1.UiDocument{RunId: key}
+		return &insightifyv1.UiDocument{RunId: key}, nil
 	}
-	return toDocument(key, st)
+	return toDocument(key, st), nil
 }
 
-func (s *MemoryStore) ApplyOps(runID string, baseVersion int64, ops []*insightifyv1.UiOp) (*insightifyv1.UiDocument, bool, error) {
+func (s *MemoryStore) ApplyOps(_ context.Context, runID string, baseVersion int64, ops []*insightifyv1.UiOp) (*insightifyv1.UiDocument, bool, error) {
 	if s == nil {
 		return nil, false, fmt.Errorf("store is nil")
 	}
@@ -60,7 +57,6 @@ func (s *MemoryStore) ApplyOps(runID string, baseVersion int64, ops []*insightif
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	st := s.docs[key]
 	if st == nil {
 		st = &docState{
@@ -69,11 +65,9 @@ func (s *MemoryStore) ApplyOps(runID string, baseVersion int64, ops []*insightif
 		}
 		s.docs[key] = st
 	}
-
 	if baseVersion > 0 && baseVersion != st.version {
 		return toDocument(key, st), true, nil
 	}
-
 	for _, op := range ops {
 		if op == nil {
 			continue

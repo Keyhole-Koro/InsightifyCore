@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,7 +10,8 @@ import (
 	"insightify/internal/gateway/entity"
 )
 
-type FileStore struct {
+// DiskStore persists project state as JSON on local disk.
+type DiskStore struct {
 	path string
 
 	loadOnce sync.Once
@@ -17,21 +19,21 @@ type FileStore struct {
 	byID     map[string]State
 }
 
-func NewFromEnv(path string) *FileStore {
-	return &FileStore{
+func NewDiskStore(path string) *DiskStore {
+	return &DiskStore{
 		path: path,
 		byID: make(map[string]State),
 	}
 }
 
-func (s *FileStore) EnsureLoaded() {
+func (s *DiskStore) EnsureLoaded(_ context.Context) {
 	if s == nil {
 		return
 	}
 	s.ensureLoaded()
 }
 
-func (s *FileStore) Save() error {
+func (s *DiskStore) Save(_ context.Context) error {
 	if s == nil {
 		return nil
 	}
@@ -44,7 +46,7 @@ func (s *FileStore) Save() error {
 	return s.writeStates(states)
 }
 
-func (s *FileStore) Get(projectID string) (State, bool) {
+func (s *DiskStore) Get(_ context.Context, projectID string) (State, bool) {
 	if s == nil {
 		return State{}, false
 	}
@@ -55,20 +57,20 @@ func (s *FileStore) Get(projectID string) (State, bool) {
 	return state, ok
 }
 
-func (s *FileStore) Put(state State) {
+func (s *DiskStore) Put(_ context.Context, state State) error {
 	if s == nil {
-		return
+		return nil
 	}
 	s.ensureLoaded()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.byID[state.ProjectID] = state
-	_ = s.saveLocked()
+	return s.saveLocked()
 }
 
-func (s *FileStore) Update(projectID string, update func(*State)) (State, bool) {
+func (s *DiskStore) Update(_ context.Context, projectID string, update func(*State)) (State, bool, error) {
 	if s == nil {
-		return State{}, false
+		return State{}, false, nil
 	}
 	s.ensureLoaded()
 	s.mu.Lock()
@@ -76,18 +78,16 @@ func (s *FileStore) Update(projectID string, update func(*State)) (State, bool) 
 
 	state, ok := s.byID[projectID]
 	if !ok {
-		return State{}, false
+		return State{}, false, nil
 	}
-
 	update(&state)
 	s.byID[projectID] = state
-	_ = s.saveLocked()
-	return state, true
+	return state, true, s.saveLocked()
 }
 
-func (s *FileStore) ListByUser(userID entity.UserID) []State {
+func (s *DiskStore) ListByUser(_ context.Context, userID entity.UserID) ([]State, error) {
 	if s == nil {
-		return nil
+		return nil, nil
 	}
 	s.ensureLoaded()
 	s.mu.RLock()
@@ -99,12 +99,12 @@ func (s *FileStore) ListByUser(userID entity.UserID) []State {
 			out = append(out, state)
 		}
 	}
-	return out
+	return out, nil
 }
 
-func (s *FileStore) GetActiveByUser(userID entity.UserID) (State, bool) {
+func (s *DiskStore) GetActiveByUser(_ context.Context, userID entity.UserID) (State, bool, error) {
 	if s == nil {
-		return State{}, false
+		return State{}, false, nil
 	}
 	s.ensureLoaded()
 	s.mu.RLock()
@@ -112,15 +112,15 @@ func (s *FileStore) GetActiveByUser(userID entity.UserID) (State, bool) {
 
 	for _, state := range s.byID {
 		if state.UserID.String() == userID.String() && state.IsActive {
-			return state, true
+			return state, true, nil
 		}
 	}
-	return State{}, false
+	return State{}, false, nil
 }
 
-func (s *FileStore) SetActiveForUser(userID entity.UserID, projectID string) (State, bool) {
+func (s *DiskStore) SetActiveForUser(_ context.Context, userID entity.UserID, projectID string) (State, bool, error) {
 	if s == nil {
-		return State{}, false
+		return State{}, false, nil
 	}
 	s.ensureLoaded()
 	s.mu.Lock()
@@ -135,26 +135,20 @@ func (s *FileStore) SetActiveForUser(userID entity.UserID, projectID string) (St
 
 	state, ok := s.byID[projectID]
 	if !ok {
-		_ = s.saveLocked()
-		return State{}, false
+		return State{}, false, s.saveLocked()
 	}
-
 	state.IsActive = true
 	s.byID[projectID] = state
-	_ = s.saveLocked()
-	return state, true
+	return state, true, s.saveLocked()
 }
 
-func (s *FileStore) AddArtifact(_ ProjectArtifact) error {
-	// File backend artifact support is currently not implemented.
-	return nil
-}
+func (s *DiskStore) AddArtifact(_ context.Context, _ ProjectArtifact) error { return nil }
 
-func (s *FileStore) ListArtifacts(_ string) ([]ProjectArtifact, error) {
+func (s *DiskStore) ListArtifacts(_ context.Context, _ string) ([]ProjectArtifact, error) {
 	return nil, nil
 }
 
-func (s *FileStore) ensureLoaded() {
+func (s *DiskStore) ensureLoaded() {
 	s.loadOnce.Do(func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -173,14 +167,13 @@ func (s *FileStore) ensureLoaded() {
 			fmt.Printf("failed to unmarshal project store: %v\n", err)
 			return
 		}
-
 		for _, state := range states {
 			s.byID[state.ProjectID] = state
 		}
 	})
 }
 
-func (s *FileStore) saveLocked() error {
+func (s *DiskStore) saveLocked() error {
 	states := make([]State, 0, len(s.byID))
 	for _, state := range s.byID {
 		states = append(states, state)
@@ -188,11 +181,10 @@ func (s *FileStore) saveLocked() error {
 	return s.writeStates(states)
 }
 
-func (s *FileStore) writeStates(states []State) error {
+func (s *DiskStore) writeStates(states []State) error {
 	data, err := json.MarshalIndent(states, "", "  ")
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(s.path, data, 0644)
+	return os.WriteFile(s.path, data, 0o644)
 }

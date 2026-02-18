@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"insightify/internal/artifact"
+	"insightify/internal/common/safeio"
 	llmclient "insightify/internal/llm/client"
 	"insightify/internal/mcp"
-	"insightify/internal/common/safeio"
 	"insightify/internal/workers/plan"
 )
 
@@ -24,12 +24,12 @@ type testRuntime struct {
 	forceFrom  string
 	depsUsage  DepsUsageMode
 	llm        llmclient.LLMClient
-	artifact   ArtifactAccess
+	artifact   ArtifactStore
 }
 
 func (r *testRuntime) GetOutDir() string         { return r.outDir }
 func (r *testRuntime) GetRepoFS() *safeio.SafeFS { return r.repoFS }
-func (r *testRuntime) Artifacts() ArtifactAccess {
+func (r *testRuntime) Artifacts() ArtifactStore {
 	if r.artifact != nil {
 		return r.artifact
 	}
@@ -46,11 +46,11 @@ type testArtifactAccess struct {
 	runtime *testRuntime
 }
 
-func (a *testArtifactAccess) Read(name string) ([]byte, error) {
+func (a *testArtifactAccess) Read(_ context.Context, name string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(a.runtime.outDir, name))
 }
 
-func (a *testArtifactAccess) Write(name string, content []byte) error {
+func (a *testArtifactAccess) Write(_ context.Context, name string, content []byte) error {
 	path := filepath.Join(a.runtime.outDir, name)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
@@ -58,7 +58,7 @@ func (a *testArtifactAccess) Write(name string, content []byte) error {
 	return os.WriteFile(path, content, 0o644)
 }
 
-func (a *testArtifactAccess) Remove(name string) error {
+func (a *testArtifactAccess) Remove(_ context.Context, name string) error {
 	path := filepath.Join(a.runtime.outDir, name)
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
@@ -66,7 +66,7 @@ func (a *testArtifactAccess) Remove(name string) error {
 	return nil
 }
 
-func (a *testArtifactAccess) List() ([]string, error) {
+func (a *testArtifactAccess) List(_ context.Context) ([]string, error) {
 	entries, err := os.ReadDir(a.runtime.outDir)
 	if err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ func NewPostgresStore(client *ent.Client) *PostgresStore {
 	return &PostgresStore{client: client}
 }
 
-func (s *PostgresStore) EnsureWorkspace(projectID string) (Workspace, error) {
+func (s *PostgresStore) EnsureWorkspace(ctx context.Context, projectID string) (Workspace, error) {
 	if s == nil || s.client == nil {
 		return Workspace{}, fmt.Errorf("store is nil")
 	}
@@ -27,13 +27,11 @@ func (s *PostgresStore) EnsureWorkspace(projectID string) (Workspace, error) {
 		return Workspace{}, fmt.Errorf("project_id is required")
 	}
 
-	ctx := context.Background()
-
 	// Check if exists
 	ws, err := s.client.Workspace.Query().
 		Where(workspace.ProjectID(pid)).
 		First(ctx)
-	
+
 	if err == nil {
 		return entToWorkspace(ws), nil
 	}
@@ -51,7 +49,7 @@ func (s *PostgresStore) EnsureWorkspace(projectID string) (Workspace, error) {
 		OnConflictColumns(workspace.FieldProjectID).
 		Ignore(). // If race condition created it
 		Exec(ctx)
-	
+
 	if err != nil {
 		return Workspace{}, err
 	}
@@ -66,7 +64,7 @@ func (s *PostgresStore) EnsureWorkspace(projectID string) (Workspace, error) {
 	return entToWorkspace(ws), nil
 }
 
-func (s *PostgresStore) GetWorkspaceByProject(projectID string) (Workspace, bool, error) {
+func (s *PostgresStore) GetWorkspaceByProject(ctx context.Context, projectID string) (Workspace, bool, error) {
 	if s == nil || s.client == nil {
 		return Workspace{}, false, fmt.Errorf("store is nil")
 	}
@@ -77,8 +75,8 @@ func (s *PostgresStore) GetWorkspaceByProject(projectID string) (Workspace, bool
 
 	ws, err := s.client.Workspace.Query().
 		Where(workspace.ProjectID(pid)).
-		Only(context.Background())
-	
+		Only(ctx)
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return Workspace{}, false, nil
@@ -89,7 +87,7 @@ func (s *PostgresStore) GetWorkspaceByProject(projectID string) (Workspace, bool
 	return entToWorkspace(ws), true, nil
 }
 
-func (s *PostgresStore) ListTabs(workspaceID string) ([]Tab, error) {
+func (s *PostgresStore) ListTabs(ctx context.Context, workspaceID string) ([]Tab, error) {
 	if s == nil || s.client == nil {
 		return nil, fmt.Errorf("store is nil")
 	}
@@ -101,8 +99,8 @@ func (s *PostgresStore) ListTabs(workspaceID string) ([]Tab, error) {
 	tabs, err := s.client.WorkspaceTab.Query().
 		Where(workspacetab.WorkspaceID(wid)).
 		Order(ent.Asc(workspacetab.FieldOrderIndex), ent.Asc(workspacetab.FieldCreatedAt)).
-		All(context.Background())
-	
+		All(ctx)
+
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +112,7 @@ func (s *PostgresStore) ListTabs(workspaceID string) ([]Tab, error) {
 	return out, nil
 }
 
-func (s *PostgresStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
+func (s *PostgresStore) GetTab(ctx context.Context, workspaceID, tabID string) (Tab, bool, error) {
 	if s == nil || s.client == nil {
 		return Tab{}, false, fmt.Errorf("store is nil")
 	}
@@ -126,8 +124,8 @@ func (s *PostgresStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
 
 	t, err := s.client.WorkspaceTab.Query().
 		Where(workspacetab.WorkspaceID(wid), workspacetab.ID(tid)).
-		Only(context.Background())
-	
+		Only(ctx)
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return Tab{}, false, nil
@@ -138,7 +136,7 @@ func (s *PostgresStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
 	return entToTab(t), true, nil
 }
 
-func (s *PostgresStore) CreateTab(workspaceID, title string) (Tab, error) {
+func (s *PostgresStore) CreateTab(ctx context.Context, workspaceID, title string) (Tab, error) {
 	if s == nil || s.client == nil {
 		return Tab{}, fmt.Errorf("store is nil")
 	}
@@ -147,7 +145,6 @@ func (s *PostgresStore) CreateTab(workspaceID, title string) (Tab, error) {
 		return Tab{}, fmt.Errorf("workspace_id is required")
 	}
 
-	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return Tab{}, err
@@ -162,7 +159,7 @@ func (s *PostgresStore) CreateTab(workspaceID, title string) (Tab, error) {
 		Where(workspacetab.WorkspaceID(wid)).
 		Order(ent.Desc(workspacetab.FieldOrderIndex)).
 		First(ctx)
-	
+
 	if err == nil {
 		maxOrder = lastTab.OrderIndex + 1
 	}
@@ -214,7 +211,7 @@ func (s *PostgresStore) CreateTab(workspaceID, title string) (Tab, error) {
 	return entToTab(tab), nil
 }
 
-func (s *PostgresStore) SelectTab(workspaceID, tabID string) error {
+func (s *PostgresStore) SelectTab(ctx context.Context, workspaceID, tabID string) error {
 	if s == nil || s.client == nil {
 		return fmt.Errorf("store is nil")
 	}
@@ -223,8 +220,6 @@ func (s *PostgresStore) SelectTab(workspaceID, tabID string) error {
 	if wid == "" || tid == "" {
 		return fmt.Errorf("workspace_id and tab_id are required")
 	}
-
-	ctx := context.Background()
 
 	// Verify tab exists
 	exists, err := s.client.WorkspaceTab.Query().
@@ -245,7 +240,7 @@ func (s *PostgresStore) SelectTab(workspaceID, tabID string) error {
 	return err
 }
 
-func (s *PostgresStore) UpdateTabRun(tabID, runID string) error {
+func (s *PostgresStore) UpdateTabRun(ctx context.Context, tabID, runID string) error {
 	if s == nil || s.client == nil {
 		return fmt.Errorf("store is nil")
 	}
@@ -258,12 +253,12 @@ func (s *PostgresStore) UpdateTabRun(tabID, runID string) error {
 	// Update
 	// Ent UpdateOneID returns error if not found? No, it returns error if not found on Save?
 	// Actually UpdateOneID returns a builder. Save() returns the updated object or error.
-	
+
 	_, err := s.client.WorkspaceTab.UpdateOneID(tid).
 		SetRunID(rid).
 		SetUpdatedAt(time.Now()).
-		Save(context.Background())
-	
+		Save(ctx)
+
 	if ent.IsNotFound(err) {
 		return fmt.Errorf("tab %s not found", tid)
 	}

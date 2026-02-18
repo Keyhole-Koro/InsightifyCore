@@ -132,7 +132,7 @@ func (s *Service) syncArtifacts(ctx context.Context, runID, projectID, outDir st
 
 		if s.projectStore != nil {
 			// Save metadata to project store
-			_ = s.projectStore.AddArtifact(projectrepo.ProjectArtifact{
+			_ = s.projectStore.AddArtifact(ctx, projectrepo.ProjectArtifact{
 				ProjectID: projectID,
 				RunID:     runID,
 				Path:      rel,

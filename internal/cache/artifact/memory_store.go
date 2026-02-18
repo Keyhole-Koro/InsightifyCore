@@ -6,8 +6,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	artifactrepo "insightify/internal/gateway/repository/artifact"
 )
 
+// MemoryStore is an in-memory origin/fallback store for artifacts.
 type MemoryStore struct {
 	mu   sync.RWMutex
 	data map[string][]byte
@@ -55,9 +58,13 @@ func (s *MemoryStore) Get(_ context.Context, runID, path string) ([]byte, error)
 	defer s.mu.RUnlock()
 	raw, ok := s.data[key]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, artifactrepo.ErrNotFound
 	}
 	return append([]byte(nil), raw...), nil
+}
+
+func (s *MemoryStore) GetURL(_ context.Context, _, _ string) (string, error) {
+	return "", nil
 }
 
 func (s *MemoryStore) List(_ context.Context, runID string) ([]string, error) {
@@ -80,9 +87,4 @@ func (s *MemoryStore) List(_ context.Context, runID string) ([]string, error) {
 	}
 	sort.Strings(out)
 	return out, nil
-}
-
-func (s *MemoryStore) GetURL(ctx context.Context, runID, path string) (string, error) {
-	// Memory store doesn't support URLs, return path as fallback or empty
-	return "", nil
 }

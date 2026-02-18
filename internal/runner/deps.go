@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -68,7 +69,7 @@ func (d *depsImpl) Artifact(key string, target any) error {
 		return fmt.Errorf("artifact access is not configured")
 	}
 	artifactName := resolveArtifactName(d.runtime, key)
-	b, err := artifacts.Read(artifactName)
+	b, err := artifacts.Read(context.Background(), artifactName)
 	if err != nil {
 		return fmt.Errorf("read artifact %s: %w", key, err)
 	}

@@ -1,17 +1,19 @@
 package uiworkspace
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 )
 
+// MemoryStore is an in-memory origin/fallback for workspace store contract.
 type MemoryStore struct {
 	mu              sync.Mutex
-	workspaces      map[string]Workspace // workspace_id -> workspace
-	workspaceByProj map[string]string    // project_id -> workspace_id
-	tabsByWorkspace map[string][]Tab     // workspace_id -> tabs
+	workspaces      map[string]Workspace
+	workspaceByProj map[string]string
+	tabsByWorkspace map[string][]Tab
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -22,7 +24,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-func (s *MemoryStore) EnsureWorkspace(projectID string) (Workspace, error) {
+func (s *MemoryStore) EnsureWorkspace(_ context.Context, projectID string) (Workspace, error) {
 	if s == nil {
 		return Workspace{}, fmt.Errorf("store is nil")
 	}
@@ -30,15 +32,11 @@ func (s *MemoryStore) EnsureWorkspace(projectID string) (Workspace, error) {
 	if pid == "" {
 		return Workspace{}, fmt.Errorf("project_id is required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	if wsID, ok := s.workspaceByProj[pid]; ok {
-		ws := s.workspaces[wsID]
-		return ws, nil
+		return s.workspaces[wsID], nil
 	}
-
 	ws := Workspace{
 		WorkspaceID: fmt.Sprintf("ws-%d", time.Now().UnixNano()),
 		ProjectID:   pid,
@@ -49,7 +47,7 @@ func (s *MemoryStore) EnsureWorkspace(projectID string) (Workspace, error) {
 	return ws, nil
 }
 
-func (s *MemoryStore) GetWorkspaceByProject(projectID string) (Workspace, bool, error) {
+func (s *MemoryStore) GetWorkspaceByProject(_ context.Context, projectID string) (Workspace, bool, error) {
 	if s == nil {
 		return Workspace{}, false, fmt.Errorf("store is nil")
 	}
@@ -57,22 +55,17 @@ func (s *MemoryStore) GetWorkspaceByProject(projectID string) (Workspace, bool, 
 	if pid == "" {
 		return Workspace{}, false, fmt.Errorf("project_id is required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	wsID, ok := s.workspaceByProj[pid]
 	if !ok {
 		return Workspace{}, false, nil
 	}
 	ws, ok := s.workspaces[wsID]
-	if !ok {
-		return Workspace{}, false, nil
-	}
-	return ws, true, nil
+	return ws, ok, nil
 }
 
-func (s *MemoryStore) ListTabs(workspaceID string) ([]Tab, error) {
+func (s *MemoryStore) ListTabs(_ context.Context, workspaceID string) ([]Tab, error) {
 	if s == nil {
 		return nil, fmt.Errorf("store is nil")
 	}
@@ -80,10 +73,8 @@ func (s *MemoryStore) ListTabs(workspaceID string) ([]Tab, error) {
 	if wid == "" {
 		return nil, fmt.Errorf("workspace_id is required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	tabs := append([]Tab(nil), s.tabsByWorkspace[wid]...)
 	sort.Slice(tabs, func(i, j int) bool {
 		if tabs[i].OrderIndex == tabs[j].OrderIndex {
@@ -94,7 +85,7 @@ func (s *MemoryStore) ListTabs(workspaceID string) ([]Tab, error) {
 	return tabs, nil
 }
 
-func (s *MemoryStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
+func (s *MemoryStore) GetTab(_ context.Context, workspaceID, tabID string) (Tab, bool, error) {
 	if s == nil {
 		return Tab{}, false, fmt.Errorf("store is nil")
 	}
@@ -103,10 +94,8 @@ func (s *MemoryStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
 	if wid == "" || tid == "" {
 		return Tab{}, false, fmt.Errorf("workspace_id and tab_id are required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	for _, t := range s.tabsByWorkspace[wid] {
 		if t.TabID == tid {
 			return t, true, nil
@@ -115,7 +104,7 @@ func (s *MemoryStore) GetTab(workspaceID, tabID string) (Tab, bool, error) {
 	return Tab{}, false, nil
 }
 
-func (s *MemoryStore) CreateTab(workspaceID, title string) (Tab, error) {
+func (s *MemoryStore) CreateTab(_ context.Context, workspaceID, title string) (Tab, error) {
 	if s == nil {
 		return Tab{}, fmt.Errorf("store is nil")
 	}
@@ -123,10 +112,8 @@ func (s *MemoryStore) CreateTab(workspaceID, title string) (Tab, error) {
 	if wid == "" {
 		return Tab{}, fmt.Errorf("workspace_id is required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	ws, ok := s.workspaces[wid]
 	if !ok {
 		return Tab{}, fmt.Errorf("workspace %s not found", wid)
@@ -147,7 +134,7 @@ func (s *MemoryStore) CreateTab(workspaceID, title string) (Tab, error) {
 	return tab, nil
 }
 
-func (s *MemoryStore) SelectTab(workspaceID, tabID string) error {
+func (s *MemoryStore) SelectTab(_ context.Context, workspaceID, tabID string) error {
 	if s == nil {
 		return fmt.Errorf("store is nil")
 	}
@@ -156,10 +143,8 @@ func (s *MemoryStore) SelectTab(workspaceID, tabID string) error {
 	if wid == "" || tid == "" {
 		return fmt.Errorf("workspace_id and tab_id are required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	ws, ok := s.workspaces[wid]
 	if !ok {
 		return fmt.Errorf("workspace %s not found", wid)
@@ -179,7 +164,7 @@ func (s *MemoryStore) SelectTab(workspaceID, tabID string) error {
 	return nil
 }
 
-func (s *MemoryStore) UpdateTabRun(tabID, runID string) error {
+func (s *MemoryStore) UpdateTabRun(_ context.Context, tabID, runID string) error {
 	if s == nil {
 		return fmt.Errorf("store is nil")
 	}
@@ -188,10 +173,8 @@ func (s *MemoryStore) UpdateTabRun(tabID, runID string) error {
 	if tid == "" || rid == "" {
 		return fmt.Errorf("tab_id and run_id are required")
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	for wid, tabs := range s.tabsByWorkspace {
 		for i := range tabs {
 			if tabs[i].TabID == tid {

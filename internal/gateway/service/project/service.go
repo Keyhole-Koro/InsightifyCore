@@ -53,10 +53,14 @@ type Entry struct {
 	Artifacts []ArtifactView
 }
 
-func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry, string, error) {
-	s.repo.EnsureLoaded()
+func (s *Service) ListProjects(ctx context.Context, userID entity.UserID) ([]Entry, string, error) {
+	ctx = ensureContext(ctx)
+	s.repo.EnsureLoaded(ctx)
 
-	projects := s.listByUser(userID)
+	projects, err := s.listByUser(ctx, userID)
+	if err != nil {
+		return nil, "", err
+	}
 	// Sort by ProjectID
 	sort.Slice(projects, func(i, j int) bool {
 		return strings.TrimSpace(projects[i].State.ProjectID) < strings.TrimSpace(projects[j].State.ProjectID)
@@ -71,8 +75,9 @@ func (s *Service) ListProjects(_ context.Context, userID entity.UserID) ([]Entry
 	return projects, activeID, nil
 }
 
-func (s *Service) CreateProject(_ context.Context, userID entity.UserID, projectName string) (Entry, error) {
-	s.repo.EnsureLoaded()
+func (s *Service) CreateProject(ctx context.Context, userID entity.UserID, projectName string) (Entry, error) {
+	repoCtx := ensureContext(ctx)
+	s.repo.EnsureLoaded(repoCtx)
 
 	if projectName == "" {
 		projectName = fmt.Sprintf("Project %d", time.Now().Unix()%100000)
@@ -81,11 +86,11 @@ func (s *Service) CreateProject(_ context.Context, userID entity.UserID, project
 	projectID := fmt.Sprintf("project-%d", time.Now().UnixNano())
 
 	var runCtx *runtimepkg.ProjectRuntime
-	ctx, err := runtimepkg.NewProjectRuntime("", projectID)
+	createdRunCtx, err := runtimepkg.NewProjectRuntime("", projectID)
 	if err != nil {
 		return Entry{}, fmt.Errorf("failed to create run context: %w", err)
 	}
-	runCtx = ctx
+	runCtx = createdRunCtx
 
 	p := Entry{
 		State: State{
@@ -97,18 +102,19 @@ func (s *Service) CreateProject(_ context.Context, userID entity.UserID, project
 		},
 		RunCtx: runCtx,
 	}
-	s.put(p)
-	s.setActiveForUser(userID, projectID)
-	_ = s.repo.Save()
+	s.put(repoCtx, p)
+	_, _ = s.setActiveForUser(repoCtx, userID, projectID)
+	_ = s.repo.Save(repoCtx)
 
-	got, _ := s.get(projectID)
+	got, _ := s.get(repoCtx, projectID)
 	return got, nil
 }
 
-func (s *Service) SelectProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
-	s.repo.EnsureLoaded()
+func (s *Service) SelectProject(ctx context.Context, userID entity.UserID, projectID string) (Entry, error) {
+	ctx = ensureContext(ctx)
+	s.repo.EnsureLoaded(ctx)
 
-	p, ok := s.get(projectID)
+	p, ok := s.get(ctx, projectID)
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
 	}
@@ -116,16 +122,17 @@ func (s *Service) SelectProject(_ context.Context, userID entity.UserID, project
 		return Entry{}, fmt.Errorf("project %s does not belong to user %s", projectID, userID.String())
 	}
 
-	selected, ok := s.setActiveForUser(userID, projectID)
+	selected, ok := s.setActiveForUser(ctx, userID, projectID)
 	if !ok {
 		return Entry{}, fmt.Errorf("project %s not found", projectID)
 	}
-	_ = s.repo.Save()
+	_ = s.repo.Save(ctx)
 	return selected, nil
 }
 
-func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, projectID string) (Entry, error) {
-	s.repo.EnsureLoaded()
+func (s *Service) EnsureProject(ctx context.Context, userID entity.UserID, projectID string) (Entry, error) {
+	ctx = ensureContext(ctx)
+	s.repo.EnsureLoaded(ctx)
 
 	if userID.IsZero() {
 		userID = entity.DemoUserID
@@ -138,12 +145,12 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 
 	// Resolve project.
 	if projectID == "" {
-		if active, ok := s.getActiveByUser(userID); ok {
+		if active, ok := s.getActiveByUser(ctx, userID); ok {
 			projectID = active.State.ProjectID
 		}
 	}
 	if projectID != "" {
-		p, existed = s.get(projectID)
+		p, existed = s.get(ctx, projectID)
 	}
 	if !existed {
 		if projectID == "" {
@@ -174,11 +181,11 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 		p.RunCtx = ctx
 	}
 
-	s.put(p)
-	s.setActiveForUser(p.State.UserID, p.State.ProjectID)
-	_ = s.repo.Save()
+	s.put(ctx, p)
+	_, _ = s.setActiveForUser(ctx, p.State.UserID, p.State.ProjectID)
+	_ = s.repo.Save(ctx)
 
-	got, _ := s.get(projectID)
+	got, _ := s.get(ctx, projectID)
 	return got, nil
 }
 
@@ -186,31 +193,31 @@ func (s *Service) EnsureProject(_ context.Context, userID entity.UserID, project
 // State management (absorbed from runtime.App)
 // ---------------------------------------------------------------------------
 
-func (s *Service) get(projectID string) (Entry, bool) {
-	repoState, ok := s.repo.Get(projectID)
+func (s *Service) get(ctx context.Context, projectID string) (Entry, bool) {
+	repoState, ok := s.repo.Get(ctx, projectID)
 	if !ok {
 		return Entry{}, false
 	}
 	s.runCtxMu.RLock()
-	ctx := s.runCtx[strings.TrimSpace(projectID)]
+	runCtx := s.runCtx[strings.TrimSpace(projectID)]
 	s.runCtxMu.RUnlock()
 
-	artifacts := s.resolveArtifacts(projectID)
-	return Entry{State: fromRepoState(repoState), RunCtx: ctx, Artifacts: artifacts}, true
+	artifacts := s.resolveArtifacts(ctx, projectID)
+	return Entry{State: fromRepoState(repoState), RunCtx: runCtx, Artifacts: artifacts}, true
 }
 
-func (s *Service) resolveArtifacts(projectID string) []ArtifactView {
+func (s *Service) resolveArtifacts(ctx context.Context, projectID string) []ArtifactView {
 	if s.artifact == nil || s.metaRepo == nil {
 		return nil
 	}
-	list, err := s.metaRepo.ListArtifacts(projectID)
+	list, err := s.metaRepo.ListArtifacts(ctx, projectID)
 	if err != nil {
 		// Log error? For now silence it to avoid disrupting main flow
 		return nil
 	}
 	out := make([]ArtifactView, 0, len(list))
 	for _, a := range list {
-		url, _ := s.artifact.GetURL(context.Background(), a.RunID, a.Path)
+		url, _ := s.artifact.GetURL(ctx, a.RunID, a.Path)
 		// ID is int in DB, converting to string for View/Proto
 		out = append(out, ArtifactView{
 			ID:        fmt.Sprintf("%d", a.ID),
@@ -223,18 +230,21 @@ func (s *Service) resolveArtifacts(projectID string) []ArtifactView {
 	return out
 }
 
-func (s *Service) put(e Entry) {
+func (s *Service) put(ctx context.Context, e Entry) {
 	if strings.TrimSpace(e.State.ProjectID) == "" {
 		return
 	}
-	s.repo.Put(toRepoState(e.State))
+	_ = s.repo.Put(ensureContext(ctx), toRepoState(e.State))
 	s.runCtxMu.Lock()
 	s.runCtx[e.State.ProjectID] = e.RunCtx
 	s.runCtxMu.Unlock()
 }
 
-func (s *Service) listByUser(userID entity.UserID) []Entry {
-	states := s.repo.ListByUser(userID)
+func (s *Service) listByUser(ctx context.Context, userID entity.UserID) ([]Entry, error) {
+	states, err := s.repo.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]Entry, 0, len(states))
 	s.runCtxMu.RLock()
 	for _, st := range states {
@@ -242,39 +252,46 @@ func (s *Service) listByUser(userID entity.UserID) []Entry {
 		if !isProjectID(state.ProjectID) {
 			continue
 		}
-		artifacts := s.resolveArtifacts(state.ProjectID)
+		artifacts := s.resolveArtifacts(ctx, state.ProjectID)
 		out = append(out, Entry{State: state, RunCtx: s.runCtx[state.ProjectID], Artifacts: artifacts})
 	}
 	s.runCtxMu.RUnlock()
-	return out
+	return out, nil
 }
 
-func (s *Service) getActiveByUser(userID entity.UserID) (Entry, bool) {
-	st, ok := s.repo.GetActiveByUser(userID)
+func (s *Service) getActiveByUser(ctx context.Context, userID entity.UserID) (Entry, bool) {
+	ctx = ensureContext(ctx)
+	st, ok, err := s.repo.GetActiveByUser(ctx, userID)
+	if err != nil {
+		return Entry{}, false
+	}
 	if !ok {
 		return Entry{}, false
 	}
 	s.runCtxMu.RLock()
 	state := fromRepoState(st)
-	ctx := s.runCtx[state.ProjectID]
+	runCtx := s.runCtx[state.ProjectID]
 	s.runCtxMu.RUnlock()
 
-	artifacts := s.resolveArtifacts(state.ProjectID)
-	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
+	artifacts := s.resolveArtifacts(ctx, state.ProjectID)
+	return Entry{State: state, RunCtx: runCtx, Artifacts: artifacts}, true
 }
 
-func (s *Service) setActiveForUser(userID entity.UserID, projectID string) (Entry, bool) {
-	st, ok := s.repo.SetActiveForUser(userID, projectID)
+func (s *Service) setActiveForUser(ctx context.Context, userID entity.UserID, projectID string) (Entry, bool) {
+	st, ok, err := s.repo.SetActiveForUser(ctx, userID, projectID)
+	if err != nil {
+		return Entry{}, false
+	}
 	if !ok {
 		return Entry{}, false
 	}
 	s.runCtxMu.RLock()
 	state := fromRepoState(st)
-	ctx := s.runCtx[state.ProjectID]
+	runCtx := s.runCtx[state.ProjectID]
 	s.runCtxMu.RUnlock()
 
-	artifacts := s.resolveArtifacts(state.ProjectID)
-	return Entry{State: state, RunCtx: ctx, Artifacts: artifacts}, true
+	artifacts := s.resolveArtifacts(ctx, state.ProjectID)
+	return Entry{State: state, RunCtx: runCtx, Artifacts: artifacts}, true
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +312,7 @@ func (s *Service) GetRunContext(projectID string) (*runtimepkg.ProjectRuntime, b
 
 // GetEntry returns the project state as a facade for other packages.
 func (s *Service) GetEntry(projectID string) (State, bool) {
-	e, ok := s.get(projectID)
+	e, ok := s.get(context.Background(), projectID)
 	if !ok {
 		return State{}, false
 	}
@@ -311,7 +328,7 @@ func (s *Service) GetEntry(projectID string) (State, bool) {
 
 // EnsureRunContext ensures a project has a valid run context with required workers.
 func (s *Service) EnsureRunContext(projectID string) (*runtimepkg.ProjectRuntime, error) {
-	e, ok := s.get(projectID)
+	e, ok := s.get(context.Background(), projectID)
 	if !ok {
 		return nil, fmt.Errorf("project %s not found", projectID)
 	}
@@ -323,8 +340,15 @@ func (s *Service) EnsureRunContext(projectID string) (*runtimepkg.ProjectRuntime
 		return nil, fmt.Errorf("failed to restore run context: %w", err)
 	}
 	e.RunCtx = ctx
-	s.put(e)
+	s.put(context.Background(), e)
 	return ctx, nil
+}
+
+func ensureContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 func (s *Service) hasRequiredWorkers(env *runtimepkg.ProjectRuntime) bool {

@@ -1,24 +1,17 @@
 package runner
 
 import (
+	"insightify/internal/common/safeio"
 	llmclient "insightify/internal/llm/client"
 	"insightify/internal/mcp"
-	"insightify/internal/common/safeio"
 )
-
-type ArtifactAccess interface {
-	Read(name string) ([]byte, error)
-	Write(name string, content []byte) error
-	Remove(name string) error
-	List() ([]string, error)
-}
 
 // Runtime is the execution context required by runner and worker specs.
 // Gateway ProjectRuntime/ExecutionRuntime and other runtimes can implement this.
 type Runtime interface {
 	GetOutDir() string
 	GetRepoFS() *safeio.SafeFS
-	Artifacts() ArtifactAccess
+	Artifacts() ArtifactStore
 	GetResolver() SpecResolver
 	GetMCP() *mcp.Registry
 	GetModelSalt() string

@@ -34,11 +34,11 @@ func (s jsonStrategy) TryLoad(ctx context.Context, spec WorkerSpec, runtime Runt
 	}
 	metaName := spec.Key + ".meta.json"
 	outName := spec.Key + ".json"
-	mb, err := artifacts.Read(metaName)
+	mb, err := artifacts.Read(ctx, metaName)
 	if err != nil {
 		return zero, false
 	}
-	ob, err := artifacts.Read(outName)
+	ob, err := artifacts.Read(ctx, outName)
 	if err != nil {
 		return zero, false
 	}
@@ -61,10 +61,10 @@ func (s jsonStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runtime
 	metaName := spec.Key + ".meta.json"
 	outName := spec.Key + ".json"
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
-		_ = artifacts.Write(outName, b)
+		_ = artifacts.Write(ctx, outName, b)
 	}
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
-	_ = artifacts.Write(metaName, mb)
+	_ = artifacts.Write(ctx, metaName, mb)
 	log.Printf("%s → %s", strings.ToUpper(spec.Key), outName)
 	return nil
 }
@@ -74,8 +74,8 @@ func (s jsonStrategy) Invalidate(ctx context.Context, spec WorkerSpec, runtime R
 	if artifacts == nil {
 		return nil
 	}
-	_ = artifacts.Remove(spec.Key + ".json")
-	_ = artifacts.Remove(spec.Key + ".meta.json")
+	_ = artifacts.Remove(ctx, spec.Key+".json")
+	_ = artifacts.Remove(ctx, spec.Key+".meta.json")
 	return nil
 }
 
@@ -103,20 +103,20 @@ func (versionedStrategy) Save(ctx context.Context, spec WorkerSpec, runtime Runt
 	}
 
 	if b, e := json.MarshalIndent(out.RuntimeState, "", "  "); e == nil {
-		_ = artifacts.Write(versioned, b)
-		_ = artifacts.Write(latest, b)
+		_ = artifacts.Write(ctx, versioned, b)
+		_ = artifacts.Write(ctx, latest, b)
 	}
 	// meta is optional for versioned write; record last inputs for debugging
 	metaName := spec.Key + ".meta.json"
 	mb, _ := json.MarshalIndent(cacheMeta{Inputs: inputFP, Salt: runtime.GetModelSalt(), CreatedAt: time.Now()}, "", "  ")
-	_ = artifacts.Write(metaName, mb)
+	_ = artifacts.Write(ctx, metaName, mb)
 
 	// Best-effort pruning of other versions
-	entries, _ := artifacts.List()
+	entries, _ := artifacts.List(ctx)
 	re := regexp.MustCompile(fmt.Sprintf(`^%s_v(\d+)\.json$`, regexp.QuoteMeta(spec.Key)))
 	for _, name := range entries {
 		if m := re.FindStringSubmatch(name); len(m) == 2 && name != versioned {
-			_ = artifacts.Remove(name)
+			_ = artifacts.Remove(ctx, name)
 		}
 	}
 	log.Printf("%s → %s (reset to v1; updated %s)", strings.ToUpper(spec.Key), versioned, latest)

@@ -6,9 +6,12 @@ import (
 	"log"
 	"os"
 
+	entsql "entgo.io/ent/dialect/sql"
+	artifactcache "insightify/internal/cache/artifact"
+	uicache "insightify/internal/cache/ui"
+	uiworkspacecache "insightify/internal/cache/uiworkspace"
 	"insightify/internal/gateway/config"
 	"insightify/internal/gateway/ent"
-	entsql "entgo.io/ent/dialect/sql"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
 	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
@@ -59,9 +62,9 @@ func initPostgresStores(dsn string, cfg *config.Config, s3Factory func() (artifa
 	client := ent.NewClient(ent.Driver(drv))
 
 	stores := &gatewayStores{
-		ui:          uirepo.NewPostgresStore(client),
+		ui:          uicache.NewCachedStore(uirepo.NewPostgresStore(client), uicache.DefaultCacheConfig()),
 		artifact:    artifactrepo.NewPostgresStore(client),
-		uiWorkspace: uiworkspacerepo.NewPostgresStore(client),
+		uiWorkspace: uiworkspacecache.NewCachedStore(uiworkspacerepo.NewPostgresStore(client), uiworkspacecache.DefaultCacheConfig()),
 	}
 	artifactStore, err := chooseArtifactStore(cfg, stores.artifact, "postgres", s3Factory)
 	if err != nil {
@@ -72,14 +75,14 @@ func initPostgresStores(dsn string, cfg *config.Config, s3Factory func() (artifa
 }
 
 func initInMemoryStores(cfg *config.Config, s3Factory func() (artifactrepo.Store, error)) (*gatewayStores, error) {
-	artifactStore, err := chooseArtifactStore(cfg, artifactrepo.NewMemoryStore(), "in-memory", s3Factory)
+	artifactStore, err := chooseArtifactStore(cfg, artifactcache.NewMemoryStore(), "in-memory", s3Factory)
 	if err != nil {
 		return nil, err
 	}
 	return &gatewayStores{
-		ui:          uirepo.NewStore(),
+		ui:          uicache.NewCachedStore(uicache.NewMemoryStore(), uicache.DefaultCacheConfig()),
 		artifact:    artifactStore,
-		uiWorkspace: uiworkspacerepo.NewMemoryStore(),
+		uiWorkspace: uiworkspacecache.NewCachedStore(uiworkspacecache.NewMemoryStore(), uiworkspacecache.DefaultCacheConfig()),
 	}, nil
 }
 
@@ -89,11 +92,21 @@ func chooseArtifactStore(
 	fallbackLabel string,
 	s3Factory func() (artifactrepo.Store, error),
 ) (artifactrepo.Store, error) {
+	var origin artifactrepo.Store
 	if cfg.Artifact.CanUseS3() {
-		return s3Factory()
+		s3Store, err := s3Factory()
+		if err != nil {
+			return nil, err
+		}
+		origin = s3Store
+	} else {
+		if cfg.Artifact.Enabled {
+			log.Printf("artifact store: using %s fallback (s3 config incomplete)", fallbackLabel)
+		}
+		origin = fallback
 	}
-	if cfg.Artifact.Enabled {
-		log.Printf("artifact store: using %s fallback (s3 config incomplete)", fallbackLabel)
+	if origin == nil {
+		return nil, fmt.Errorf("artifact origin store is nil")
 	}
-	return fallback, nil
+	return artifactcache.NewCachedStore(origin, artifactcache.DefaultCacheConfig()), nil
 }

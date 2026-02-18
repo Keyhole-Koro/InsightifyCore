@@ -24,36 +24,35 @@ func NewPostgresStore(client *ent.Client) *PostgresStore {
 	return &PostgresStore{client: client}
 }
 
-func (s *PostgresStore) GetDocument(runID string) *insightifyv1.UiDocument {
+func (s *PostgresStore) GetDocument(ctx context.Context, runID string) (*insightifyv1.UiDocument, error) {
 	if s == nil || s.client == nil {
-		return nil
+		return nil, fmt.Errorf("store is nil")
 	}
 	key := normalizeRunID(runID)
 	if key == "" {
-		return nil
+		return nil, fmt.Errorf("run_id is required")
 	}
 
 	doc, err := s.client.UserInteraction.Query().
 		Where(userinteraction.ID(key)).
-		Only(context.Background())
-	
+		Only(ctx)
+
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return &insightifyv1.UiDocument{RunId: key}
+			return &insightifyv1.UiDocument{RunId: key}, nil
 		}
-		// Log error?
-		return &insightifyv1.UiDocument{RunId: key}
+		return nil, err
 	}
 
 	nodesMap, err := unmarshalNodes(doc.Nodes)
 	if err != nil {
-		return &insightifyv1.UiDocument{RunId: key}
+		return nil, err
 	}
 
-	return toDocFromMap(key, doc.Version, nodesMap)
+	return toDocFromMap(key, doc.Version, nodesMap), nil
 }
 
-func (s *PostgresStore) ApplyOps(runID string, baseVersion int64, ops []*insightifyv1.UiOp) (*insightifyv1.UiDocument, bool, error) {
+func (s *PostgresStore) ApplyOps(ctx context.Context, runID string, baseVersion int64, ops []*insightifyv1.UiOp) (*insightifyv1.UiDocument, bool, error) {
 	if s == nil || s.client == nil {
 		return nil, false, fmt.Errorf("store is nil")
 	}
@@ -62,12 +61,11 @@ func (s *PostgresStore) ApplyOps(runID string, baseVersion int64, ops []*insight
 		return nil, false, fmt.Errorf("run_id is required")
 	}
 
-	ctx := context.Background()
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, false, err
 	}
-	
+
 	// Lock/Get
 	// Create if not exists (Upsert-like for init)
 	err = tx.UserInteraction.Create().
@@ -159,7 +157,7 @@ func (s *PostgresStore) ApplyOps(runID string, baseVersion int64, ops []*insight
 			tx.Rollback()
 			return nil, false, fmt.Errorf("failed to marshal new state: %w", err)
 		}
-		
+
 		// Convert []byte back to map[string]any for Ent
 		var jsonMap map[string]any
 		if err := json.Unmarshal(newJSON, &jsonMap); err != nil {
@@ -191,19 +189,19 @@ func (s *PostgresStore) ApplyOps(runID string, baseVersion int64, ops []*insight
 func unmarshalNodes(data any) (map[string]*insightifyv1.UiNode, error) {
 	// Ent stores as map[string]any in memory check
 	// If it comes from DB, it might be unmarshaled to map[string]any
-	
+
 	// We need to handle map[string]any -> map[string]*UiNode conversion via JSON
-	
+
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var rawMap map[string]json.RawMessage
 	if err := json.Unmarshal(bytes, &rawMap); err != nil {
 		return nil, err
 	}
-	
+
 	out := make(map[string]*insightifyv1.UiNode, len(rawMap))
 	for k, v := range rawMap {
 		node := &insightifyv1.UiNode{}
@@ -249,4 +247,3 @@ func toDocFromMap(runID string, version int64, nodes map[string]*insightifyv1.Ui
 		Nodes:   outNodes,
 	}
 }
-

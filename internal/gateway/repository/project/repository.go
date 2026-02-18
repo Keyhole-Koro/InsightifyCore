@@ -1,25 +1,26 @@
 package project
 
 import (
+	"context"
 	"time"
 
 	"insightify/internal/gateway/entity"
 )
 
 type Repository interface {
-	EnsureLoaded()
-	Save() error
-	Get(projectID string) (State, bool)
-	Put(state State)
-	Update(projectID string, update func(*State)) (State, bool)
-	ListByUser(userID entity.UserID) []State
-	GetActiveByUser(userID entity.UserID) (State, bool)
-	SetActiveForUser(userID entity.UserID, projectID string) (State, bool)
+	EnsureLoaded(ctx context.Context)
+	Save(ctx context.Context) error
+	Get(ctx context.Context, projectID string) (State, bool)
+	Put(ctx context.Context, state State) error
+	Update(ctx context.Context, projectID string, update func(*State)) (State, bool, error)
+	ListByUser(ctx context.Context, userID entity.UserID) ([]State, error)
+	GetActiveByUser(ctx context.Context, userID entity.UserID) (State, bool, error)
+	SetActiveForUser(ctx context.Context, userID entity.UserID, projectID string) (State, bool, error)
 }
 
 type ArtifactRepository interface {
-	AddArtifact(artifact ProjectArtifact) error
-	ListArtifacts(projectID string) ([]ProjectArtifact, error)
+	AddArtifact(ctx context.Context, artifact ProjectArtifact) error
+	ListArtifacts(ctx context.Context, projectID string) ([]ProjectArtifact, error)
 }
 
 type State struct {

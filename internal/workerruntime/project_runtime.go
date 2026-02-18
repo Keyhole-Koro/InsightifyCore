@@ -5,11 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"insightify/internal/common/safeio"
+	"insightify/internal/common/scan"
 	llmclient "insightify/internal/llm/client"
 	"insightify/internal/mcp"
 	"insightify/internal/runner"
-	"insightify/internal/common/safeio"
-	"insightify/internal/common/scan"
+	"insightify/internal/workerruntime/artifactfs"
 )
 
 // ProjectRuntime holds long-lived runtime dependencies for a project.
@@ -32,9 +33,10 @@ type ProjectRuntime struct {
 
 // ExecutionOptions controls per-execution runtime overrides.
 type ExecutionOptions struct {
-	OutDir    string
-	ForceFrom string
-	DepsUsage runner.DepsUsageMode
+	OutDir        string
+	ForceFrom     string
+	DepsUsage     runner.DepsUsageMode
+	ArtifactStore runner.ArtifactStore
 }
 
 // ExecutionRuntime provides a runner.Runtime view for a single execution.
@@ -43,7 +45,7 @@ type ExecutionRuntime struct {
 	outDir    string
 	forceFrom string
 	depsUsage runner.DepsUsageMode
-	artifact  runner.ArtifactAccess
+	artifact  runner.ArtifactStore
 }
 
 // ProjectRuntime interface-style accessors.
@@ -65,14 +67,17 @@ func (r *ProjectRuntime) NewExecutionRuntime(opts ExecutionOptions) *ExecutionRu
 		forceFrom: opts.ForceFrom,
 		depsUsage: opts.DepsUsage,
 	}
-	exec.artifact = newLocalArtifactAccess(exec)
+	exec.artifact = opts.ArtifactStore
+	if exec.artifact == nil {
+		exec.artifact = artifactfs.NewFileStore(outDir)
+	}
 	return exec
 }
 
 // runner.Runtime interface implementation.
 func (r *ExecutionRuntime) GetOutDir() string                  { return r.outDir }
 func (r *ExecutionRuntime) GetRepoFS() *safeio.SafeFS          { return r.project.RepoFS }
-func (r *ExecutionRuntime) Artifacts() runner.ArtifactAccess   { return r.artifact }
+func (r *ExecutionRuntime) Artifacts() runner.ArtifactStore    { return r.artifact }
 func (r *ExecutionRuntime) GetResolver() runner.SpecResolver   { return r.project.Resolver }
 func (r *ExecutionRuntime) GetMCP() *mcp.Registry              { return r.project.MCP }
 func (r *ExecutionRuntime) GetModelSalt() string               { return r.project.ModelSalt }

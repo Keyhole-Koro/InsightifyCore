@@ -2,56 +2,45 @@ package project
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"insightify/internal/gateway/ent"
 	"insightify/internal/gateway/ent/artifact"
 	entproject "insightify/internal/gateway/ent/project"
 	"insightify/internal/gateway/entity"
-
-	"github.com/hashicorp/golang-lru/v2"
 )
 
 type PostgresStore struct {
 	client *ent.Client
-
-	// Metadata cache (read-through) keyed by project_id.
-	artifactCache *lru.Cache[string, []ProjectArtifact]
 }
 
-func NewPostgresStore(client *ent.Client, cache *lru.Cache[string, []ProjectArtifact]) (*PostgresStore, error) {
+func NewPostgresStore(client *ent.Client) (*PostgresStore, error) {
 	return &PostgresStore{
-		client:        client,
-		artifactCache: cache,
+		client: client,
 	}, nil
 }
 
-func (s *PostgresStore) EnsureLoaded() {
+func (s *PostgresStore) EnsureLoaded(_ context.Context) {
 	// Schema creation is handled in app.go or via migration tool.
 }
 
-func (s *PostgresStore) Save() error {
+func (s *PostgresStore) Save(_ context.Context) error {
 	// Ent operations are immediate/transactional.
 	return nil
 }
 
-func (s *PostgresStore) Get(projectID string) (State, bool) {
+func (s *PostgresStore) Get(ctx context.Context, projectID string) (State, bool) {
 	p, err := s.client.Project.Query().
 		Where(entproject.ID(projectID)).
-		Only(context.Background())
+		Only(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return State{}, false
-		}
-		fmt.Printf("failed to get project: %v\n", err)
 		return State{}, false
 	}
 	return toState(p), true
 }
 
-func (s *PostgresStore) Put(state State) {
-	err := s.client.Project.Create().
+func (s *PostgresStore) Put(ctx context.Context, state State) error {
+	return s.client.Project.Create().
 		SetID(state.ProjectID).
 		SetName(state.ProjectName).
 		SetUserID(state.UserID.String()).
@@ -59,17 +48,13 @@ func (s *PostgresStore) Put(state State) {
 		SetIsActive(state.IsActive).
 		OnConflictColumns(entproject.FieldID).
 		UpdateNewValues().
-		Exec(context.Background())
-	if err != nil {
-		fmt.Printf("failed to put project: %v\n", err)
-	}
+		Exec(ctx)
 }
 
-func (s *PostgresStore) Update(projectID string, update func(*State)) (State, bool) {
-	ctx := context.Background()
+func (s *PostgresStore) Update(ctx context.Context, projectID string, update func(*State)) (State, bool, error) {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -77,7 +62,7 @@ func (s *PostgresStore) Update(projectID string, update func(*State)) (State, bo
 		Where(entproject.ID(projectID)).
 		Only(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 
 	state := toState(p)
@@ -90,45 +75,44 @@ func (s *PostgresStore) Update(projectID string, update func(*State)) (State, bo
 		SetIsActive(state.IsActive).
 		Save(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
-	return state, true
+	return state, true, nil
 }
 
-func (s *PostgresStore) ListByUser(userID entity.UserID) []State {
+func (s *PostgresStore) ListByUser(ctx context.Context, userID entity.UserID) ([]State, error) {
 	projects, err := s.client.Project.Query().
 		Where(entproject.UserID(userID.String())).
-		All(context.Background())
+		All(ctx)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	out := make([]State, 0, len(projects))
 	for _, p := range projects {
 		out = append(out, toState(p))
 	}
-	return out
+	return out, nil
 }
 
-func (s *PostgresStore) GetActiveByUser(userID entity.UserID) (State, bool) {
+func (s *PostgresStore) GetActiveByUser(ctx context.Context, userID entity.UserID) (State, bool, error) {
 	p, err := s.client.Project.Query().
 		Where(entproject.UserID(userID.String()), entproject.IsActive(true)).
-		Only(context.Background())
+		Only(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, nil
 	}
-	return toState(p), true
+	return toState(p), true, nil
 }
 
-func (s *PostgresStore) SetActiveForUser(userID entity.UserID, projectID string) (State, bool) {
-	ctx := context.Background()
+func (s *PostgresStore) SetActiveForUser(ctx context.Context, userID entity.UserID, projectID string) (State, bool, error) {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -137,46 +121,37 @@ func (s *PostgresStore) SetActiveForUser(userID entity.UserID, projectID string)
 		SetIsActive(false).
 		Save(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 
 	p, err := tx.Project.UpdateOneID(projectID).
 		SetIsActive(true).
 		Save(ctx)
 	if err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return State{}, false
+		return State{}, false, err
 	}
-	return toState(p), true
+	return toState(p), true, nil
 }
 
-func (s *PostgresStore) AddArtifact(a ProjectArtifact) error {
+func (s *PostgresStore) AddArtifact(ctx context.Context, a ProjectArtifact) error {
 	_, err := s.client.Artifact.Create().
 		SetProjectID(a.ProjectID).
 		SetRunID(a.RunID).
 		SetPath(a.Path).
 		SetCreatedAt(time.Now()).
-		Save(context.Background())
-	if err == nil && s.artifactCache != nil {
-		s.artifactCache.Remove(a.ProjectID)
-	}
+		Save(ctx)
 	return err
 }
 
-func (s *PostgresStore) ListArtifacts(projectID string) ([]ProjectArtifact, error) {
-	if s.artifactCache != nil {
-		if cached, ok := s.artifactCache.Get(projectID); ok {
-			return cached, nil
-		}
-	}
-
+func (s *PostgresStore) ListArtifacts(ctx context.Context, projectID string) ([]ProjectArtifact, error) {
 	artifactsEnt, err := s.client.Artifact.Query().
 		Where(artifact.ProjectID(projectID)).
 		Order(ent.Desc(artifact.FieldCreatedAt)).
-		All(context.Background())
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -190,9 +165,6 @@ func (s *PostgresStore) ListArtifacts(projectID string) ([]ProjectArtifact, erro
 			Path:      a.Path,
 			CreatedAt: a.CreatedAt,
 		}
-	}
-	if s.artifactCache != nil {
-		s.artifactCache.Add(projectID, out)
 	}
 	return out, nil
 }
