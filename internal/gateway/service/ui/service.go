@@ -9,6 +9,7 @@ import (
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
 	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
+	gatewayrestore "insightify/internal/gateway/service/restore"
 	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
 )
 
@@ -16,6 +17,7 @@ import (
 type Service struct {
 	store                    uirepo.Store
 	workspaces               *gatewayuiworkspace.Service
+	restore                  *gatewayrestore.Service
 	artifact                 artifactrepo.Store
 	conversationArtifactPath string
 }
@@ -28,6 +30,7 @@ func New(store uirepo.Store, workspaces *gatewayuiworkspace.Service, artifact ar
 	return &Service{
 		store:                    store,
 		workspaces:               workspaces,
+		restore:                  gatewayrestore.New(store, workspaces),
 		artifact:                 artifact,
 		conversationArtifactPath: path,
 	}
@@ -74,53 +77,26 @@ func (s *Service) ApplyOps(ctx context.Context, req *insightifyv1.ApplyUiOpsRequ
 	return res, nil
 }
 
-func (s *Service) GetProjectTabDocument(ctx context.Context, req *insightifyv1.GetProjectUiDocumentRequest) (*insightifyv1.GetProjectUiDocumentResponse, error) {
+func (s *Service) Restore(ctx context.Context, req *insightifyv1.RestoreUiRequest) (*insightifyv1.RestoreUiResponse, error) {
 	if s == nil || s.store == nil {
 		return nil, fmt.Errorf("ui service is not available")
 	}
-	if s.workspaces == nil {
-		return nil, fmt.Errorf("ui workspace service is not available")
+	if s.restore == nil {
+		return nil, fmt.Errorf("ui restore service is not available")
 	}
 	projectID := strings.TrimSpace(req.GetProjectId())
 	if projectID == "" {
 		return nil, fmt.Errorf("project_id is required")
 	}
 
-	preferredTabID := strings.TrimSpace(req.GetTabId())
-	if preferredTabID == "" {
-		preferredTabID = gatewayuiworkspace.DefaultTabID
-	}
-	_, tab, ok, err := s.workspaces.ResolveTab(projectID, preferredTabID)
+	result, err := s.restore.ResolveProjectTabDocument(ctx, projectID, req.GetTabId())
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return &insightifyv1.GetProjectUiDocumentResponse{
-			Found:     false,
-			ProjectId: projectID,
-		}, nil
+	if result.Found && result.Document != nil {
+		result.Document = s.withConversationHistory(ctx, result.RunID, result.Document)
 	}
-	tabID := strings.TrimSpace(tab.TabID)
-	runID := strings.TrimSpace(tab.RunID)
-	if runID == "" {
-		return &insightifyv1.GetProjectUiDocumentResponse{
-			Found:     false,
-			ProjectId: projectID,
-			TabId:     tabID,
-		}, nil
-	}
-	doc, err := s.store.GetDocument(ctx, runID)
-	if err != nil {
-		return nil, err
-	}
-	doc = s.withConversationHistory(ctx, runID, doc)
-	return &insightifyv1.GetProjectUiDocumentResponse{
-		Found:     true,
-		ProjectId: projectID,
-		TabId:     strings.TrimSpace(tabID),
-		RunId:     runID,
-		Document:  doc,
-	}, nil
+	return result.ToRestoreProtoResponse(), nil
 }
 
 func (s *Service) GetWorkspace(_ context.Context, req *insightifyv1.GetUiWorkspaceRequest) (*insightifyv1.GetUiWorkspaceResponse, error) {

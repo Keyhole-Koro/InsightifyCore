@@ -27,14 +27,6 @@ func (h *UiHandler) GetDocument(ctx context.Context, req *connect.Request[insigh
 	return connect.NewResponse(out), nil
 }
 
-func (h *UiHandler) GetProjectTabDocument(ctx context.Context, req *connect.Request[insightifyv1.GetProjectUiDocumentRequest]) (*connect.Response[insightifyv1.GetProjectUiDocumentResponse], error) {
-	out, err := h.svc.GetProjectTabDocument(ctx, req.Msg)
-	if err != nil {
-		return nil, toUIError(err)
-	}
-	return connect.NewResponse(out), nil
-}
-
 func (h *UiHandler) ApplyOps(ctx context.Context, req *connect.Request[insightifyv1.ApplyUiOpsRequest]) (*connect.Response[insightifyv1.ApplyUiOpsResponse], error) {
 	out, err := h.svc.ApplyOps(ctx, req.Msg)
 	if err != nil {

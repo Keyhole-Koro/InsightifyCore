@@ -37,9 +37,6 @@ const (
 const (
 	// UiServiceGetDocumentProcedure is the fully-qualified name of the UiService's GetDocument RPC.
 	UiServiceGetDocumentProcedure = "/insightify.v1.UiService/GetDocument"
-	// UiServiceGetProjectTabDocumentProcedure is the fully-qualified name of the UiService's
-	// GetProjectTabDocument RPC.
-	UiServiceGetProjectTabDocumentProcedure = "/insightify.v1.UiService/GetProjectTabDocument"
 	// UiServiceApplyOpsProcedure is the fully-qualified name of the UiService's ApplyOps RPC.
 	UiServiceApplyOpsProcedure = "/insightify.v1.UiService/ApplyOps"
 	// UiWorkspaceServiceGetWorkspaceProcedure is the fully-qualified name of the UiWorkspaceService's
@@ -54,12 +51,14 @@ const (
 	// UiWorkspaceServiceSelectTabProcedure is the fully-qualified name of the UiWorkspaceService's
 	// SelectTab RPC.
 	UiWorkspaceServiceSelectTabProcedure = "/insightify.v1.UiWorkspaceService/SelectTab"
+	// UiWorkspaceServiceRestoreProcedure is the fully-qualified name of the UiWorkspaceService's
+	// Restore RPC.
+	UiWorkspaceServiceRestoreProcedure = "/insightify.v1.UiWorkspaceService/Restore"
 )
 
 // UiServiceClient is a client for the insightify.v1.UiService service.
 type UiServiceClient interface {
 	GetDocument(context.Context, *connect.Request[v1.GetUiDocumentRequest]) (*connect.Response[v1.GetUiDocumentResponse], error)
-	GetProjectTabDocument(context.Context, *connect.Request[v1.GetProjectUiDocumentRequest]) (*connect.Response[v1.GetProjectUiDocumentResponse], error)
 	ApplyOps(context.Context, *connect.Request[v1.ApplyUiOpsRequest]) (*connect.Response[v1.ApplyUiOpsResponse], error)
 }
 
@@ -80,12 +79,6 @@ func NewUiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(uiServiceMethods.ByName("GetDocument")),
 			connect.WithClientOptions(opts...),
 		),
-		getProjectTabDocument: connect.NewClient[v1.GetProjectUiDocumentRequest, v1.GetProjectUiDocumentResponse](
-			httpClient,
-			baseURL+UiServiceGetProjectTabDocumentProcedure,
-			connect.WithSchema(uiServiceMethods.ByName("GetProjectTabDocument")),
-			connect.WithClientOptions(opts...),
-		),
 		applyOps: connect.NewClient[v1.ApplyUiOpsRequest, v1.ApplyUiOpsResponse](
 			httpClient,
 			baseURL+UiServiceApplyOpsProcedure,
@@ -97,19 +90,13 @@ func NewUiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 
 // uiServiceClient implements UiServiceClient.
 type uiServiceClient struct {
-	getDocument           *connect.Client[v1.GetUiDocumentRequest, v1.GetUiDocumentResponse]
-	getProjectTabDocument *connect.Client[v1.GetProjectUiDocumentRequest, v1.GetProjectUiDocumentResponse]
-	applyOps              *connect.Client[v1.ApplyUiOpsRequest, v1.ApplyUiOpsResponse]
+	getDocument *connect.Client[v1.GetUiDocumentRequest, v1.GetUiDocumentResponse]
+	applyOps    *connect.Client[v1.ApplyUiOpsRequest, v1.ApplyUiOpsResponse]
 }
 
 // GetDocument calls insightify.v1.UiService.GetDocument.
 func (c *uiServiceClient) GetDocument(ctx context.Context, req *connect.Request[v1.GetUiDocumentRequest]) (*connect.Response[v1.GetUiDocumentResponse], error) {
 	return c.getDocument.CallUnary(ctx, req)
-}
-
-// GetProjectTabDocument calls insightify.v1.UiService.GetProjectTabDocument.
-func (c *uiServiceClient) GetProjectTabDocument(ctx context.Context, req *connect.Request[v1.GetProjectUiDocumentRequest]) (*connect.Response[v1.GetProjectUiDocumentResponse], error) {
-	return c.getProjectTabDocument.CallUnary(ctx, req)
 }
 
 // ApplyOps calls insightify.v1.UiService.ApplyOps.
@@ -120,7 +107,6 @@ func (c *uiServiceClient) ApplyOps(ctx context.Context, req *connect.Request[v1.
 // UiServiceHandler is an implementation of the insightify.v1.UiService service.
 type UiServiceHandler interface {
 	GetDocument(context.Context, *connect.Request[v1.GetUiDocumentRequest]) (*connect.Response[v1.GetUiDocumentResponse], error)
-	GetProjectTabDocument(context.Context, *connect.Request[v1.GetProjectUiDocumentRequest]) (*connect.Response[v1.GetProjectUiDocumentResponse], error)
 	ApplyOps(context.Context, *connect.Request[v1.ApplyUiOpsRequest]) (*connect.Response[v1.ApplyUiOpsResponse], error)
 }
 
@@ -137,12 +123,6 @@ func NewUiServiceHandler(svc UiServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(uiServiceMethods.ByName("GetDocument")),
 		connect.WithHandlerOptions(opts...),
 	)
-	uiServiceGetProjectTabDocumentHandler := connect.NewUnaryHandler(
-		UiServiceGetProjectTabDocumentProcedure,
-		svc.GetProjectTabDocument,
-		connect.WithSchema(uiServiceMethods.ByName("GetProjectTabDocument")),
-		connect.WithHandlerOptions(opts...),
-	)
 	uiServiceApplyOpsHandler := connect.NewUnaryHandler(
 		UiServiceApplyOpsProcedure,
 		svc.ApplyOps,
@@ -153,8 +133,6 @@ func NewUiServiceHandler(svc UiServiceHandler, opts ...connect.HandlerOption) (s
 		switch r.URL.Path {
 		case UiServiceGetDocumentProcedure:
 			uiServiceGetDocumentHandler.ServeHTTP(w, r)
-		case UiServiceGetProjectTabDocumentProcedure:
-			uiServiceGetProjectTabDocumentHandler.ServeHTTP(w, r)
 		case UiServiceApplyOpsProcedure:
 			uiServiceApplyOpsHandler.ServeHTTP(w, r)
 		default:
@@ -170,10 +148,6 @@ func (UnimplementedUiServiceHandler) GetDocument(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiService.GetDocument is not implemented"))
 }
 
-func (UnimplementedUiServiceHandler) GetProjectTabDocument(context.Context, *connect.Request[v1.GetProjectUiDocumentRequest]) (*connect.Response[v1.GetProjectUiDocumentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiService.GetProjectTabDocument is not implemented"))
-}
-
 func (UnimplementedUiServiceHandler) ApplyOps(context.Context, *connect.Request[v1.ApplyUiOpsRequest]) (*connect.Response[v1.ApplyUiOpsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiService.ApplyOps is not implemented"))
 }
@@ -184,6 +158,7 @@ type UiWorkspaceServiceClient interface {
 	ListTabs(context.Context, *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error)
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
+	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
 }
 
 // NewUiWorkspaceServiceClient constructs a client for the insightify.v1.UiWorkspaceService service.
@@ -221,6 +196,12 @@ func NewUiWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(uiWorkspaceServiceMethods.ByName("SelectTab")),
 			connect.WithClientOptions(opts...),
 		),
+		restore: connect.NewClient[v1.RestoreUiRequest, v1.RestoreUiResponse](
+			httpClient,
+			baseURL+UiWorkspaceServiceRestoreProcedure,
+			connect.WithSchema(uiWorkspaceServiceMethods.ByName("Restore")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -230,6 +211,7 @@ type uiWorkspaceServiceClient struct {
 	listTabs     *connect.Client[v1.ListUiTabsRequest, v1.ListUiTabsResponse]
 	createTab    *connect.Client[v1.CreateUiTabRequest, v1.CreateUiTabResponse]
 	selectTab    *connect.Client[v1.SelectUiTabRequest, v1.SelectUiTabResponse]
+	restore      *connect.Client[v1.RestoreUiRequest, v1.RestoreUiResponse]
 }
 
 // GetWorkspace calls insightify.v1.UiWorkspaceService.GetWorkspace.
@@ -252,12 +234,18 @@ func (c *uiWorkspaceServiceClient) SelectTab(ctx context.Context, req *connect.R
 	return c.selectTab.CallUnary(ctx, req)
 }
 
+// Restore calls insightify.v1.UiWorkspaceService.Restore.
+func (c *uiWorkspaceServiceClient) Restore(ctx context.Context, req *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error) {
+	return c.restore.CallUnary(ctx, req)
+}
+
 // UiWorkspaceServiceHandler is an implementation of the insightify.v1.UiWorkspaceService service.
 type UiWorkspaceServiceHandler interface {
 	GetWorkspace(context.Context, *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error)
 	ListTabs(context.Context, *connect.Request[v1.ListUiTabsRequest]) (*connect.Response[v1.ListUiTabsResponse], error)
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
+	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
 }
 
 // NewUiWorkspaceServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -291,6 +279,12 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 		connect.WithSchema(uiWorkspaceServiceMethods.ByName("SelectTab")),
 		connect.WithHandlerOptions(opts...),
 	)
+	uiWorkspaceServiceRestoreHandler := connect.NewUnaryHandler(
+		UiWorkspaceServiceRestoreProcedure,
+		svc.Restore,
+		connect.WithSchema(uiWorkspaceServiceMethods.ByName("Restore")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/insightify.v1.UiWorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UiWorkspaceServiceGetWorkspaceProcedure:
@@ -301,6 +295,8 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 			uiWorkspaceServiceCreateTabHandler.ServeHTTP(w, r)
 		case UiWorkspaceServiceSelectTabProcedure:
 			uiWorkspaceServiceSelectTabHandler.ServeHTTP(w, r)
+		case UiWorkspaceServiceRestoreProcedure:
+			uiWorkspaceServiceRestoreHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -324,4 +320,8 @@ func (UnimplementedUiWorkspaceServiceHandler) CreateTab(context.Context, *connec
 
 func (UnimplementedUiWorkspaceServiceHandler) SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.SelectTab is not implemented"))
+}
+
+func (UnimplementedUiWorkspaceServiceHandler) Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.Restore is not implemented"))
 }

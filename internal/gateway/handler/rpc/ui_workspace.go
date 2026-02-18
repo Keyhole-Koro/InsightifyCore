@@ -48,3 +48,11 @@ func (h *UiWorkspaceHandler) SelectTab(ctx context.Context, req *connect.Request
 	}
 	return connect.NewResponse(out), nil
 }
+
+func (h *UiWorkspaceHandler) Restore(ctx context.Context, req *connect.Request[insightifyv1.RestoreUiRequest]) (*connect.Response[insightifyv1.RestoreUiResponse], error) {
+	out, err := h.svc.Restore(ctx, req.Msg)
+	if err != nil {
+		return nil, toUIError(err)
+	}
+	return connect.NewResponse(out), nil
+}
