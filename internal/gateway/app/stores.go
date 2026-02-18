@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
+	"strings"
 
+	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	artifactcache "insightify/internal/cache/artifact"
 	uicache "insightify/internal/cache/ui"
@@ -26,7 +27,7 @@ type gatewayStores struct {
 func initStores(cfg *config.Config) (*gatewayStores, error) {
 	s3Factory := newArtifactS3StoreFactory(cfg)
 
-	if dsn := os.Getenv("PROJECT_STORE_PG_DSN"); dsn != "" {
+	if dsn := strings.TrimSpace(cfg.DatabaseURL); dsn != "" {
 		return initPostgresStores(dsn, cfg, s3Factory)
 	}
 	return initInMemoryStores(cfg, s3Factory)
@@ -58,7 +59,7 @@ func initPostgresStores(dsn string, cfg *config.Config, s3Factory func() (artifa
 	}
 
 	// Initialize Ent client
-	drv := entsql.OpenDB("pgx", db)
+	drv := entsql.OpenDB(dialect.Postgres, db)
 	client := ent.NewClient(ent.Driver(drv))
 
 	stores := &gatewayStores{

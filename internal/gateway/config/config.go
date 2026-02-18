@@ -3,15 +3,22 @@ package config
 import (
 	"flag"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
 
+type AppEnv string
+
+const (
+	AppEnvLocal AppEnv = "local"
+	AppEnvStage AppEnv = "stage"
+	AppEnvProd  AppEnv = "prod"
+)
+
 type Config struct {
 	Port        string
-	Env         string
+	Env         AppEnv
 	DatabaseURL string
 	Artifact    ArtifactConfig
 	Interaction InteractionConfig
@@ -55,71 +62,38 @@ func Load() (*Config, error) {
 		}
 	}
 
-	env := strings.TrimSpace(os.Getenv("APP_ENV"))
-	if env == "" {
-		env = "local"
-	}
+	env := normalizeAppEnv(os.Getenv("APP_ENV"))
+	cfg := configForEnv(env)
+	cfg.Port = *port
+	cfg.Env = env
 
-	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
-	if dbURL == "" {
-		// Default for local development if not set?
-		dbURL = "postgres://insightify:insightify@localhost:5432/insightify?sslmode=disable"
-	}
-
-	return &Config{
-		Port:        *port,
-		Env:         env,
-		DatabaseURL: dbURL,
-		Artifact:    loadArtifactConfig(env),
-		Interaction: loadInteractionConfig(),
-	}, nil
+	return &cfg, nil
 }
 
-func loadArtifactConfig(env string) ArtifactConfig {
-	if strings.EqualFold(strings.TrimSpace(env), "local") {
-		return ArtifactConfig{
-			Enabled:   true,
-			Endpoint:  firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_MINIO_ENDPOINT")), "minio:9000"),
-			Region:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_REGION")), "us-east-1"),
-			AccessKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_ACCESS_KEY")), "insightify"),
-			SecretKey: firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_SECRET_KEY")), "insightify123"),
-			Bucket:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_BUCKET")), "insightify-artifacts"),
-			UseSSL:    false,
-		}
-	}
-
-	endpoint := resolveArtifactEndpoint(env)
-	return ArtifactConfig{
-		Enabled:   endpoint != "",
-		Endpoint:  endpoint,
-		Region:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_REGION")), "us-east-1"),
-		AccessKey: strings.TrimSpace(os.Getenv("ARTIFACT_S3_ACCESS_KEY")),
-		SecretKey: strings.TrimSpace(os.Getenv("ARTIFACT_S3_SECRET_KEY")),
-		Bucket:    firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_S3_BUCKET")), "insightify-artifacts"),
-		UseSSL:    resolveArtifactUseSSL(env),
+func normalizeAppEnv(raw string) AppEnv {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(AppEnvLocal):
+		return AppEnvLocal
+	case string(AppEnvStage):
+		return AppEnvStage
+	case string(AppEnvProd):
+		return AppEnvProd
+	default:
+		return AppEnvLocal
 	}
 }
 
-func resolveArtifactEndpoint(env string) string {
-	if strings.EqualFold(strings.TrimSpace(env), "local") {
-		return firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_MINIO_ENDPOINT")), "minio:9000")
+func configForEnv(env AppEnv) Config {
+	switch env {
+	case AppEnvLocal:
+		return localConfig()
+	case AppEnvStage:
+		return stageConfig()
+	case AppEnvProd:
+		return prodConfig()
+	default:
+		return localConfig()
 	}
-	return strings.TrimSpace(os.Getenv("ARTIFACT_S3_ENDPOINT"))
-}
-
-func resolveArtifactUseSSL(env string) bool {
-	if strings.EqualFold(strings.TrimSpace(env), "local") {
-		return false
-	}
-	raw := strings.TrimSpace(os.Getenv("ARTIFACT_S3_USE_SSL"))
-	if raw == "" {
-		return true
-	}
-	v, err := strconv.ParseBool(raw)
-	if err != nil {
-		return true
-	}
-	return v
 }
 
 func firstNonEmpty(values ...string) string {
@@ -129,13 +103,4 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func loadInteractionConfig() InteractionConfig {
-	return InteractionConfig{
-		ConversationArtifactPath: firstNonEmpty(
-			strings.TrimSpace(os.Getenv("INTERACTION_CONVERSATION_ARTIFACT_PATH")),
-			"interaction/conversation_history.json",
-		),
-	}
 }

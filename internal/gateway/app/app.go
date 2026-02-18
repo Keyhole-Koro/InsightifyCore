@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -47,7 +48,7 @@ func New() (*App, error) {
 	db := stdlib.OpenDBFromPool(pool)
 
 	// Initialize Ent client
-	drv := entsql.OpenDB("pgx", db)
+	drv := entsql.OpenDB(dialect.Postgres, db)
 	client := ent.NewClient(ent.Driver(drv))
 
 	// Run Ent migrations
