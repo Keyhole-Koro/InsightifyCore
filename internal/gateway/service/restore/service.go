@@ -2,9 +2,13 @@ package restore
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	uirepo "insightify/internal/gateway/repository/ui"
 	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
@@ -18,13 +22,16 @@ const (
 )
 
 type Result struct {
-	ProjectID string
-	TabID     string
-	RunID     string
-	Found     bool
-	Restored  bool
-	Reason    insightifyv1.UiRestoreReason
-	Document  *insightifyv1.UiDocument
+	ProjectID    string
+	TabID        string
+	RunID        string
+	Reason       insightifyv1.UiRestoreReason
+	Document     *insightifyv1.UiDocument
+	DocumentHash string
+}
+
+func (r Result) IsResolved() bool {
+	return r.Reason == ReasonResolved
 }
 
 type Service struct {
@@ -63,8 +70,6 @@ func (s *Service) ResolveProjectTabDocument(ctx context.Context, projectID, pref
 	if !ok {
 		return Result{
 			ProjectID: pid,
-			Found:     false,
-			Restored:  false,
 			Reason:    ReasonNoTab,
 		}, nil
 	}
@@ -75,8 +80,6 @@ func (s *Service) ResolveProjectTabDocument(ctx context.Context, projectID, pref
 		return Result{
 			ProjectID: pid,
 			TabID:     tabID,
-			Found:     false,
-			Restored:  false,
 			Reason:    ReasonNoRun,
 		}, nil
 	}
@@ -86,24 +89,79 @@ func (s *Service) ResolveProjectTabDocument(ctx context.Context, projectID, pref
 		return Result{}, err
 	}
 	return Result{
-		ProjectID: pid,
-		TabID:     tabID,
-		RunID:     runID,
-		Found:     true,
-		Restored:  true,
-		Reason:    ReasonResolved,
-		Document:  doc,
+		ProjectID:    pid,
+		TabID:        tabID,
+		RunID:        runID,
+		Reason:       ReasonResolved,
+		Document:     doc,
+		DocumentHash: HashDocumentCanonical(doc),
 	}, nil
 }
 
 func (r Result) ToRestoreProtoResponse() *insightifyv1.RestoreUiResponse {
+	found, restored := flagsFromReason(r.Reason)
 	return &insightifyv1.RestoreUiResponse{
-		Found:     r.Found,
-		Restored:  r.Restored,
-		Reason:    r.Reason,
-		ProjectId: strings.TrimSpace(r.ProjectID),
-		TabId:     strings.TrimSpace(r.TabID),
-		RunId:     strings.TrimSpace(r.RunID),
-		Document:  r.Document,
+		Reason:       r.Reason,
+		Found:        found,
+		Restored:     restored,
+		ProjectId:    strings.TrimSpace(r.ProjectID),
+		TabId:        strings.TrimSpace(r.TabID),
+		RunId:        strings.TrimSpace(r.RunID),
+		Document:     r.Document,
+		DocumentHash: strings.TrimSpace(r.DocumentHash),
 	}
+}
+
+func flagsFromReason(reason insightifyv1.UiRestoreReason) (bool, bool) {
+	if reason == ReasonResolved {
+		return true, true
+	}
+	return false, false
+}
+
+func HashDocumentCanonical(doc *insightifyv1.UiDocument) string {
+	if doc == nil {
+		return ""
+	}
+	type encodedNode struct {
+		id      string
+		nodeTyp insightifyv1.UiNodeType
+		payload []byte
+	}
+	nodes := make([]encodedNode, 0, len(doc.GetNodes()))
+	for _, node := range doc.GetNodes() {
+		if node == nil {
+			continue
+		}
+		payload, err := proto.MarshalOptions{Deterministic: true}.Marshal(node)
+		if err != nil {
+			continue
+		}
+		nodes = append(nodes, encodedNode{
+			id:      strings.TrimSpace(node.GetId()),
+			nodeTyp: node.GetType(),
+			payload: payload,
+		})
+	}
+	sort.Slice(nodes, func(i, j int) bool {
+		if nodes[i].id != nodes[j].id {
+			return nodes[i].id < nodes[j].id
+		}
+		if nodes[i].nodeTyp != nodes[j].nodeTyp {
+			return nodes[i].nodeTyp < nodes[j].nodeTyp
+		}
+		return string(nodes[i].payload) < string(nodes[j].payload)
+	})
+
+	hasher := sha256.New()
+	for _, node := range nodes {
+		_, _ = hasher.Write([]byte(node.id))
+		_, _ = hasher.Write([]byte{0})
+		_, _ = hasher.Write([]byte(fmt.Sprintf("%d", node.nodeTyp)))
+		_, _ = hasher.Write([]byte{0})
+		_, _ = hasher.Write(node.payload)
+		_, _ = hasher.Write([]byte{0})
+	}
+	sum := hasher.Sum(nil)
+	return hex.EncodeToString(sum[:])
 }

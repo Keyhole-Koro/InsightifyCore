@@ -1333,14 +1333,24 @@ func (x *RestoreUiRequest) GetTabId() string {
 }
 
 type RestoreUiResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Found         bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
-	Restored      bool                   `protobuf:"varint,2,opt,name=restored,proto3" json:"restored,omitempty"`
-	Reason        UiRestoreReason        `protobuf:"varint,3,opt,name=reason,proto3,enum=insightify.v1.UiRestoreReason" json:"reason,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	TabId         string                 `protobuf:"bytes,5,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
-	RunId         string                 `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	Document      *UiDocument            `protobuf:"bytes,7,opt,name=document,proto3" json:"document,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// reason is the primary restore decision key for clients.
+	Reason UiRestoreReason `protobuf:"varint,1,opt,name=reason,proto3,enum=insightify.v1.UiRestoreReason" json:"reason,omitempty"`
+	// found/restored are compatibility flags derived from reason.
+	// true only when reason == UI_RESTORE_REASON_RESOLVED.
+	Found    bool `protobuf:"varint,2,opt,name=found,proto3" json:"found,omitempty"`
+	Restored bool `protobuf:"varint,3,opt,name=restored,proto3" json:"restored,omitempty"`
+	// project_id always echoes the request target.
+	ProjectId string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// tab_id is set when a tab can be resolved.
+	TabId string `protobuf:"bytes,5,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	// run_id is required when found=true; empty when found=false.
+	RunId string `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// document is returned for found=true (nodes may be empty).
+	Document *UiDocument `protobuf:"bytes,7,opt,name=document,proto3" json:"document,omitempty"`
+	// document_hash is a sha256 hash over sorted node ids in the resolved document.
+	// It can be used by clients to compare local cache with server state.
+	DocumentHash  string `protobuf:"bytes,8,opt,name=document_hash,json=documentHash,proto3" json:"document_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1375,6 +1385,13 @@ func (*RestoreUiResponse) Descriptor() ([]byte, []int) {
 	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{20}
 }
 
+func (x *RestoreUiResponse) GetReason() UiRestoreReason {
+	if x != nil {
+		return x.Reason
+	}
+	return UiRestoreReason_UI_RESTORE_REASON_UNSPECIFIED
+}
+
 func (x *RestoreUiResponse) GetFound() bool {
 	if x != nil {
 		return x.Found
@@ -1387,13 +1404,6 @@ func (x *RestoreUiResponse) GetRestored() bool {
 		return x.Restored
 	}
 	return false
-}
-
-func (x *RestoreUiResponse) GetReason() UiRestoreReason {
-	if x != nil {
-		return x.Reason
-	}
-	return UiRestoreReason_UI_RESTORE_REASON_UNSPECIFIED
 }
 
 func (x *RestoreUiResponse) GetProjectId() string {
@@ -1422,6 +1432,13 @@ func (x *RestoreUiResponse) GetDocument() *UiDocument {
 		return x.Document
 	}
 	return nil
+}
+
+func (x *RestoreUiResponse) GetDocumentHash() string {
+	if x != nil {
+		return x.DocumentHash
+	}
+	return ""
 }
 
 type ApplyUiOpsRequest struct {
@@ -1875,16 +1892,17 @@ const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\x10RestoreUiRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
-	"\x06tab_id\x18\x02 \x01(\tR\x05tabId\"\x81\x02\n" +
-	"\x11RestoreUiResponse\x12\x14\n" +
-	"\x05found\x18\x01 \x01(\bR\x05found\x12\x1a\n" +
-	"\brestored\x18\x02 \x01(\bR\brestored\x126\n" +
-	"\x06reason\x18\x03 \x01(\x0e2\x1e.insightify.v1.UiRestoreReasonR\x06reason\x12\x1d\n" +
+	"\x06tab_id\x18\x02 \x01(\tR\x05tabId\"\xa6\x02\n" +
+	"\x11RestoreUiResponse\x126\n" +
+	"\x06reason\x18\x01 \x01(\x0e2\x1e.insightify.v1.UiRestoreReasonR\x06reason\x12\x14\n" +
+	"\x05found\x18\x02 \x01(\bR\x05found\x12\x1a\n" +
+	"\brestored\x18\x03 \x01(\bR\brestored\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x15\n" +
 	"\x06tab_id\x18\x05 \x01(\tR\x05tabId\x12\x15\n" +
 	"\x06run_id\x18\x06 \x01(\tR\x05runId\x125\n" +
-	"\bdocument\x18\a \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\"\x8a\x01\n" +
+	"\bdocument\x18\a \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\x12#\n" +
+	"\rdocument_hash\x18\b \x01(\tR\fdocumentHash\"\x8a\x01\n" +
 	"\x11ApplyUiOpsRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12!\n" +
 	"\fbase_version\x18\x02 \x01(\x03R\vbaseVersion\x12%\n" +

@@ -93,8 +93,9 @@ func (s *Service) Restore(ctx context.Context, req *insightifyv1.RestoreUiReques
 	if err != nil {
 		return nil, err
 	}
-	if result.Found && result.Document != nil {
+	if result.IsResolved() && result.Document != nil {
 		result.Document = s.withConversationHistory(ctx, result.RunID, result.Document)
+		result.DocumentHash = gatewayrestore.HashDocumentCanonical(result.Document)
 	}
 	return result.ToRestoreProtoResponse(), nil
 }
