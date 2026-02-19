@@ -99,24 +99,14 @@ func (s *Service) ResolveProjectTabDocument(ctx context.Context, projectID, pref
 }
 
 func (r Result) ToRestoreProtoResponse() *insightifyv1.RestoreUiResponse {
-	found, restored := flagsFromReason(r.Reason)
 	return &insightifyv1.RestoreUiResponse{
 		Reason:       r.Reason,
-		Found:        found,
-		Restored:     restored,
 		ProjectId:    strings.TrimSpace(r.ProjectID),
 		TabId:        strings.TrimSpace(r.TabID),
 		RunId:        strings.TrimSpace(r.RunID),
 		Document:     r.Document,
 		DocumentHash: strings.TrimSpace(r.DocumentHash),
 	}
-}
-
-func flagsFromReason(reason insightifyv1.UiRestoreReason) (bool, bool) {
-	if reason == ReasonResolved {
-		return true, true
-	}
-	return false, false
 }
 
 func HashDocumentCanonical(doc *insightifyv1.UiDocument) string {
