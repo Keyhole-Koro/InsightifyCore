@@ -1,6 +1,7 @@
 package userinteraction
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -16,6 +17,14 @@ type Service struct {
 	state                    map[string]*sessionState
 	artifact                 artifactrepo.Store
 	conversationArtifactPath string
+	uiSync                   UISync
+}
+
+// UISync updates UiDocument from interaction events on the core side.
+type UISync interface {
+	OnUserAccepted(ctx context.Context, runID, interactionID, input string) error
+	OnAssistantOutput(ctx context.Context, runID, interactionID, message string) error
+	OnWaiting(ctx context.Context, runID, interactionID string, waiting bool) error
 }
 
 type SubscriptionEventKind string

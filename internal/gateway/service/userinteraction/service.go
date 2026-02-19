@@ -22,6 +22,15 @@ func New(artifact artifactrepo.Store, conversationArtifactPath string) *Service 
 	}
 }
 
+func (s *Service) SetUISync(sync UISync) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.uiSync = sync
+}
+
 func (s *Service) Wait(ctx context.Context, req *insightifyv1.WaitRequest) (*insightifyv1.WaitResponse, error) {
 	runID := strings.TrimSpace(req.GetRunId())
 	if runID == "" {
@@ -134,7 +143,6 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	st := s.getOrCreateLocked(runID)
 	if interactionID := strings.TrimSpace(req.GetInteractionId()); interactionID != "" {
@@ -146,8 +154,15 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 	st.closed = true
 	st.waiting = false
 	st.updatedAt = time.Now()
+	syncer := s.uiSync
+	syncRunID := runID
+	syncInter := st.interactionID
 	notifyLocked(st)
+	s.mu.Unlock()
 
+	if syncer != nil {
+		_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+	}
 	return &insightifyv1.CloseResponse{
 		Closed: true,
 	}, nil
@@ -160,6 +175,12 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 		return "", fmt.Errorf("run_id is required")
 	}
 	for {
+		var (
+			syncer     UISync
+			syncRunID  string
+			syncInter  string
+			emitWaitOn bool
+		)
 		s.mu.Lock()
 		st := s.getOrCreateLocked(runID)
 		if st.interactionID == "" {
@@ -167,6 +188,10 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 		}
 		st.waiting = true
 		st.updatedAt = time.Now()
+		syncer = s.uiSync
+		syncRunID = runID
+		syncInter = st.interactionID
+		emitWaitOn = syncer != nil
 		if len(st.inputQueue) > 0 {
 			in := strings.TrimSpace(st.inputQueue[0])
 			st.inputQueue = st.inputQueue[1:]
@@ -174,6 +199,10 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 			st.updatedAt = time.Now()
 			notifyLocked(st)
 			s.mu.Unlock()
+			if emitWaitOn {
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+			}
 			if in == "" {
 				continue
 			}
@@ -183,20 +212,38 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 			st.waiting = false
 			notifyLocked(st)
 			s.mu.Unlock()
+			if emitWaitOn {
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+			}
 			return "", context.Canceled
 		}
 		notifyLocked(st)
 		ch := st.changed
 		s.mu.Unlock()
+		if emitWaitOn {
+			_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
+		}
 
 		select {
 		case <-ctx.Done():
+			var (
+				syncer2    UISync
+				syncRunID2 string
+				syncInter2 string
+			)
 			s.mu.Lock()
 			st := s.getOrCreateLocked(runID)
 			st.waiting = false
 			st.updatedAt = time.Now()
+			syncer2 = s.uiSync
+			syncRunID2 = runID
+			syncInter2 = st.interactionID
 			notifyLocked(st)
 			s.mu.Unlock()
+			if syncer2 != nil {
+				_ = syncer2.OnWaiting(context.Background(), syncRunID2, syncInter2, false)
+			}
 			return "", ctx.Err()
 		case <-ch:
 		}

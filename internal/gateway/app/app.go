@@ -24,6 +24,7 @@ import (
 	"insightify/internal/gateway/server"
 	gatewayproject "insightify/internal/gateway/service/project"
 	gatewayui "insightify/internal/gateway/service/ui"
+	gatewayuievent "insightify/internal/gateway/service/uievent"
 	gatewayuiworkspace "insightify/internal/gateway/service/uiworkspace"
 	gatewayuserinteraction "insightify/internal/gateway/service/userinteraction"
 	gatewayworker "insightify/internal/gateway/service/worker"
@@ -92,7 +93,9 @@ func New() (*App, error) {
 	projectSvc := gatewayproject.New(projectStore, projectStore, artifactStoreWithCache)
 	uiWorkspaceSvc := gatewayuiworkspace.New(uiWorkspaceStore)                                                        // Use the Ent-backed uiWorkspaceStore
 	uiSvc := gatewayui.New(uiStore, uiWorkspaceSvc, artifactStoreWithCache, cfg.Interaction.ConversationArtifactPath) // Use the Ent-backed uiStore
+	uiEventSvc := gatewayuievent.New(uiStore)
 	userInteractionSvc := gatewayuserinteraction.New(artifactStoreWithCache, cfg.Interaction.ConversationArtifactPath)
+	userInteractionSvc.SetUISync(uiEventSvc)
 	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStoreWithCache)
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)

@@ -21,7 +21,13 @@ func (s *Service) PublishOutput(ctx context.Context, runID, interactionID, messa
 		return fmt.Errorf("message is required")
 	}
 
-	var snapshot []byte
+	var (
+		snapshot   []byte
+		syncer     UISync
+		syncRunID  string
+		syncInter  string
+		syncOutput string
+	)
 	s.mu.Lock()
 
 	st := s.getOrCreateLocked(runID)
@@ -44,10 +50,17 @@ func (s *Service) PublishOutput(ctx context.Context, runID, interactionID, messa
 	})
 	st.updatedAt = time.Now()
 	snapshot = s.buildConversationSnapshotLocked(runID, st)
+	syncer = s.uiSync
+	syncRunID = runID
+	syncInter = st.interactionID
+	syncOutput = message
 	notifyLocked(st)
 	s.mu.Unlock()
 
 	s.persistConversation(ctx, runID, snapshot)
+	if syncer != nil {
+		_ = syncer.OnAssistantOutput(ctx, syncRunID, syncInter, syncOutput)
+	}
 	return nil
 }
 
@@ -61,7 +74,13 @@ func (s *Service) Send(ctx context.Context, req *insightifyv1.SendRequest) (*ins
 		return nil, fmt.Errorf("input is required")
 	}
 
-	var snapshot []byte
+	var (
+		snapshot  []byte
+		syncer    UISync
+		syncRunID string
+		syncInter string
+		syncInput string
+	)
 	s.mu.Lock()
 
 	st := s.getOrCreateLocked(runID)
@@ -89,10 +108,17 @@ func (s *Service) Send(ctx context.Context, req *insightifyv1.SendRequest) (*ins
 	st.waiting = false
 	st.updatedAt = time.Now()
 	snapshot = s.buildConversationSnapshotLocked(runID, st)
+	syncer = s.uiSync
+	syncRunID = runID
+	syncInter = st.interactionID
+	syncInput = input
 	notifyLocked(st)
 	s.mu.Unlock()
 
 	s.persistConversation(ctx, runID, snapshot)
+	if syncer != nil {
+		_ = syncer.OnUserAccepted(ctx, syncRunID, syncInter, syncInput)
+	}
 	return &insightifyv1.SendResponse{
 		Accepted:         true,
 		InteractionId:    st.interactionID,
