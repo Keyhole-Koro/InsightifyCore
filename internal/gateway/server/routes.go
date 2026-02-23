@@ -26,11 +26,12 @@ func NewMux(
 	mux.Handle(insightifyv1connect.NewUiServiceHandler(uiHandler))
 	mux.Handle(insightifyv1connect.NewUiWorkspaceServiceHandler(uiWorkspaceHandler))
 
-	// Debug Handlers
+	// Trace Handlers
 	mux.HandleFunc("/ws/interaction", userInteractionHandler.HandleInteractionWS)
-	mux.HandleFunc("/debug/frontend-trace", traceHandler.HandleFrontendTrace)
-	mux.HandleFunc("/debug/run-logs", traceHandler.HandleRunLogs)
+	mux.HandleFunc("/trace/frontend", traceHandler.HandleFrontendTrace)
+	mux.HandleFunc("/trace/run-logs", traceHandler.HandleRunLogs)
+	mux.HandleFunc("/trace/run-logs/latest", traceHandler.HandleLatestRunLogs)
 
 	// Middleware
-	return middleware.CORS(mux)
+	return middleware.CORS(middleware.Trace(mux))
 }

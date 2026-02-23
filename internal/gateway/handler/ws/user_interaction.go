@@ -2,12 +2,13 @@ package ws
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	logctx "insightify/internal/common/logctx"
+	traceutil "insightify/internal/common/trace"
 	userinteraction "insightify/internal/gateway/service/userinteraction"
 
 	"github.com/gorilla/websocket"
@@ -48,6 +49,7 @@ type interactionWSInbound struct {
 type interactionWSOutbound struct {
 	Type             string `json:"type"`
 	RunID            string `json:"runId,omitempty"`
+	TraceID          string `json:"traceId,omitempty"`
 	InteractionID    string `json:"interactionId,omitempty"`
 	Waiting          bool   `json:"waiting,omitempty"`
 	Closed           bool   `json:"closed,omitempty"`
@@ -63,18 +65,23 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		http.Error(w, "run_id is required", http.StatusBadRequest)
 		return
 	}
+	traceID := traceutil.ExtractHTTP(r)
+	ctxWithTrace := traceutil.WithContext(r.Context(), traceID)
+	traceutil.InjectHTTPResponse(w, traceID)
 
 	conn, err := interactionWSUpgrader.Upgrade(w, r, nil)
 	if err != nil {
+		logctx.Error(ctxWithTrace, "interaction ws upgrade failed", err, "run_id", runID)
 		return
 	}
 	defer conn.Close()
+	logctx.Info(ctxWithTrace, "interaction ws connected", "run_id", runID)
 
-	ctx, cancel := context.WithCancel(r.Context())
+	ctx, cancel := context.WithCancel(ctxWithTrace)
 	defer cancel()
 
 	if err := conn.SetReadDeadline(time.Now().Add(interactionWSPongWait)); err != nil {
-		log.Printf("interaction ws set read deadline failed: %v", err)
+		logctx.Error(ctx, "interaction ws set read deadline failed", err, "run_id", runID)
 		return
 	}
 	conn.SetPongHandler(func(string) error {
@@ -114,6 +121,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 	if subErr != nil {
 		pushInteractionWS(writeCh, interactionWSOutbound{
 			Type:    "error",
+			TraceID: traceID,
 			Code:    "invalid_argument",
 			Message: subErr.Error(),
 		})
@@ -123,8 +131,9 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 	}
 
 	pushInteractionWS(writeCh, interactionWSOutbound{
-		Type:  "subscribed",
-		RunID: runID,
+		Type:    "subscribed",
+		RunID:   runID,
+		TraceID: traceID,
 	})
 
 	go func() {
@@ -145,6 +154,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 					pushInteractionWS(writeCh, interactionWSOutbound{
 						Type:          "wait_state",
 						RunID:         runID,
+						TraceID:       traceID,
 						InteractionID: state.GetInteractionId(),
 						Waiting:       state.GetWaiting(),
 						Closed:        state.GetClosed(),
@@ -153,6 +163,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 					pushInteractionWS(writeCh, interactionWSOutbound{
 						Type:             "assistant_message",
 						RunID:            runID,
+						TraceID:          traceID,
 						InteractionID:    strings.TrimSpace(evt.InteractionID),
 						AssistantMessage: strings.TrimSpace(evt.AssistantMessage),
 					})
@@ -172,6 +183,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		if msgType == "" {
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:    "error",
+				TraceID: traceID,
 				Code:    "invalid_argument",
 				Message: "type is required",
 			})
@@ -184,6 +196,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		if msgRunID != runID {
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:    "error",
+				TraceID: traceID,
 				Code:    "invalid_argument",
 				Message: "runId mismatch",
 			})
@@ -192,7 +205,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 
 		switch msgType {
 		case "ping":
-			pushInteractionWS(writeCh, interactionWSOutbound{Type: "pong"})
+			pushInteractionWS(writeCh, interactionWSOutbound{Type: "pong", TraceID: traceID})
 		case "send":
 			out, sendErr := h.svc.Send(ctx, &insightifyv1.SendRequest{
 				RunId:         runID,
@@ -200,8 +213,10 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 				Input:         strings.TrimSpace(in.Input),
 			})
 			if sendErr != nil {
+				logctx.Error(ctx, "interaction send failed", sendErr, "run_id", runID)
 				pushInteractionWS(writeCh, interactionWSOutbound{
 					Type:    "error",
+					TraceID: traceID,
 					Code:    "internal",
 					Message: sendErr.Error(),
 				})
@@ -210,6 +225,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:             "send_ack",
 				RunID:            runID,
+				TraceID:          traceID,
 				InteractionID:    out.GetInteractionId(),
 				Accepted:         out.GetAccepted(),
 				AssistantMessage: out.GetAssistantMessage(),
@@ -221,21 +237,25 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 				Reason:        strings.TrimSpace(in.Reason),
 			})
 			if closeErr != nil {
+				logctx.Error(ctx, "interaction close failed", closeErr, "run_id", runID)
 				pushInteractionWS(writeCh, interactionWSOutbound{
 					Type:    "error",
+					TraceID: traceID,
 					Code:    "internal",
 					Message: closeErr.Error(),
 				})
 				continue
 			}
 			pushInteractionWS(writeCh, interactionWSOutbound{
-				Type:   "close_ack",
-				RunID:  runID,
-				Closed: out.GetClosed(),
+				Type:    "close_ack",
+				RunID:   runID,
+				TraceID: traceID,
+				Closed:  out.GetClosed(),
 			})
 		default:
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:    "error",
+				TraceID: traceID,
 				Code:    "invalid_argument",
 				Message: "unsupported type: " + msgType,
 			})

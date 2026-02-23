@@ -7,6 +7,7 @@ import (
 	"time"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	logctx "insightify/internal/common/logctx"
 )
 
 // PublishOutput enqueues a server assistant message for the run.
@@ -61,6 +62,7 @@ func (s *Service) PublishOutput(ctx context.Context, runID, interactionID, messa
 	if syncer != nil {
 		_ = syncer.OnAssistantOutput(ctx, syncRunID, syncInter, syncOutput)
 	}
+	logctx.Info(ctx, "interaction assistant output published", "run_id", runID, "interaction_id", st.interactionID)
 	return nil
 }
 
@@ -119,6 +121,7 @@ func (s *Service) Send(ctx context.Context, req *insightifyv1.SendRequest) (*ins
 	if syncer != nil {
 		_ = syncer.OnUserAccepted(ctx, syncRunID, syncInter, syncInput)
 	}
+	logctx.Info(ctx, "interaction user input accepted", "run_id", runID, "interaction_id", st.interactionID)
 	return &insightifyv1.SendResponse{
 		Accepted:         true,
 		InteractionId:    st.interactionID,

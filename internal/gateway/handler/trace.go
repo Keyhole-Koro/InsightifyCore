@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	gatewayworker "insightify/internal/gateway/service/worker"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -73,5 +74,41 @@ func (h *TraceHandler) HandleRunLogs(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"run_id": runID,
 		"events": events,
+	})
+}
+
+func (h *TraceHandler) HandleLatestRunLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	limit := 20
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	runIDs := h.workerSvc.Telemetry().LatestRuns(limit)
+	items := make([]map[string]any, 0, len(runIDs))
+	for _, runID := range runIDs {
+		events, err := h.workerSvc.Telemetry().Read(runID)
+		if err != nil {
+			continue
+		}
+		lastTS := ""
+		if len(events) > 0 {
+			if ts, ok := events[len(events)-1]["timestamp"].(string); ok {
+				lastTS = ts
+			}
+		}
+		items = append(items, map[string]any{
+			"run_id":      runID,
+			"event_count": len(events),
+			"last_ts":     lastTS,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"items": items,
 	})
 }

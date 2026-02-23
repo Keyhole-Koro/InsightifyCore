@@ -3,10 +3,11 @@ package worker
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	logctx "insightify/internal/common/logctx"
+	traceutil "insightify/internal/common/trace"
 	projectrepo "insightify/internal/gateway/repository/project"
 	"insightify/internal/runner"
 	"io/fs"
@@ -37,13 +38,16 @@ func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunReques
 	}
 
 	runID := s.newRunID()
-	runCtx, cancel := context.WithCancel(context.Background())
+	reqTraceID := traceutil.FromContext(ctx)
+	runBaseCtx := traceutil.WithContext(context.Background(), reqTraceID)
+	runCtx, cancel := context.WithCancel(runBaseCtx)
 	st := &WorkerRuntime{
 		RunID:     runID,
 		ProjectID: projectID,
 		WorkerID:  workerID,
 		StartedAt: time.Now(),
 	}
+	logctx.Info(runCtx, "worker run started", "run_id", runID, "project_id", projectID, "worker_id", workerID)
 
 	s.runMu.Lock()
 	s.runs[runID] = st
@@ -51,7 +55,7 @@ func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunReques
 
 	if s.workspaces != nil {
 		if err := s.workspaces.AssignRunToCurrentTab(projectID, runID); err != nil {
-			log.Printf("failed to assign run %s to current tab for project %s: %v", runID, projectID, err)
+			logctx.Error(runCtx, "failed to assign run to current tab", err, "run_id", runID, "project_id", projectID)
 		}
 	}
 
@@ -71,11 +75,11 @@ func (s *Service) newRunID() string {
 func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID string, params map[string]string) {
 	runEnv, err := s.project.EnsureRunContext(projectID)
 	if err != nil {
-		log.Printf("[ERROR] run %s ensure context failed: %v", runID, err)
+		logctx.Error(ctx, "run ensure context failed", err, "run_id", runID, "project_id", projectID, "worker_id", workerID)
 		return
 	}
 	if runEnv == nil || runEnv.Runtime() == nil || runEnv.Runtime().GetResolver() == nil {
-		log.Printf("[ERROR] run %s has no resolver", runID)
+		logctx.Error(ctx, "run has no resolver", nil, "run_id", runID, "project_id", projectID, "worker_id", workerID)
 		return
 	}
 
@@ -86,7 +90,7 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 
 	out, err := runner.ExecuteWorker(execCtx, runEnv.Runtime(), workerID, params)
 	if err != nil {
-		log.Printf("[ERROR] run %s execute worker %s failed: %v", runID, workerID, err)
+		logctx.Error(ctx, "execute worker failed", err, "run_id", runID, "project_id", projectID, "worker_id", workerID)
 		return
 	}
 
@@ -100,11 +104,13 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			defer cancel()
+			ctx = traceutil.WithContext(ctx, traceutil.FromContext(execCtx))
 			if err := s.syncArtifacts(ctx, runID, projectID, runEnv.GetOutDir()); err != nil {
-				log.Printf("failed to sync artifacts for run %s: %v", runID, err)
+				logctx.Error(ctx, "failed to sync artifacts", err, "run_id", runID, "project_id", projectID, "worker_id", workerID)
 			}
 		}()
 	}
+	logctx.Info(execCtx, "worker run completed", "run_id", runID, "project_id", projectID, "worker_id", workerID)
 }
 
 func (s *Service) syncArtifacts(ctx context.Context, runID, projectID, outDir string) error {

@@ -22,10 +22,10 @@
   - `ProjectService`
   - `RunService`
   - `UiService`
-- Debug/補助エンドポイント:
+- Trace/補助エンドポイント:
   - `/ws/interaction` (WebSocket)
-  - `/debug/frontend-trace`
-  - `/debug/run-logs`
+  - `/trace/frontend`
+  - `/trace/run-logs`
 
 主要ソース:
 - `InsightifyCore/internal/gateway/server/routes.go`

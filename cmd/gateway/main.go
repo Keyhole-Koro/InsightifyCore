@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"io"
+	"log/slog"
 	"os"
+	"path/filepath"
 	"os/signal"
 	"syscall"
 	"time"
@@ -12,14 +14,17 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(newLogWriter(), &slog.HandlerOptions{})))
+
 	a, err := app.New()
 	if err != nil {
-		log.Fatalf("Failed to initialize app: %v", err)
+		slog.Error("Failed to initialize app", "error", err.Error())
+		os.Exit(1)
 	}
 
 	go func() {
 		if err := a.Start(); err != nil {
-			log.Printf("Server error: %v", err)
+			slog.Error("Server error", "error", err.Error())
 		}
 	}()
 
@@ -27,14 +32,27 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := a.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", "error", err.Error())
+		os.Exit(1)
 	}
 
-	log.Println("Server exiting")
+	slog.Info("Server exiting")
+}
+
+func newLogWriter() io.Writer {
+	if err := os.MkdirAll("logs", 0o755); err != nil {
+		return os.Stdout
+	}
+	logPath := filepath.Join("logs", "core.jsonl")
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return os.Stdout
+	}
+	return io.MultiWriter(os.Stdout, f)
 }
