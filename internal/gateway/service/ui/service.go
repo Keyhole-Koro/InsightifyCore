@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"google.golang.org/protobuf/proto"
 	insightifyv1 "insightify/gen/go/insightify/v1"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
@@ -98,6 +100,67 @@ func (s *Service) Restore(ctx context.Context, req *insightifyv1.RestoreUiReques
 		result.DocumentHash = gatewayrestore.HashDocumentCanonical(result.Document)
 	}
 	return result.ToRestoreProtoResponse(), nil
+}
+
+func (s *Service) CreateNodeInTab(ctx context.Context, req *insightifyv1.CreateNodeInTabRequest) (*insightifyv1.CreateNodeInTabResponse, error) {
+	if s == nil || s.store == nil {
+		return nil, fmt.Errorf("ui service is not available")
+	}
+	if s.workspaces == nil {
+		return nil, fmt.Errorf("ui workspace service is not available")
+	}
+	projectID := strings.TrimSpace(req.GetProjectId())
+	if projectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+	incomingNode := req.GetNode()
+	if incomingNode == nil {
+		return nil, fmt.Errorf("node is required")
+	}
+	node, ok := proto.Clone(incomingNode).(*insightifyv1.UiNode)
+	if !ok || node == nil {
+		return nil, fmt.Errorf("failed to clone ui node")
+	}
+	nodeID := strings.TrimSpace(node.GetId())
+	if nodeID == "" {
+		nodeID = fmt.Sprintf("node-%d", time.Now().UnixNano())
+	}
+	node.Id = nodeID
+
+	_, tab, found, err := s.workspaces.ResolveTab(projectID, req.GetTabId())
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("tab is not found for project_id=%s", projectID)
+	}
+
+	tabID := strings.TrimSpace(tab.TabID)
+	runID := strings.TrimSpace(tab.RunID)
+	if runID == "" {
+		return nil, fmt.Errorf("tab has no run_id: tab_id=%s", tabID)
+	}
+
+	doc, _, err := s.store.ApplyOps(ctx, runID, 0, []*insightifyv1.UiOp{
+		{
+			Action: &insightifyv1.UiOp_UpsertNode{
+				UpsertNode: &insightifyv1.UiUpsertNode{Node: node},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	doc = s.withConversationHistory(ctx, runID, doc)
+	return &insightifyv1.CreateNodeInTabResponse{
+		Reason:       gatewayrestore.ReasonResolved,
+		ProjectId:    projectID,
+		TabId:        tabID,
+		RunId:        runID,
+		NodeId:       nodeID,
+		Document:     doc,
+		DocumentHash: gatewayrestore.HashDocumentCanonical(doc),
+	}, nil
 }
 
 func (s *Service) GetWorkspace(_ context.Context, req *insightifyv1.GetUiWorkspaceRequest) (*insightifyv1.GetUiWorkspaceResponse, error) {

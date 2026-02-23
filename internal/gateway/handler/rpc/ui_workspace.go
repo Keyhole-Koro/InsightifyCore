@@ -48,3 +48,11 @@ func (h *UiWorkspaceHandler) Restore(ctx context.Context, req *connect.Request[i
 	}
 	return connect.NewResponse(out), nil
 }
+
+func (h *UiWorkspaceHandler) CreateNodeInTab(ctx context.Context, req *connect.Request[insightifyv1.CreateNodeInTabRequest]) (*connect.Response[insightifyv1.CreateNodeInTabResponse], error) {
+	out, err := h.svc.CreateNodeInTab(ctx, req.Msg)
+	if err != nil {
+		return nil, toUIError(err)
+	}
+	return connect.NewResponse(out), nil
+}

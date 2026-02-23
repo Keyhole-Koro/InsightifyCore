@@ -51,6 +51,9 @@ const (
 	// UiWorkspaceServiceRestoreProcedure is the fully-qualified name of the UiWorkspaceService's
 	// Restore RPC.
 	UiWorkspaceServiceRestoreProcedure = "/insightify.v1.UiWorkspaceService/Restore"
+	// UiWorkspaceServiceCreateNodeInTabProcedure is the fully-qualified name of the
+	// UiWorkspaceService's CreateNodeInTab RPC.
+	UiWorkspaceServiceCreateNodeInTabProcedure = "/insightify.v1.UiWorkspaceService/CreateNodeInTab"
 )
 
 // UiServiceClient is a client for the insightify.v1.UiService service.
@@ -155,6 +158,7 @@ type UiWorkspaceServiceClient interface {
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
 	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
+	CreateNodeInTab(context.Context, *connect.Request[v1.CreateNodeInTabRequest]) (*connect.Response[v1.CreateNodeInTabResponse], error)
 }
 
 // NewUiWorkspaceServiceClient constructs a client for the insightify.v1.UiWorkspaceService service.
@@ -192,15 +196,22 @@ func NewUiWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(uiWorkspaceServiceMethods.ByName("Restore")),
 			connect.WithClientOptions(opts...),
 		),
+		createNodeInTab: connect.NewClient[v1.CreateNodeInTabRequest, v1.CreateNodeInTabResponse](
+			httpClient,
+			baseURL+UiWorkspaceServiceCreateNodeInTabProcedure,
+			connect.WithSchema(uiWorkspaceServiceMethods.ByName("CreateNodeInTab")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // uiWorkspaceServiceClient implements UiWorkspaceServiceClient.
 type uiWorkspaceServiceClient struct {
-	getWorkspace *connect.Client[v1.GetUiWorkspaceRequest, v1.GetUiWorkspaceResponse]
-	createTab    *connect.Client[v1.CreateUiTabRequest, v1.CreateUiTabResponse]
-	selectTab    *connect.Client[v1.SelectUiTabRequest, v1.SelectUiTabResponse]
-	restore      *connect.Client[v1.RestoreUiRequest, v1.RestoreUiResponse]
+	getWorkspace    *connect.Client[v1.GetUiWorkspaceRequest, v1.GetUiWorkspaceResponse]
+	createTab       *connect.Client[v1.CreateUiTabRequest, v1.CreateUiTabResponse]
+	selectTab       *connect.Client[v1.SelectUiTabRequest, v1.SelectUiTabResponse]
+	restore         *connect.Client[v1.RestoreUiRequest, v1.RestoreUiResponse]
+	createNodeInTab *connect.Client[v1.CreateNodeInTabRequest, v1.CreateNodeInTabResponse]
 }
 
 // GetWorkspace calls insightify.v1.UiWorkspaceService.GetWorkspace.
@@ -223,12 +234,18 @@ func (c *uiWorkspaceServiceClient) Restore(ctx context.Context, req *connect.Req
 	return c.restore.CallUnary(ctx, req)
 }
 
+// CreateNodeInTab calls insightify.v1.UiWorkspaceService.CreateNodeInTab.
+func (c *uiWorkspaceServiceClient) CreateNodeInTab(ctx context.Context, req *connect.Request[v1.CreateNodeInTabRequest]) (*connect.Response[v1.CreateNodeInTabResponse], error) {
+	return c.createNodeInTab.CallUnary(ctx, req)
+}
+
 // UiWorkspaceServiceHandler is an implementation of the insightify.v1.UiWorkspaceService service.
 type UiWorkspaceServiceHandler interface {
 	GetWorkspace(context.Context, *connect.Request[v1.GetUiWorkspaceRequest]) (*connect.Response[v1.GetUiWorkspaceResponse], error)
 	CreateTab(context.Context, *connect.Request[v1.CreateUiTabRequest]) (*connect.Response[v1.CreateUiTabResponse], error)
 	SelectTab(context.Context, *connect.Request[v1.SelectUiTabRequest]) (*connect.Response[v1.SelectUiTabResponse], error)
 	Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error)
+	CreateNodeInTab(context.Context, *connect.Request[v1.CreateNodeInTabRequest]) (*connect.Response[v1.CreateNodeInTabResponse], error)
 }
 
 // NewUiWorkspaceServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -262,6 +279,12 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 		connect.WithSchema(uiWorkspaceServiceMethods.ByName("Restore")),
 		connect.WithHandlerOptions(opts...),
 	)
+	uiWorkspaceServiceCreateNodeInTabHandler := connect.NewUnaryHandler(
+		UiWorkspaceServiceCreateNodeInTabProcedure,
+		svc.CreateNodeInTab,
+		connect.WithSchema(uiWorkspaceServiceMethods.ByName("CreateNodeInTab")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/insightify.v1.UiWorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UiWorkspaceServiceGetWorkspaceProcedure:
@@ -272,6 +295,8 @@ func NewUiWorkspaceServiceHandler(svc UiWorkspaceServiceHandler, opts ...connect
 			uiWorkspaceServiceSelectTabHandler.ServeHTTP(w, r)
 		case UiWorkspaceServiceRestoreProcedure:
 			uiWorkspaceServiceRestoreHandler.ServeHTTP(w, r)
+		case UiWorkspaceServiceCreateNodeInTabProcedure:
+			uiWorkspaceServiceCreateNodeInTabHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -295,4 +320,8 @@ func (UnimplementedUiWorkspaceServiceHandler) SelectTab(context.Context, *connec
 
 func (UnimplementedUiWorkspaceServiceHandler) Restore(context.Context, *connect.Request[v1.RestoreUiRequest]) (*connect.Response[v1.RestoreUiResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.Restore is not implemented"))
+}
+
+func (UnimplementedUiWorkspaceServiceHandler) CreateNodeInTab(context.Context, *connect.Request[v1.CreateNodeInTabRequest]) (*connect.Response[v1.CreateNodeInTabResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("insightify.v1.UiWorkspaceService.CreateNodeInTab is not implemented"))
 }

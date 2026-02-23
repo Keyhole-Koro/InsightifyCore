@@ -1423,6 +1423,167 @@ func (x *RestoreUiResponse) GetDocumentHash() string {
 	return ""
 }
 
+type CreateNodeInTabRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TabId         string                 `protobuf:"bytes,2,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	Node          *UiNode                `protobuf:"bytes,3,opt,name=node,proto3" json:"node,omitempty"`
+	Actor         string                 `protobuf:"bytes,4,opt,name=actor,proto3" json:"actor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodeInTabRequest) Reset() {
+	*x = CreateNodeInTabRequest{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodeInTabRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodeInTabRequest) ProtoMessage() {}
+
+func (x *CreateNodeInTabRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodeInTabRequest.ProtoReflect.Descriptor instead.
+func (*CreateNodeInTabRequest) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CreateNodeInTabRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabRequest) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabRequest) GetNode() *UiNode {
+	if x != nil {
+		return x.Node
+	}
+	return nil
+}
+
+func (x *CreateNodeInTabRequest) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+type CreateNodeInTabResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// reason follows the same decision semantics as Restore.
+	Reason        UiRestoreReason `protobuf:"varint,1,opt,name=reason,proto3,enum=insightify.v1.UiRestoreReason" json:"reason,omitempty"`
+	ProjectId     string          `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TabId         string          `protobuf:"bytes,3,opt,name=tab_id,json=tabId,proto3" json:"tab_id,omitempty"`
+	RunId         string          `protobuf:"bytes,4,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	NodeId        string          `protobuf:"bytes,5,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Document      *UiDocument     `protobuf:"bytes,6,opt,name=document,proto3" json:"document,omitempty"`
+	DocumentHash  string          `protobuf:"bytes,7,opt,name=document_hash,json=documentHash,proto3" json:"document_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodeInTabResponse) Reset() {
+	*x = CreateNodeInTabResponse{}
+	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodeInTabResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodeInTabResponse) ProtoMessage() {}
+
+func (x *CreateNodeInTabResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodeInTabResponse.ProtoReflect.Descriptor instead.
+func (*CreateNodeInTabResponse) Descriptor() ([]byte, []int) {
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CreateNodeInTabResponse) GetReason() UiRestoreReason {
+	if x != nil {
+		return x.Reason
+	}
+	return UiRestoreReason_UI_RESTORE_REASON_UNSPECIFIED
+}
+
+func (x *CreateNodeInTabResponse) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabResponse) GetTabId() string {
+	if x != nil {
+		return x.TabId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabResponse) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabResponse) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *CreateNodeInTabResponse) GetDocument() *UiDocument {
+	if x != nil {
+		return x.Document
+	}
+	return nil
+}
+
+func (x *CreateNodeInTabResponse) GetDocumentHash() string {
+	if x != nil {
+		return x.DocumentHash
+	}
+	return ""
+}
+
 type ApplyUiOpsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -1435,7 +1596,7 @@ type ApplyUiOpsRequest struct {
 
 func (x *ApplyUiOpsRequest) Reset() {
 	*x = ApplyUiOpsRequest{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	mi := &file_insightify_v1_ui_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1608,7 @@ func (x *ApplyUiOpsRequest) String() string {
 func (*ApplyUiOpsRequest) ProtoMessage() {}
 
 func (x *ApplyUiOpsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[21]
+	mi := &file_insightify_v1_ui_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1621,7 @@ func (x *ApplyUiOpsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyUiOpsRequest.ProtoReflect.Descriptor instead.
 func (*ApplyUiOpsRequest) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{21}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ApplyUiOpsRequest) GetRunId() string {
@@ -1503,7 +1664,7 @@ type ApplyUiOpsResponse struct {
 
 func (x *ApplyUiOpsResponse) Reset() {
 	*x = ApplyUiOpsResponse{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	mi := &file_insightify_v1_ui_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1515,7 +1676,7 @@ func (x *ApplyUiOpsResponse) String() string {
 func (*ApplyUiOpsResponse) ProtoMessage() {}
 
 func (x *ApplyUiOpsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[22]
+	mi := &file_insightify_v1_ui_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1528,7 +1689,7 @@ func (x *ApplyUiOpsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyUiOpsResponse.ProtoReflect.Descriptor instead.
 func (*ApplyUiOpsResponse) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{22}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ApplyUiOpsResponse) GetDocument() *UiDocument {
@@ -1573,7 +1734,7 @@ type UiOp struct {
 
 func (x *UiOp) Reset() {
 	*x = UiOp{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[23]
+	mi := &file_insightify_v1_ui_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1585,7 +1746,7 @@ func (x *UiOp) String() string {
 func (*UiOp) ProtoMessage() {}
 
 func (x *UiOp) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[23]
+	mi := &file_insightify_v1_ui_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1598,7 +1759,7 @@ func (x *UiOp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiOp.ProtoReflect.Descriptor instead.
 func (*UiOp) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{23}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UiOp) GetAction() isUiOp_Action {
@@ -1666,7 +1827,7 @@ type UiUpsertNode struct {
 
 func (x *UiUpsertNode) Reset() {
 	*x = UiUpsertNode{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[24]
+	mi := &file_insightify_v1_ui_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1678,7 +1839,7 @@ func (x *UiUpsertNode) String() string {
 func (*UiUpsertNode) ProtoMessage() {}
 
 func (x *UiUpsertNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[24]
+	mi := &file_insightify_v1_ui_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1691,7 +1852,7 @@ func (x *UiUpsertNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiUpsertNode.ProtoReflect.Descriptor instead.
 func (*UiUpsertNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{24}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UiUpsertNode) GetNode() *UiNode {
@@ -1710,7 +1871,7 @@ type UiDeleteNode struct {
 
 func (x *UiDeleteNode) Reset() {
 	*x = UiDeleteNode{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[25]
+	mi := &file_insightify_v1_ui_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1722,7 +1883,7 @@ func (x *UiDeleteNode) String() string {
 func (*UiDeleteNode) ProtoMessage() {}
 
 func (x *UiDeleteNode) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[25]
+	mi := &file_insightify_v1_ui_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1735,7 +1896,7 @@ func (x *UiDeleteNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiDeleteNode.ProtoReflect.Descriptor instead.
 func (*UiDeleteNode) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{25}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UiDeleteNode) GetNodeId() string {
@@ -1753,7 +1914,7 @@ type UiClearNodes struct {
 
 func (x *UiClearNodes) Reset() {
 	*x = UiClearNodes{}
-	mi := &file_insightify_v1_ui_proto_msgTypes[26]
+	mi := &file_insightify_v1_ui_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1765,7 +1926,7 @@ func (x *UiClearNodes) String() string {
 func (*UiClearNodes) ProtoMessage() {}
 
 func (x *UiClearNodes) ProtoReflect() protoreflect.Message {
-	mi := &file_insightify_v1_ui_proto_msgTypes[26]
+	mi := &file_insightify_v1_ui_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1778,7 +1939,7 @@ func (x *UiClearNodes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UiClearNodes.ProtoReflect.Descriptor instead.
 func (*UiClearNodes) Descriptor() ([]byte, []int) {
-	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{26}
+	return file_insightify_v1_ui_proto_rawDescGZIP(), []int{28}
 }
 
 var File_insightify_v1_ui_proto protoreflect.FileDescriptor
@@ -1882,7 +2043,22 @@ const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\x06tab_id\x18\x03 \x01(\tR\x05tabId\x12\x15\n" +
 	"\x06run_id\x18\x04 \x01(\tR\x05runId\x125\n" +
 	"\bdocument\x18\x05 \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\x12#\n" +
-	"\rdocument_hash\x18\x06 \x01(\tR\fdocumentHash\"\x8a\x01\n" +
+	"\rdocument_hash\x18\x06 \x01(\tR\fdocumentHash\"\x8f\x01\n" +
+	"\x16CreateNodeInTabRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06tab_id\x18\x02 \x01(\tR\x05tabId\x12)\n" +
+	"\x04node\x18\x03 \x01(\v2\x15.insightify.v1.UiNodeR\x04node\x12\x14\n" +
+	"\x05actor\x18\x04 \x01(\tR\x05actor\"\x93\x02\n" +
+	"\x17CreateNodeInTabResponse\x126\n" +
+	"\x06reason\x18\x01 \x01(\x0e2\x1e.insightify.v1.UiRestoreReasonR\x06reason\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x15\n" +
+	"\x06tab_id\x18\x03 \x01(\tR\x05tabId\x12\x15\n" +
+	"\x06run_id\x18\x04 \x01(\tR\x05runId\x12\x17\n" +
+	"\anode_id\x18\x05 \x01(\tR\x06nodeId\x125\n" +
+	"\bdocument\x18\x06 \x01(\v2\x19.insightify.v1.UiDocumentR\bdocument\x12#\n" +
+	"\rdocument_hash\x18\a \x01(\tR\fdocumentHash\"\x8a\x01\n" +
 	"\x11ApplyUiOpsRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12!\n" +
 	"\fbase_version\x18\x02 \x01(\x03R\vbaseVersion\x12%\n" +
@@ -1921,12 +2097,13 @@ const file_insightify_v1_ui_proto_rawDesc = "" +
 	"\x17UI_RESTORE_REASON_ERROR\x10\x042\xb6\x01\n" +
 	"\tUiService\x12X\n" +
 	"\vGetDocument\x12#.insightify.v1.GetUiDocumentRequest\x1a$.insightify.v1.GetUiDocumentResponse\x12O\n" +
-	"\bApplyOps\x12 .insightify.v1.ApplyUiOpsRequest\x1a!.insightify.v1.ApplyUiOpsResponse2\xe7\x02\n" +
+	"\bApplyOps\x12 .insightify.v1.ApplyUiOpsRequest\x1a!.insightify.v1.ApplyUiOpsResponse2\xc9\x03\n" +
 	"\x12UiWorkspaceService\x12[\n" +
 	"\fGetWorkspace\x12$.insightify.v1.GetUiWorkspaceRequest\x1a%.insightify.v1.GetUiWorkspaceResponse\x12R\n" +
 	"\tCreateTab\x12!.insightify.v1.CreateUiTabRequest\x1a\".insightify.v1.CreateUiTabResponse\x12R\n" +
 	"\tSelectTab\x12!.insightify.v1.SelectUiTabRequest\x1a\".insightify.v1.SelectUiTabResponse\x12L\n" +
-	"\aRestore\x12\x1f.insightify.v1.RestoreUiRequest\x1a .insightify.v1.RestoreUiResponseB\x9f\x01\n" +
+	"\aRestore\x12\x1f.insightify.v1.RestoreUiRequest\x1a .insightify.v1.RestoreUiResponse\x12`\n" +
+	"\x0fCreateNodeInTab\x12%.insightify.v1.CreateNodeInTabRequest\x1a&.insightify.v1.CreateNodeInTabResponseB\x9f\x01\n" +
 	"\x11com.insightify.v1B\aUiProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"
 
 var (
@@ -1942,38 +2119,40 @@ func file_insightify_v1_ui_proto_rawDescGZIP() []byte {
 }
 
 var file_insightify_v1_ui_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_insightify_v1_ui_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_insightify_v1_ui_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_insightify_v1_ui_proto_goTypes = []any{
-	(UiNodeType)(0),                // 0: insightify.v1.UiNodeType
-	(UiRestoreReason)(0),           // 1: insightify.v1.UiRestoreReason
-	(UiChatMessage_Role)(0),        // 2: insightify.v1.UiChatMessage.Role
-	(*UiNodeMeta)(nil),             // 3: insightify.v1.UiNodeMeta
-	(*UiChatMessage)(nil),          // 4: insightify.v1.UiChatMessage
-	(*UiLlmChatState)(nil),         // 5: insightify.v1.UiLlmChatState
-	(*UiMarkdownState)(nil),        // 6: insightify.v1.UiMarkdownState
-	(*UiImageState)(nil),           // 7: insightify.v1.UiImageState
-	(*UiTableState)(nil),           // 8: insightify.v1.UiTableState
-	(*UiTableRow)(nil),             // 9: insightify.v1.UiTableRow
-	(*UiNode)(nil),                 // 10: insightify.v1.UiNode
-	(*UiDocument)(nil),             // 11: insightify.v1.UiDocument
-	(*GetUiDocumentRequest)(nil),   // 12: insightify.v1.GetUiDocumentRequest
-	(*GetUiDocumentResponse)(nil),  // 13: insightify.v1.GetUiDocumentResponse
-	(*UiWorkspace)(nil),            // 14: insightify.v1.UiWorkspace
-	(*UiWorkspaceTab)(nil),         // 15: insightify.v1.UiWorkspaceTab
-	(*GetUiWorkspaceRequest)(nil),  // 16: insightify.v1.GetUiWorkspaceRequest
-	(*GetUiWorkspaceResponse)(nil), // 17: insightify.v1.GetUiWorkspaceResponse
-	(*CreateUiTabRequest)(nil),     // 18: insightify.v1.CreateUiTabRequest
-	(*CreateUiTabResponse)(nil),    // 19: insightify.v1.CreateUiTabResponse
-	(*SelectUiTabRequest)(nil),     // 20: insightify.v1.SelectUiTabRequest
-	(*SelectUiTabResponse)(nil),    // 21: insightify.v1.SelectUiTabResponse
-	(*RestoreUiRequest)(nil),       // 22: insightify.v1.RestoreUiRequest
-	(*RestoreUiResponse)(nil),      // 23: insightify.v1.RestoreUiResponse
-	(*ApplyUiOpsRequest)(nil),      // 24: insightify.v1.ApplyUiOpsRequest
-	(*ApplyUiOpsResponse)(nil),     // 25: insightify.v1.ApplyUiOpsResponse
-	(*UiOp)(nil),                   // 26: insightify.v1.UiOp
-	(*UiUpsertNode)(nil),           // 27: insightify.v1.UiUpsertNode
-	(*UiDeleteNode)(nil),           // 28: insightify.v1.UiDeleteNode
-	(*UiClearNodes)(nil),           // 29: insightify.v1.UiClearNodes
+	(UiNodeType)(0),                 // 0: insightify.v1.UiNodeType
+	(UiRestoreReason)(0),            // 1: insightify.v1.UiRestoreReason
+	(UiChatMessage_Role)(0),         // 2: insightify.v1.UiChatMessage.Role
+	(*UiNodeMeta)(nil),              // 3: insightify.v1.UiNodeMeta
+	(*UiChatMessage)(nil),           // 4: insightify.v1.UiChatMessage
+	(*UiLlmChatState)(nil),          // 5: insightify.v1.UiLlmChatState
+	(*UiMarkdownState)(nil),         // 6: insightify.v1.UiMarkdownState
+	(*UiImageState)(nil),            // 7: insightify.v1.UiImageState
+	(*UiTableState)(nil),            // 8: insightify.v1.UiTableState
+	(*UiTableRow)(nil),              // 9: insightify.v1.UiTableRow
+	(*UiNode)(nil),                  // 10: insightify.v1.UiNode
+	(*UiDocument)(nil),              // 11: insightify.v1.UiDocument
+	(*GetUiDocumentRequest)(nil),    // 12: insightify.v1.GetUiDocumentRequest
+	(*GetUiDocumentResponse)(nil),   // 13: insightify.v1.GetUiDocumentResponse
+	(*UiWorkspace)(nil),             // 14: insightify.v1.UiWorkspace
+	(*UiWorkspaceTab)(nil),          // 15: insightify.v1.UiWorkspaceTab
+	(*GetUiWorkspaceRequest)(nil),   // 16: insightify.v1.GetUiWorkspaceRequest
+	(*GetUiWorkspaceResponse)(nil),  // 17: insightify.v1.GetUiWorkspaceResponse
+	(*CreateUiTabRequest)(nil),      // 18: insightify.v1.CreateUiTabRequest
+	(*CreateUiTabResponse)(nil),     // 19: insightify.v1.CreateUiTabResponse
+	(*SelectUiTabRequest)(nil),      // 20: insightify.v1.SelectUiTabRequest
+	(*SelectUiTabResponse)(nil),     // 21: insightify.v1.SelectUiTabResponse
+	(*RestoreUiRequest)(nil),        // 22: insightify.v1.RestoreUiRequest
+	(*RestoreUiResponse)(nil),       // 23: insightify.v1.RestoreUiResponse
+	(*CreateNodeInTabRequest)(nil),  // 24: insightify.v1.CreateNodeInTabRequest
+	(*CreateNodeInTabResponse)(nil), // 25: insightify.v1.CreateNodeInTabResponse
+	(*ApplyUiOpsRequest)(nil),       // 26: insightify.v1.ApplyUiOpsRequest
+	(*ApplyUiOpsResponse)(nil),      // 27: insightify.v1.ApplyUiOpsResponse
+	(*UiOp)(nil),                    // 28: insightify.v1.UiOp
+	(*UiUpsertNode)(nil),            // 29: insightify.v1.UiUpsertNode
+	(*UiDeleteNode)(nil),            // 30: insightify.v1.UiDeleteNode
+	(*UiClearNodes)(nil),            // 31: insightify.v1.UiClearNodes
 }
 var file_insightify_v1_ui_proto_depIdxs = []int32{
 	2,  // 0: insightify.v1.UiChatMessage.role:type_name -> insightify.v1.UiChatMessage.Role
@@ -1996,29 +2175,34 @@ var file_insightify_v1_ui_proto_depIdxs = []int32{
 	15, // 17: insightify.v1.SelectUiTabResponse.tabs:type_name -> insightify.v1.UiWorkspaceTab
 	1,  // 18: insightify.v1.RestoreUiResponse.reason:type_name -> insightify.v1.UiRestoreReason
 	11, // 19: insightify.v1.RestoreUiResponse.document:type_name -> insightify.v1.UiDocument
-	26, // 20: insightify.v1.ApplyUiOpsRequest.ops:type_name -> insightify.v1.UiOp
-	11, // 21: insightify.v1.ApplyUiOpsResponse.document:type_name -> insightify.v1.UiDocument
-	27, // 22: insightify.v1.UiOp.upsert_node:type_name -> insightify.v1.UiUpsertNode
-	28, // 23: insightify.v1.UiOp.delete_node:type_name -> insightify.v1.UiDeleteNode
-	29, // 24: insightify.v1.UiOp.clear_nodes:type_name -> insightify.v1.UiClearNodes
-	10, // 25: insightify.v1.UiUpsertNode.node:type_name -> insightify.v1.UiNode
-	12, // 26: insightify.v1.UiService.GetDocument:input_type -> insightify.v1.GetUiDocumentRequest
-	24, // 27: insightify.v1.UiService.ApplyOps:input_type -> insightify.v1.ApplyUiOpsRequest
-	16, // 28: insightify.v1.UiWorkspaceService.GetWorkspace:input_type -> insightify.v1.GetUiWorkspaceRequest
-	18, // 29: insightify.v1.UiWorkspaceService.CreateTab:input_type -> insightify.v1.CreateUiTabRequest
-	20, // 30: insightify.v1.UiWorkspaceService.SelectTab:input_type -> insightify.v1.SelectUiTabRequest
-	22, // 31: insightify.v1.UiWorkspaceService.Restore:input_type -> insightify.v1.RestoreUiRequest
-	13, // 32: insightify.v1.UiService.GetDocument:output_type -> insightify.v1.GetUiDocumentResponse
-	25, // 33: insightify.v1.UiService.ApplyOps:output_type -> insightify.v1.ApplyUiOpsResponse
-	17, // 34: insightify.v1.UiWorkspaceService.GetWorkspace:output_type -> insightify.v1.GetUiWorkspaceResponse
-	19, // 35: insightify.v1.UiWorkspaceService.CreateTab:output_type -> insightify.v1.CreateUiTabResponse
-	21, // 36: insightify.v1.UiWorkspaceService.SelectTab:output_type -> insightify.v1.SelectUiTabResponse
-	23, // 37: insightify.v1.UiWorkspaceService.Restore:output_type -> insightify.v1.RestoreUiResponse
-	32, // [32:38] is the sub-list for method output_type
-	26, // [26:32] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	10, // 20: insightify.v1.CreateNodeInTabRequest.node:type_name -> insightify.v1.UiNode
+	1,  // 21: insightify.v1.CreateNodeInTabResponse.reason:type_name -> insightify.v1.UiRestoreReason
+	11, // 22: insightify.v1.CreateNodeInTabResponse.document:type_name -> insightify.v1.UiDocument
+	28, // 23: insightify.v1.ApplyUiOpsRequest.ops:type_name -> insightify.v1.UiOp
+	11, // 24: insightify.v1.ApplyUiOpsResponse.document:type_name -> insightify.v1.UiDocument
+	29, // 25: insightify.v1.UiOp.upsert_node:type_name -> insightify.v1.UiUpsertNode
+	30, // 26: insightify.v1.UiOp.delete_node:type_name -> insightify.v1.UiDeleteNode
+	31, // 27: insightify.v1.UiOp.clear_nodes:type_name -> insightify.v1.UiClearNodes
+	10, // 28: insightify.v1.UiUpsertNode.node:type_name -> insightify.v1.UiNode
+	12, // 29: insightify.v1.UiService.GetDocument:input_type -> insightify.v1.GetUiDocumentRequest
+	26, // 30: insightify.v1.UiService.ApplyOps:input_type -> insightify.v1.ApplyUiOpsRequest
+	16, // 31: insightify.v1.UiWorkspaceService.GetWorkspace:input_type -> insightify.v1.GetUiWorkspaceRequest
+	18, // 32: insightify.v1.UiWorkspaceService.CreateTab:input_type -> insightify.v1.CreateUiTabRequest
+	20, // 33: insightify.v1.UiWorkspaceService.SelectTab:input_type -> insightify.v1.SelectUiTabRequest
+	22, // 34: insightify.v1.UiWorkspaceService.Restore:input_type -> insightify.v1.RestoreUiRequest
+	24, // 35: insightify.v1.UiWorkspaceService.CreateNodeInTab:input_type -> insightify.v1.CreateNodeInTabRequest
+	13, // 36: insightify.v1.UiService.GetDocument:output_type -> insightify.v1.GetUiDocumentResponse
+	27, // 37: insightify.v1.UiService.ApplyOps:output_type -> insightify.v1.ApplyUiOpsResponse
+	17, // 38: insightify.v1.UiWorkspaceService.GetWorkspace:output_type -> insightify.v1.GetUiWorkspaceResponse
+	19, // 39: insightify.v1.UiWorkspaceService.CreateTab:output_type -> insightify.v1.CreateUiTabResponse
+	21, // 40: insightify.v1.UiWorkspaceService.SelectTab:output_type -> insightify.v1.SelectUiTabResponse
+	23, // 41: insightify.v1.UiWorkspaceService.Restore:output_type -> insightify.v1.RestoreUiResponse
+	25, // 42: insightify.v1.UiWorkspaceService.CreateNodeInTab:output_type -> insightify.v1.CreateNodeInTabResponse
+	36, // [36:43] is the sub-list for method output_type
+	29, // [29:36] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_insightify_v1_ui_proto_init() }
@@ -2026,7 +2210,7 @@ func file_insightify_v1_ui_proto_init() {
 	if File_insightify_v1_ui_proto != nil {
 		return
 	}
-	file_insightify_v1_ui_proto_msgTypes[23].OneofWrappers = []any{
+	file_insightify_v1_ui_proto_msgTypes[25].OneofWrappers = []any{
 		(*UiOp_UpsertNode)(nil),
 		(*UiOp_DeleteNode)(nil),
 		(*UiOp_ClearNodes)(nil),
@@ -2037,7 +2221,7 @@ func file_insightify_v1_ui_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_insightify_v1_ui_proto_rawDesc), len(file_insightify_v1_ui_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   27,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
