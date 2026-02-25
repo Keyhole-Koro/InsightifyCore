@@ -23,6 +23,7 @@ import (
 	"insightify/internal/gateway/repository/ui"
 	"insightify/internal/gateway/repository/uiworkspace"
 	"insightify/internal/gateway/server"
+	gatewayact "insightify/internal/gateway/service/act"
 	gatewayproject "insightify/internal/gateway/service/project"
 	gatewayui "insightify/internal/gateway/service/ui"
 	gatewayuievent "insightify/internal/gateway/service/uievent"
@@ -117,6 +118,8 @@ func New() (*App, error) {
 	userInteractionSvc := gatewayuserinteraction.New(artifactStoreWithCache, cfg.Interaction.ConversationArtifactPath)
 	userInteractionSvc.SetUISync(uiEventSvc)
 	workerSvc := gatewayworker.New(projectSvc.AsProjectReader(), projectStore, uiWorkspaceSvc, uiSvc, userInteractionSvc, artifactStoreWithCache)
+	actSvc := gatewayact.New(uiStore)
+	_ = actSvc // Available for handler wiring in future tickets
 
 	projectHandler := rpc.NewProjectHandler(projectSvc)
 	runHandler := rpc.NewRunHandler(workerSvc)
