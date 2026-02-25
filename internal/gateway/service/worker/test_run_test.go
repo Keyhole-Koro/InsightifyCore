@@ -50,7 +50,7 @@ func TestStartRunAssignsRunToCurrentTabImmediately(t *testing.T) {
 
 	res, err := svc.StartRun(context.Background(), &insightifyv1.StartRunRequest{
 		ProjectId: "project-1",
-		WorkerId:  "testllmChatNode",
+		WorkerId:  "actBootstrapNode",
 	})
 	if err != nil {
 		t.Fatalf("StartRun() error = %v", err)

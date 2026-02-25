@@ -238,3 +238,20 @@ Phase 3 (整理):
 - 段階移行 (Phase 1-3)
 - 互換ログと fail-fast エラーメッセージ
 - タイムラインの折りたたみ/仮想化表示の導入
+
+## 14. Implementation Status
+
+| Ticket | Description | Status |
+|--------|------------|--------|
+| ACT-001 | Act Input Routing Integration (Web) | ✅ Done |
+| ACT-002 | Act Node Renderer (Web) | ✅ Done |
+| ACT-003 | Disable Direct User Node Creation (Web UX) | ✅ Done |
+| ACT-004 | Act Orchestrator Service (Core) | ✅ Done |
+| ACT-005 | Worker Routing Policy (Core) | ✅ Done |
+| ACT-006 | CreateNodeInTab Actor Enforcement Hardening (Core) | ✅ Done |
+| ACT-007 | Restore Compatibility for Act Payload (Core/Web) | ✅ Done |
+| ACT-008 | Remove Remaining LLM Chat-Centric Paths | ✅ Done |
+
+### Remaining LLM Chat Paths
+
+None. Worker-driven interaction is written directly to `act.timeline`.

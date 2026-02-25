@@ -356,8 +356,8 @@ func (s *Service) hasRequiredWorkers(env *runtimepkg.ProjectRuntime) bool {
 		return false
 	}
 	_, hasBootstrap := env.Resolver.Get("bootstrap")
-	_, hasTestLLM := env.Resolver.Get("testllmChatNode")
-	return hasBootstrap && hasTestLLM
+	_, hasActBootstrap := env.Resolver.Get("actBootstrapNode")
+	return hasBootstrap && hasActBootstrap
 }
 
 func isProjectID(id string) bool {

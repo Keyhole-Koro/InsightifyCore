@@ -88,9 +88,9 @@ func (s *Service) Handle(ctx context.Context, ev Event) error {
 	if err != nil {
 		return err
 	}
-	node := findChatNodeByID(doc, nodeID)
+	node := findActNodeByID(doc, nodeID)
 	if node == nil {
-		return fmt.Errorf("chat node not found: run_id=%s node_id=%s", runID, nodeID)
+		return fmt.Errorf("act node not found: run_id=%s node_id=%s", runID, nodeID)
 	}
 	applyEventToNode(node, ev)
 
@@ -104,19 +104,21 @@ func (s *Service) Handle(ctx context.Context, ev Event) error {
 	return err
 }
 
-func findChatNodeByID(doc *insightifyv1.UiDocument, nodeID string) *insightifyv1.UiNode {
+func findActNodeByID(doc *insightifyv1.UiDocument, nodeID string) *insightifyv1.UiNode {
 	if doc != nil {
 		for _, node := range doc.GetNodes() {
 			if node == nil {
 				continue
 			}
 			if strings.TrimSpace(node.GetId()) == nodeID &&
-				node.GetType() == insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT {
+				node.GetType() == insightifyv1.UiNodeType_UI_NODE_TYPE_ACT {
 				if node.Meta == nil {
-					node.Meta = &insightifyv1.UiNodeMeta{Title: "LLM Chat"}
+					node.Meta = &insightifyv1.UiNodeMeta{Title: "Act"}
 				}
-				if node.LlmChat == nil {
-					node.LlmChat = &insightifyv1.UiLlmChatState{}
+				if node.Act == nil {
+					node.Act = &insightifyv1.UiActState{
+						ActId: node.GetId(),
+					}
 				}
 				return node
 			}
@@ -129,12 +131,14 @@ func applyEventToNode(node *insightifyv1.UiNode, ev Event) {
 	if node == nil {
 		return
 	}
-	if node.LlmChat == nil {
-		node.LlmChat = &insightifyv1.UiLlmChatState{}
+	if node.Act == nil {
+		node.Act = &insightifyv1.UiActState{
+			ActId: node.GetId(),
+		}
 	}
-	chat := node.LlmChat
-	if strings.TrimSpace(chat.GetModel()) == "" {
-		chat.Model = "Low"
+	act := node.Act
+	if strings.TrimSpace(act.GetActId()) == "" {
+		act.ActId = node.GetId()
 	}
 	interactionID := strings.TrimSpace(ev.InteractionID)
 	if interactionID == "" {
@@ -145,38 +149,40 @@ func applyEventToNode(node *insightifyv1.UiNode, ev Event) {
 	case EventUserAccepted:
 		content := strings.TrimSpace(ev.Content)
 		if content != "" {
-			chat.Messages = append(chat.Messages, &insightifyv1.UiChatMessage{
-				Id:      fmt.Sprintf("%s-user-%d", sanitizeID(interactionID), len(chat.Messages)+1),
-				Role:    insightifyv1.UiChatMessage_ROLE_USER,
-				Content: content,
+			act.Timeline = append(act.GetTimeline(), &insightifyv1.UiActTimelineEvent{
+				Id:              fmt.Sprintf("%s-user-%d", sanitizeID(interactionID), len(act.GetTimeline())+1),
+				CreatedAtUnixMs: time.Now().UnixMilli(),
+				Kind:            "user_input",
+				Summary:         content,
+				Detail:          interactionID,
 			})
 		}
-		chat.IsResponding = true
-		chat.SendLocked = false
-		chat.SendLockHint = ""
+		act.Status = insightifyv1.UiActStatus_UI_ACT_STATUS_PLANNING
+		act.Mode = "planning"
 	case EventAssistantOut:
 		content := strings.TrimSpace(ev.Content)
 		if content != "" {
-			chat.Messages = append(chat.Messages, &insightifyv1.UiChatMessage{
-				Id:      fmt.Sprintf("%s-assistant-%d", sanitizeID(interactionID), len(chat.Messages)+1),
-				Role:    insightifyv1.UiChatMessage_ROLE_ASSISTANT,
-				Content: content,
+			act.Timeline = append(act.GetTimeline(), &insightifyv1.UiActTimelineEvent{
+				Id:              fmt.Sprintf("%s-assistant-%d", sanitizeID(interactionID), len(act.GetTimeline())+1),
+				CreatedAtUnixMs: time.Now().UnixMilli(),
+				Kind:            "worker_output",
+				Summary:         content,
+				Detail:          interactionID,
 			})
 		}
-		chat.IsResponding = true
-		chat.SendLocked = false
-		chat.SendLockHint = ""
+		act.Status = insightifyv1.UiActStatus_UI_ACT_STATUS_NEEDS_USER_ACTION
+		act.Mode = "needs_user_action"
 	case EventAssistantDone:
-		chat.IsResponding = false
-		chat.SendLocked = false
-		chat.SendLockHint = ""
+		act.Status = insightifyv1.UiActStatus_UI_ACT_STATUS_NEEDS_USER_ACTION
+		act.Mode = "needs_user_action"
 	case EventWaiting:
-		chat.IsResponding = false
-		chat.SendLocked = false
 		if ev.Waiting {
-			chat.SendLockHint = "Waiting for user input"
+			act.Mode = "needs_user_action"
+			act.Status = insightifyv1.UiActStatus_UI_ACT_STATUS_NEEDS_USER_ACTION
 		} else {
-			chat.SendLockHint = ""
+			if strings.TrimSpace(act.GetMode()) == "" {
+				act.Mode = "planning"
+			}
 		}
 	}
 }

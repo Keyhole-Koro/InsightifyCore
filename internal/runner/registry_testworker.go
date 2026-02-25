@@ -36,14 +36,14 @@ func init() {
 func BuildRegistryTestWorker(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 
-	reg["testllmChatNode"] = WorkerSpec{
-		Key:         "testllmChatNode",
-		Description: "Test LLM chat node worker for interactive daily conversation loop.",
+	reg["actBootstrapNode"] = WorkerSpec{
+		Key:         "actBootstrapNode",
+		Description: "Act bootstrap worker for interactive daily conversation loop.",
 		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
 			return plan.BootstrapIn{}, nil
 		},
 		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "testllmChatNode")
+			ctx = llm.WithWorker(ctx, "actBootstrapNode")
 			p := testpipe.LLMChatNodePipeline{
 				LLM: runtime.GetLLM(),
 			}
@@ -51,7 +51,7 @@ func BuildRegistryTestWorker(_ Runtime) map[string]WorkerSpec {
 				if waiter, waiterOK := InteractionWaiterFromContext(ctx); waiterOK {
 					nodeID, nodeOK := NodeIDFromContext(ctx)
 					if !nodeOK || nodeID == "" {
-						return WorkerOutput{}, fmt.Errorf("testllmChatNode requires node_id in context")
+						return WorkerOutput{}, fmt.Errorf("actBootstrapNode requires node_id in context")
 					}
 					p.Interaction = &interactionAdapter{
 						runID:  runID,

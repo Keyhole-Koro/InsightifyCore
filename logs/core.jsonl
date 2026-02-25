@@ -30,3 +30,9 @@
 {"time":"2026-02-25T08:37:09.666975529Z","level":"INFO","msg":"Starting API server on :8081"}
 {"time":"2026-02-25T08:39:20.752187828Z","level":"INFO","msg":"database identity","database":"insightify","server_addr":"172.18.0.2/32","server_port":5432,"user":"insightify"}
 {"time":"2026-02-25T08:39:20.843018016Z","level":"INFO","msg":"Starting API server on :8081"}
+{"time":"2026-02-25T14:03:56.240330874Z","level":"INFO","msg":"database identity","database":"insightify","server_addr":"172.18.0.2/32","server_port":5432,"user":"insightify"}
+{"time":"2026-02-25T14:03:56.452782957Z","level":"INFO","msg":"Starting API server on :8081"}
+{"time":"2026-02-25T14:06:38.224493493Z","level":"INFO","msg":"database identity","database":"insightify","server_addr":"172.18.0.2/32","server_port":5432,"user":"insightify"}
+{"time":"2026-02-25T14:06:38.336254419Z","level":"INFO","msg":"Starting API server on :8081"}
+{"time":"2026-02-25T14:06:42.361163701Z","level":"INFO","msg":"database identity","database":"insightify","server_addr":"172.18.0.2/32","server_port":5432,"user":"insightify"}
+{"time":"2026-02-25T14:06:42.484252869Z","level":"INFO","msg":"Starting API server on :8081"}

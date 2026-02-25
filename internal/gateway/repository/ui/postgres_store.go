@@ -203,9 +203,10 @@ func unmarshalNodes(data any) (map[string]*insightifyv1.UiNode, error) {
 	}
 
 	out := make(map[string]*insightifyv1.UiNode, len(rawMap))
+	unmarshal := protojson.UnmarshalOptions{DiscardUnknown: true}
 	for k, v := range rawMap {
 		node := &insightifyv1.UiNode{}
-		if err := protojson.Unmarshal(v, node); err != nil {
+		if err := unmarshal.Unmarshal(v, node); err != nil {
 			return nil, err
 		}
 		out[k] = node

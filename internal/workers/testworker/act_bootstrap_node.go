@@ -18,7 +18,7 @@ import (
 
 const (
 	testChatNodeID       = "test-llm-chat-node"
-	testChatWorkerKey    = "testllmChatNode"
+	testChatWorkerKey    = "actBootstrapNode"
 	testChatModelName    = "Low"
 	defaultChatMaxTurns  = 8
 	defaultIdleTimeout   = 30 * time.Second
@@ -62,10 +62,10 @@ type LLMChatNodePipeline struct {
 // Run creates/updates a chat node and handles interactive conversation turns.
 func (p *LLMChatNodePipeline) Run(ctx context.Context, in plan.BootstrapIn) error {
 	if p == nil {
-		return fmt.Errorf("testllmChatNode: pipeline is nil")
+		return fmt.Errorf("actBootstrapNode: pipeline is nil")
 	}
 	if p.LLM == nil {
-		return fmt.Errorf("testllmChatNode: llm client is nil")
+		return fmt.Errorf("actBootstrapNode: llm client is nil")
 	}
 
 	maxTurns := p.MaxTurns
@@ -180,7 +180,7 @@ func (p *LLMChatNodePipeline) generateReply(ctx context.Context, userInput strin
 	}
 	var result artifact.InitPurposeOut
 	if err := json.Unmarshal(raw, &result); err != nil {
-		return "", fmt.Errorf("testllmChatNode JSON invalid: %w", err)
+		return "", fmt.Errorf("actBootstrapNode JSON invalid: %w", err)
 	}
 	return strings.TrimSpace(result.FollowupQuestion), nil
 }

@@ -27,19 +27,21 @@ func nodeFromClientView(workerID string, view *workerv1.ClientView) *insightifyv
 	}
 	return &insightifyv1.UiNode{
 		Id:   fmt.Sprintf("%s-node", sanitizeID(workerID)),
-		Type: insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT,
+		Type: insightifyv1.UiNodeType_UI_NODE_TYPE_ACT,
 		Meta: &insightifyv1.UiNodeMeta{
 			Title: strings.TrimSpace(workerID),
 		},
-		LlmChat: &insightifyv1.UiLlmChatState{
-			Model:        "Low",
-			IsResponding: false,
-			SendLocked:   false,
-			Messages: []*insightifyv1.UiChatMessage{
+		Act: &insightifyv1.UiActState{
+			ActId:  fmt.Sprintf("%s-node", sanitizeID(workerID)),
+			Status: insightifyv1.UiActStatus_UI_ACT_STATUS_DONE,
+			Mode:   "done",
+			Timeline: []*insightifyv1.UiActTimelineEvent{
 				{
-					Id:      fmt.Sprintf("%s-assistant-1", sanitizeID(workerID)),
-					Role:    insightifyv1.UiChatMessage_ROLE_ASSISTANT,
-					Content: content,
+					Id:              fmt.Sprintf("%s-assistant-1", sanitizeID(workerID)),
+					CreatedAtUnixMs: 0,
+					Kind:            "worker_output",
+					Summary:         content,
+					WorkerKey:       strings.TrimSpace(workerID),
 				},
 			},
 		},

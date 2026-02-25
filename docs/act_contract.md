@@ -52,3 +52,13 @@ Recommended event kinds:
 - `system`
 
 Any other actor is denied.
+
+## Actor Policy (ApplyOps)
+
+`ApplyOps` enforces the same actor policy. Empty actor defaults to `system` for
+internal-call compatibility. Denied actors receive a `permission denied` error.
+
+## LLM Chat Compatibility
+
+`UI_NODE_TYPE_LLM_CHAT` rendering and interaction compatibility has been removed.
+Worker interaction is represented on `UI_NODE_TYPE_ACT.timeline`.

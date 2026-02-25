@@ -79,7 +79,7 @@ func (s *DiskStore) loadLocked(runID string) (*insightifyv1.UiDocument, error) {
 		return nil, err
 	}
 	doc := &insightifyv1.UiDocument{}
-	if err := protojson.Unmarshal(raw, doc); err != nil {
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(raw, doc); err != nil {
 		return nil, err
 	}
 	if doc.RunId == "" {
