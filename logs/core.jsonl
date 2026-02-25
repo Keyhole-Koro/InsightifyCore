@@ -1,16 +1,10 @@
-{"time":"2026-02-19T10:10:40.007699499Z","level":"INFO","msg":"Starting API server on :8081"}
-{"time":"2026-02-21T09:07:14.277754809Z","level":"INFO","msg":"Starting API server on :8081"}
-{"time":"2026-02-23T05:57:43.832726131Z","level":"INFO","msg":"Starting API server on :8081"}
-{"time":"2026-02-23T07:48:03.592330381Z","level":"INFO","msg":"worker run started","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1","project_id":"project-1771495047024964856","worker_id":"testllmChatNode"}
-{"time":"2026-02-23T07:48:03.657110812Z","level":"INFO","msg":"interaction assistant output published","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1","interaction_id":"interaction-1771832883606949681"}
-{"time":"2026-02-23T07:48:04.125622187Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1"}
-{"time":"2026-02-23T07:48:08.222773147Z","level":"INFO","msg":"interaction user input accepted","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1","interaction_id":"interaction-1771832883606949681"}
-{"time":"2026-02-23T07:48:10.602906973Z","level":"INFO","msg":"interaction assistant output published","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1","interaction_id":"interaction-1771832883606949681"}
-{"time":"2026-02-23T07:48:38.57155793Z","level":"INFO","msg":"TESTLLMCHATNODE → testllmChatNode_v1.json (reset to v1; updated testllmChatNode.json)"}
-{"time":"2026-02-23T07:48:38.571794059Z","level":"INFO","msg":"worker run completed","trace_id":"trc_1771832883127_f698fdd70705f8e7","run_id":"run-1","project_id":"project-1771495047024964856","worker_id":"testllmChatNode"}
-{"time":"2026-02-23T08:10:10.118251618Z","level":"INFO","msg":"Starting API server on :8081"}
-{"time":"2026-02-23T08:10:22.122026368Z","level":"INFO","msg":"Starting API server on :8081"}
-{"time":"2026-02-23T08:14:46.14691565Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771834485349_669e94af1cdb248c","run_id":"run-1"}
-{"time":"2026-02-23T08:14:54.216488886Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771834494923_948b013946d15fec","run_id":"run-1"}
-{"time":"2026-02-23T08:15:23.221779565Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771834523982_f0e4216c4084de1d","run_id":"run-1"}
-{"time":"2026-02-23T08:16:21.953344007Z","level":"INFO","msg":"Starting API server on :8081"}
+{"time":"2026-02-24T14:32:01.853088404Z","level":"INFO","msg":"database identity","database":"insightify","server_addr":"172.18.0.2/32","server_port":5432,"user":"insightify"}
+{"time":"2026-02-24T14:32:01.989153887Z","level":"INFO","msg":"Starting API server on :8081"}
+{"time":"2026-02-24T14:32:21.56225434Z","level":"INFO","msg":"worker run started","trace_id":"trc_1771943542638_4fdb213586e1d320","run_id":"run-project-1771939704143899604-1771943541562-5da1292c","project_id":"project-1771939704143899604","worker_id":"bootstrap"}
+{"time":"2026-02-24T14:32:21.570322071Z","level":"INFO","msg":"BOOTSTRAP → bootstrap_v1.json (reset to v1; updated bootstrap.json)"}
+{"time":"2026-02-24T14:32:21.589147889Z","level":"INFO","msg":"worker run completed","trace_id":"trc_1771943542638_4fdb213586e1d320","run_id":"run-project-1771939704143899604-1771943541562-5da1292c","project_id":"project-1771939704143899604","worker_id":"bootstrap"}
+{"time":"2026-02-24T14:32:26.194670497Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771943546335_95cda93183960fa3","run_id":"run-project-1771939704143899604-1771943541562-5da1292c","node_id":"llm-chat-1771943546067-67601"}
+{"time":"2026-02-24T14:32:31.170104671Z","level":"INFO","msg":"worker run started","trace_id":"trc_1771943551292_cf86ff7ca7144c41","run_id":"run-project-1771943549686470377-1771943551170-af9145b9","project_id":"project-1771943549686470377","worker_id":"bootstrap"}
+{"time":"2026-02-24T14:32:31.178017145Z","level":"INFO","msg":"BOOTSTRAP → bootstrap_v1.json (reset to v1; updated bootstrap.json)"}
+{"time":"2026-02-24T14:32:31.188041723Z","level":"INFO","msg":"worker run completed","trace_id":"trc_1771943551292_cf86ff7ca7144c41","run_id":"run-project-1771943549686470377-1771943551170-af9145b9","project_id":"project-1771943549686470377","worker_id":"bootstrap"}
+{"time":"2026-02-24T14:32:37.491380063Z","level":"INFO","msg":"interaction ws connected","trace_id":"trc_1771943556650_31c2dd1603bd16dc","run_id":"run-project-1771943549686470377-1771943551170-af9145b9","node_id":"llm-chat-1771943556388-65218"}

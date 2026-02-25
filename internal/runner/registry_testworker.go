@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"insightify/internal/llm/middleware"
 	"insightify/internal/workers/plan"
 	testpipe "insightify/internal/workers/testworker"
@@ -9,6 +10,7 @@ import (
 
 type interactionAdapter struct {
 	runID  string
+	nodeID string
 	waiter InteractionWaiter
 }
 
@@ -16,14 +18,14 @@ func (a *interactionAdapter) WaitForInput(ctx context.Context) (string, error) {
 	if a == nil || a.waiter == nil {
 		return "", context.Canceled
 	}
-	return a.waiter.WaitForInput(ctx, a.runID)
+	return a.waiter.WaitForInput(ctx, a.runID, a.nodeID)
 }
 
 func (a *interactionAdapter) PublishOutput(ctx context.Context, message string) error {
 	if a == nil || a.waiter == nil {
 		return context.Canceled
 	}
-	return a.waiter.PublishOutput(ctx, a.runID, "", message)
+	return a.waiter.PublishOutput(ctx, a.runID, a.nodeID, "", message)
 }
 
 // BuildRegistryTestWorker wires test-only workers used for interaction prototyping.
@@ -45,10 +47,15 @@ func BuildRegistryTestWorker(_ Runtime) map[string]WorkerSpec {
 			p := testpipe.LLMChatNodePipeline{
 				LLM: runtime.GetLLM(),
 			}
-			if runID, ok := RunIDFromContext(ctx); ok {
-				if waiter, ok := InteractionWaiterFromContext(ctx); ok {
+			if runID, runOK := RunIDFromContext(ctx); runOK {
+				if waiter, waiterOK := InteractionWaiterFromContext(ctx); waiterOK {
+					nodeID, nodeOK := NodeIDFromContext(ctx)
+					if !nodeOK || nodeID == "" {
+						return WorkerOutput{}, fmt.Errorf("testllmChatNode requires node_id in context")
+					}
 					p.Interaction = &interactionAdapter{
 						runID:  runID,
+						nodeID: nodeID,
 						waiter: waiter,
 					}
 				}

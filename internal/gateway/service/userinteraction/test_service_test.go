@@ -13,12 +13,13 @@ import (
 func TestSendQueuesInputForWaitForInput(t *testing.T) {
 	svc := New(nil, "")
 	runID := "run-1"
+	nodeID := "node-1"
 	want := "hello from user"
 
 	gotCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 	go func() {
-		in, err := svc.WaitForInput(context.Background(), runID)
+		in, err := svc.WaitForInput(context.Background(), runID, nodeID)
 		if err != nil {
 			errCh <- err
 			return
@@ -33,8 +34,9 @@ func TestSendQueuesInputForWaitForInput(t *testing.T) {
 	}
 
 	resp, err := svc.Send(context.Background(), &insightifyv1.SendRequest{
-		RunId: runID,
-		Input: want,
+		RunId:  runID,
+		NodeId: nodeID,
+		Input:  want,
 	})
 	if err != nil {
 		t.Fatalf("Send() error = %v", err)
@@ -61,11 +63,12 @@ func TestSendQueuesInputForWaitForInput(t *testing.T) {
 func TestSubscribeEmitsStateTransitions(t *testing.T) {
 	svc := New(nil, "")
 	runID := "run-subscribe"
+	nodeID := "node-subscribe"
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sub, err := svc.Subscribe(ctx, runID)
+	sub, err := svc.Subscribe(ctx, runID, nodeID)
 	if err != nil {
 		t.Fatalf("Subscribe() error = %v", err)
 	}
@@ -82,14 +85,15 @@ func TestSubscribeEmitsStateTransitions(t *testing.T) {
 	waitDone := make(chan struct{})
 	go func() {
 		close(waitReady)
-		_, _ = svc.WaitForInput(context.Background(), runID)
+		_, _ = svc.WaitForInput(context.Background(), runID, nodeID)
 		close(waitDone)
 	}()
 	<-waitReady
 
 	_, sendErr := svc.Send(context.Background(), &insightifyv1.SendRequest{
-		RunId: runID,
-		Input: "hello",
+		RunId:  runID,
+		NodeId: nodeID,
+		Input:  "hello",
 	})
 	if sendErr != nil {
 		t.Fatalf("Send() error = %v", sendErr)
@@ -125,17 +129,18 @@ func TestSubscribeEmitsStateTransitions(t *testing.T) {
 func TestPublishOutputEmitsAssistantMessage(t *testing.T) {
 	svc := New(nil, "")
 	runID := "run-output"
+	nodeID := "node-output"
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sub, err := svc.Subscribe(ctx, runID)
+	sub, err := svc.Subscribe(ctx, runID, nodeID)
 	if err != nil {
 		t.Fatalf("Subscribe() error = %v", err)
 	}
 	_ = readWaitState(t, sub)
 
-	if err := svc.PublishOutput(context.Background(), runID, "", "hello assistant"); err != nil {
+	if err := svc.PublishOutput(context.Background(), runID, nodeID, "", "hello assistant"); err != nil {
 		t.Fatalf("PublishOutput() error = %v", err)
 	}
 
@@ -163,21 +168,23 @@ func TestConversationArtifactStoredByRunID(t *testing.T) {
 	store := &memoryArtifactStore{data: map[string][]byte{}}
 	svc := New(store, "")
 	runID := "run-conversation"
+	nodeID := "node-conversation"
 	interactionID := "interaction-1"
 
 	_, err := svc.Send(context.Background(), &insightifyv1.SendRequest{
 		RunId:         runID,
+		NodeId:        nodeID,
 		InteractionId: interactionID,
 		Input:         "hello",
 	})
 	if err != nil {
 		t.Fatalf("Send() error = %v", err)
 	}
-	if err := svc.PublishOutput(context.Background(), runID, interactionID, "hi there"); err != nil {
+	if err := svc.PublishOutput(context.Background(), runID, nodeID, interactionID, "hi there"); err != nil {
 		t.Fatalf("PublishOutput() error = %v", err)
 	}
 
-	raw, ok := store.data[runID+"/"+svc.conversationArtifactPath]
+	raw, ok := store.data[runID+"/"+nodeID+"/"+svc.conversationArtifactPath]
 	if !ok {
 		t.Fatalf("conversation artifact not stored")
 	}

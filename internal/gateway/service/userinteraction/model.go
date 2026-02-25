@@ -22,9 +22,9 @@ type Service struct {
 
 // UISync updates UiDocument from interaction events on the core side.
 type UISync interface {
-	OnUserAccepted(ctx context.Context, runID, interactionID, input string) error
-	OnAssistantOutput(ctx context.Context, runID, interactionID, message string) error
-	OnWaiting(ctx context.Context, runID, interactionID string, waiting bool) error
+	OnUserAccepted(ctx context.Context, runID, nodeID, interactionID, input string) error
+	OnAssistantOutput(ctx context.Context, runID, nodeID, interactionID, message string) error
+	OnWaiting(ctx context.Context, runID, nodeID, interactionID string, waiting bool) error
 }
 
 type SubscriptionEventKind string
@@ -56,6 +56,7 @@ type conversationMessage struct {
 
 type conversationArtifact struct {
 	RunID    string                `json:"run_id"`
+	NodeID   string                `json:"node_id"`
 	Messages []conversationMessage `json:"messages"`
 }
 
@@ -81,8 +82,8 @@ func (s *Service) waitResponseFromStateLocked(st *sessionState) *insightifyv1.Wa
 	}
 }
 
-func (s *Service) getOrCreateLocked(runID string) *sessionState {
-	key := runID
+func (s *Service) getOrCreateLocked(runID, nodeID string) *sessionState {
+	key := sessionKey(runID, nodeID)
 	if st, ok := s.state[key]; ok {
 		return st
 	}
@@ -92,6 +93,10 @@ func (s *Service) getOrCreateLocked(runID string) *sessionState {
 	}
 	s.state[key] = st
 	return st
+}
+
+func sessionKey(runID, nodeID string) string {
+	return runID + "|" + nodeID
 }
 
 func notifyLocked(st *sessionState) {

@@ -33,8 +33,9 @@ func (s *Service) SetUISync(sync UISync) {
 
 func (s *Service) Wait(ctx context.Context, req *insightifyv1.WaitRequest) (*insightifyv1.WaitResponse, error) {
 	runID := strings.TrimSpace(req.GetRunId())
-	if runID == "" {
-		return nil, fmt.Errorf("run_id is required")
+	nodeID := strings.TrimSpace(req.GetNodeId())
+	if runID == "" || nodeID == "" {
+		return nil, fmt.Errorf("run_id and node_id are required")
 	}
 	timeoutMs := req.GetTimeoutMs()
 	waitCtx := ctx
@@ -45,7 +46,7 @@ func (s *Service) Wait(ctx context.Context, req *insightifyv1.WaitRequest) (*ins
 	}
 	for {
 		s.mu.Lock()
-		st := s.getOrCreateLocked(runID)
+		st := s.getOrCreateLocked(runID, nodeID)
 		if st.interactionID == "" {
 			st.interactionID = newInteractionID()
 		}
@@ -75,14 +76,15 @@ func (s *Service) Wait(ctx context.Context, req *insightifyv1.WaitRequest) (*ins
 }
 
 // Snapshot returns the latest interaction wait state for a run.
-func (s *Service) Snapshot(runID string) (*insightifyv1.WaitResponse, error) {
+func (s *Service) Snapshot(runID, nodeID string) (*insightifyv1.WaitResponse, error) {
 	runID = strings.TrimSpace(runID)
-	if runID == "" {
-		return nil, fmt.Errorf("run_id is required")
+	nodeID = strings.TrimSpace(nodeID)
+	if runID == "" || nodeID == "" {
+		return nil, fmt.Errorf("run_id and node_id are required")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := s.getOrCreateLocked(runID)
+	st := s.getOrCreateLocked(runID, nodeID)
 	if st.interactionID == "" {
 		st.interactionID = newInteractionID()
 	}
@@ -91,10 +93,11 @@ func (s *Service) Snapshot(runID string) (*insightifyv1.WaitResponse, error) {
 }
 
 // Subscribe emits interaction updates for a run until ctx is canceled.
-func (s *Service) Subscribe(ctx context.Context, runID string) (<-chan *SubscriptionEvent, error) {
+func (s *Service) Subscribe(ctx context.Context, runID, nodeID string) (<-chan *SubscriptionEvent, error) {
 	runID = strings.TrimSpace(runID)
-	if runID == "" {
-		return nil, fmt.Errorf("run_id is required")
+	nodeID = strings.TrimSpace(nodeID)
+	if runID == "" || nodeID == "" {
+		return nil, fmt.Errorf("run_id and node_id are required")
 	}
 	out := make(chan *SubscriptionEvent, 8)
 
@@ -102,7 +105,7 @@ func (s *Service) Subscribe(ctx context.Context, runID string) (<-chan *Subscrip
 		defer close(out)
 		for {
 			s.mu.Lock()
-			st := s.getOrCreateLocked(runID)
+			st := s.getOrCreateLocked(runID, nodeID)
 			if st.interactionID == "" {
 				st.interactionID = newInteractionID()
 			}
@@ -138,13 +141,14 @@ func (s *Service) Subscribe(ctx context.Context, runID string) (<-chan *Subscrip
 
 func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*insightifyv1.CloseResponse, error) {
 	runID := strings.TrimSpace(req.GetRunId())
-	if runID == "" {
-		return nil, fmt.Errorf("run_id is required")
+	nodeID := strings.TrimSpace(req.GetNodeId())
+	if runID == "" || nodeID == "" {
+		return nil, fmt.Errorf("run_id and node_id are required")
 	}
 
 	s.mu.Lock()
 
-	st := s.getOrCreateLocked(runID)
+	st := s.getOrCreateLocked(runID, nodeID)
 	if interactionID := strings.TrimSpace(req.GetInteractionId()); interactionID != "" {
 		st.interactionID = interactionID
 	}
@@ -156,12 +160,13 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 	st.updatedAt = time.Now()
 	syncer := s.uiSync
 	syncRunID := runID
+	syncNodeID := nodeID
 	syncInter := st.interactionID
 	notifyLocked(st)
 	s.mu.Unlock()
 
 	if syncer != nil {
-		_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+		_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, false)
 	}
 	return &insightifyv1.CloseResponse{
 		Closed: true,
@@ -169,20 +174,22 @@ func (s *Service) Close(_ context.Context, req *insightifyv1.CloseRequest) (*ins
 }
 
 // WaitForInput blocks until a new user input for runID is available.
-func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error) {
+func (s *Service) WaitForInput(ctx context.Context, runID, nodeID string) (string, error) {
 	runID = strings.TrimSpace(runID)
-	if runID == "" {
-		return "", fmt.Errorf("run_id is required")
+	nodeID = strings.TrimSpace(nodeID)
+	if runID == "" || nodeID == "" {
+		return "", fmt.Errorf("run_id and node_id are required")
 	}
 	for {
 		var (
 			syncer     UISync
 			syncRunID  string
+			syncNodeID string
 			syncInter  string
 			emitWaitOn bool
 		)
 		s.mu.Lock()
-		st := s.getOrCreateLocked(runID)
+		st := s.getOrCreateLocked(runID, nodeID)
 		if st.interactionID == "" {
 			st.interactionID = newInteractionID()
 		}
@@ -190,6 +197,7 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 		st.updatedAt = time.Now()
 		syncer = s.uiSync
 		syncRunID = runID
+		syncNodeID = nodeID
 		syncInter = st.interactionID
 		emitWaitOn = syncer != nil
 		if len(st.inputQueue) > 0 {
@@ -200,8 +208,8 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 			notifyLocked(st)
 			s.mu.Unlock()
 			if emitWaitOn {
-				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
-				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, true)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, false)
 			}
 			if in == "" {
 				continue
@@ -213,8 +221,8 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 			notifyLocked(st)
 			s.mu.Unlock()
 			if emitWaitOn {
-				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
-				_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, false)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, true)
+				_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, false)
 			}
 			return "", context.Canceled
 		}
@@ -222,27 +230,29 @@ func (s *Service) WaitForInput(ctx context.Context, runID string) (string, error
 		ch := st.changed
 		s.mu.Unlock()
 		if emitWaitOn {
-			_ = syncer.OnWaiting(context.Background(), syncRunID, syncInter, true)
+			_ = syncer.OnWaiting(context.Background(), syncRunID, syncNodeID, syncInter, true)
 		}
 
 		select {
 		case <-ctx.Done():
 			var (
-				syncer2    UISync
-				syncRunID2 string
-				syncInter2 string
+				syncer2     UISync
+				syncRunID2  string
+				syncNodeID2 string
+				syncInter2  string
 			)
 			s.mu.Lock()
-			st := s.getOrCreateLocked(runID)
+			st := s.getOrCreateLocked(runID, nodeID)
 			st.waiting = false
 			st.updatedAt = time.Now()
 			syncer2 = s.uiSync
 			syncRunID2 = runID
+			syncNodeID2 = nodeID
 			syncInter2 = st.interactionID
 			notifyLocked(st)
 			s.mu.Unlock()
 			if syncer2 != nil {
-				_ = syncer2.OnWaiting(context.Background(), syncRunID2, syncInter2, false)
+				_ = syncer2.OnWaiting(context.Background(), syncRunID2, syncNodeID2, syncInter2, false)
 			}
 			return "", ctx.Err()
 		case <-ch:

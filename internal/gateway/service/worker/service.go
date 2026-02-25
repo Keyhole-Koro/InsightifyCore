@@ -7,7 +7,6 @@ import (
 	"insightify/internal/runner"
 	runtimepkg "insightify/internal/workerruntime"
 	"sync"
-	"sync/atomic"
 )
 
 // ProjectReader is an interface to read project state without circular dependency on project service.
@@ -36,9 +35,8 @@ type Service struct {
 	artifact     artifactrepo.Store
 	telemetry    *TelemetryStore
 
-	runMu      sync.RWMutex
-	runs       map[string]*WorkerRuntime
-	runCounter atomic.Uint64
+	runMu sync.RWMutex
+	runs  map[string]*WorkerRuntime
 }
 
 func New(project ProjectReader, projectStore projectrepo.ArtifactRepository, workspaces WorkspaceRunBinder, ui *gatewayui.Service, interaction runner.InteractionWaiter, artifact artifactrepo.Store) *Service {

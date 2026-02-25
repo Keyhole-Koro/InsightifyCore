@@ -21,6 +21,7 @@ const (
 
 type Event struct {
 	RunID         string
+	NodeID        string
 	InteractionID string
 	Type          EventType
 	Content       string
@@ -35,18 +36,20 @@ func New(store uirepo.Store) *Service {
 	return &Service{store: store}
 }
 
-func (s *Service) OnUserAccepted(ctx context.Context, runID, interactionID, input string) error {
+func (s *Service) OnUserAccepted(ctx context.Context, runID, nodeID, interactionID, input string) error {
 	return s.Handle(ctx, Event{
 		RunID:         runID,
+		NodeID:        nodeID,
 		InteractionID: interactionID,
 		Type:          EventUserAccepted,
 		Content:       input,
 	})
 }
 
-func (s *Service) OnAssistantOutput(ctx context.Context, runID, interactionID, message string) error {
+func (s *Service) OnAssistantOutput(ctx context.Context, runID, nodeID, interactionID, message string) error {
 	if err := s.Handle(ctx, Event{
 		RunID:         runID,
+		NodeID:        nodeID,
 		InteractionID: interactionID,
 		Type:          EventAssistantOut,
 		Content:       message,
@@ -55,14 +58,16 @@ func (s *Service) OnAssistantOutput(ctx context.Context, runID, interactionID, m
 	}
 	return s.Handle(ctx, Event{
 		RunID:         runID,
+		NodeID:        nodeID,
 		InteractionID: interactionID,
 		Type:          EventAssistantDone,
 	})
 }
 
-func (s *Service) OnWaiting(ctx context.Context, runID, interactionID string, waiting bool) error {
+func (s *Service) OnWaiting(ctx context.Context, runID, nodeID, interactionID string, waiting bool) error {
 	return s.Handle(ctx, Event{
 		RunID:         runID,
+		NodeID:        nodeID,
 		InteractionID: interactionID,
 		Type:          EventWaiting,
 		Waiting:       waiting,
@@ -74,17 +79,18 @@ func (s *Service) Handle(ctx context.Context, ev Event) error {
 		return fmt.Errorf("ui event service is not available")
 	}
 	runID := strings.TrimSpace(ev.RunID)
-	if runID == "" {
-		return fmt.Errorf("run_id is required")
+	nodeID := strings.TrimSpace(ev.NodeID)
+	if runID == "" || nodeID == "" {
+		return fmt.Errorf("run_id and node_id are required")
 	}
 
 	doc, err := s.store.GetDocument(ctx, runID)
 	if err != nil {
 		return err
 	}
-	node := findOrCreateChatNode(doc, runID)
+	node := findChatNodeByID(doc, nodeID)
 	if node == nil {
-		return fmt.Errorf("failed to resolve chat node for run %s", runID)
+		return fmt.Errorf("chat node not found: run_id=%s node_id=%s", runID, nodeID)
 	}
 	applyEventToNode(node, ev)
 
@@ -98,13 +104,14 @@ func (s *Service) Handle(ctx context.Context, ev Event) error {
 	return err
 }
 
-func findOrCreateChatNode(doc *insightifyv1.UiDocument, runID string) *insightifyv1.UiNode {
+func findChatNodeByID(doc *insightifyv1.UiDocument, nodeID string) *insightifyv1.UiNode {
 	if doc != nil {
 		for _, node := range doc.GetNodes() {
 			if node == nil {
 				continue
 			}
-			if node.GetType() == insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT {
+			if strings.TrimSpace(node.GetId()) == nodeID &&
+				node.GetType() == insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT {
 				if node.Meta == nil {
 					node.Meta = &insightifyv1.UiNodeMeta{Title: "LLM Chat"}
 				}
@@ -115,20 +122,7 @@ func findOrCreateChatNode(doc *insightifyv1.UiDocument, runID string) *insightif
 			}
 		}
 	}
-	return &insightifyv1.UiNode{
-		Id:   "llm-chat-" + sanitizeID(runID),
-		Type: insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT,
-		Meta: &insightifyv1.UiNodeMeta{
-			Title: "LLM Chat",
-		},
-		LlmChat: &insightifyv1.UiLlmChatState{
-			Model:        "Low",
-			IsResponding: false,
-			SendLocked:   false,
-			SendLockHint: "",
-			Messages:     nil,
-		},
-	}
+	return nil
 }
 
 func applyEventToNode(node *insightifyv1.UiNode, ev Event) {

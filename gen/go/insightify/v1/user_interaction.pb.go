@@ -24,7 +24,8 @@ const (
 type WaitRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	TimeoutMs     int32                  `protobuf:"varint,2,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	NodeId        string                 `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	TimeoutMs     int32                  `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +63,13 @@ func (*WaitRequest) Descriptor() ([]byte, []int) {
 func (x *WaitRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
+	}
+	return ""
+}
+
+func (x *WaitRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
 	}
 	return ""
 }
@@ -136,8 +144,9 @@ func (x *WaitResponse) GetClosed() bool {
 type SendRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	Input         string                 `protobuf:"bytes,3,opt,name=input,proto3" json:"input,omitempty"`
+	NodeId        string                 `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	InteractionId string                 `protobuf:"bytes,3,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	Input         string                 `protobuf:"bytes,4,opt,name=input,proto3" json:"input,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +184,13 @@ func (*SendRequest) Descriptor() ([]byte, []int) {
 func (x *SendRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
+	}
+	return ""
+}
+
+func (x *SendRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
 	}
 	return ""
 }
@@ -256,8 +272,9 @@ func (x *SendResponse) GetAssistantMessage() string {
 type CloseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	InteractionId string                 `protobuf:"bytes,2,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	NodeId        string                 `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	InteractionId string                 `protobuf:"bytes,3,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -295,6 +312,13 @@ func (*CloseRequest) Descriptor() ([]byte, []int) {
 func (x *CloseRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
+	}
+	return ""
+}
+
+func (x *CloseRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
 	}
 	return ""
 }
@@ -361,27 +385,30 @@ var File_insightify_v1_user_interaction_proto protoreflect.FileDescriptor
 
 const file_insightify_v1_user_interaction_proto_rawDesc = "" +
 	"\n" +
-	"$insightify/v1/user_interaction.proto\x12\rinsightify.v1\"C\n" +
+	"$insightify/v1/user_interaction.proto\x12\rinsightify.v1\"\\\n" +
 	"\vWaitRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1d\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12\x1d\n" +
 	"\n" +
-	"timeout_ms\x18\x02 \x01(\x05R\ttimeoutMs\"g\n" +
+	"timeout_ms\x18\x03 \x01(\x05R\ttimeoutMs\"g\n" +
 	"\fWaitResponse\x12\x18\n" +
 	"\awaiting\x18\x01 \x01(\bR\awaiting\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +
-	"\x06closed\x18\x03 \x01(\bR\x06closed\"a\n" +
+	"\x06closed\x18\x03 \x01(\bR\x06closed\"z\n" +
 	"\vSendRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
-	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x14\n" +
-	"\x05input\x18\x03 \x01(\tR\x05input\"~\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12%\n" +
+	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12\x14\n" +
+	"\x05input\x18\x04 \x01(\tR\x05input\"~\n" +
 	"\fSendResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
 	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12+\n" +
-	"\x11assistant_message\x18\x03 \x01(\tR\x10assistantMessage\"d\n" +
+	"\x11assistant_message\x18\x03 \x01(\tR\x10assistantMessage\"}\n" +
 	"\fCloseRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12%\n" +
-	"\x0einteraction_id\x18\x02 \x01(\tR\rinteractionId\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"'\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12%\n" +
+	"\x0einteraction_id\x18\x03 \x01(\tR\rinteractionId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"'\n" +
 	"\rCloseResponse\x12\x16\n" +
 	"\x06closed\x18\x01 \x01(\bR\x06closedB\xac\x01\n" +
 	"\x11com.insightify.v1B\x14UserInteractionProtoP\x01Z,insightify/gen/go/insightify/v1;insightifyv1\xa2\x02\x03IXX\xaa\x02\rInsightify.V1\xca\x02\rInsightify\\V1\xe2\x02\x19Insightify\\V1\\GPBMetadata\xea\x02\x0eInsightify::V1b\x06proto3"

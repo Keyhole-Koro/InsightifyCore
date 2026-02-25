@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -37,7 +39,7 @@ func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunReques
 		return nil, fmt.Errorf("worker_id is required")
 	}
 
-	runID := s.newRunID()
+	runID := s.newRunID(projectID)
 	reqTraceID := traceutil.FromContext(ctx)
 	runBaseCtx := traceutil.WithContext(context.Background(), reqTraceID)
 	runCtx, cancel := context.WithCancel(runBaseCtx)
@@ -67,9 +69,25 @@ func (s *Service) StartRun(ctx context.Context, req *insightifyv1.StartRunReques
 	return &insightifyv1.StartRunResponse{RunId: runID}, nil
 }
 
-func (s *Service) newRunID() string {
-	n := s.runCounter.Add(1)
-	return fmt.Sprintf("run-%d", n)
+func (s *Service) newRunID(projectID string) string {
+	pid := strings.TrimSpace(projectID)
+	if pid == "" {
+		pid = "project"
+	}
+	ts := time.Now().UnixMilli()
+	suffix := randomHex(4)
+	return fmt.Sprintf("run-%s-%d-%s", pid, ts, suffix)
+}
+
+func randomHex(size int) string {
+	if size <= 0 {
+		size = 4
+	}
+	buf := make([]byte, size)
+	if _, err := rand.Read(buf); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(buf)
 }
 
 func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID string, params map[string]string) {
@@ -84,6 +102,9 @@ func (s *Service) executeRun(ctx context.Context, runID, projectID, workerID str
 	}
 
 	execCtx := runner.WithRunID(ctx, runID)
+	if nodeID := strings.TrimSpace(params["node_id"]); nodeID != "" {
+		execCtx = runner.WithNodeID(execCtx, nodeID)
+	}
 	if s.interaction != nil {
 		execCtx = runner.WithInteractionWaiter(execCtx, s.interaction)
 	}

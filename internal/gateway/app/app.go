@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -47,6 +48,25 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 	db := stdlib.OpenDBFromPool(pool)
+
+	var (
+		currentDatabase string
+		serverAddr      string
+		serverPort      int
+		currentUser     string
+	)
+	if err := db.QueryRowContext(
+		context.Background(),
+		"SELECT current_database(), COALESCE(inet_server_addr()::text, ''), COALESCE(inet_server_port(), 0), current_user",
+	).Scan(&currentDatabase, &serverAddr, &serverPort, &currentUser); err != nil {
+		return nil, fmt.Errorf("failed to query database identity: %w", err)
+	}
+	slog.Info("database identity",
+		"database", currentDatabase,
+		"server_addr", serverAddr,
+		"server_port", serverPort,
+		"user", currentUser,
+	)
 
 	// Initialize Ent client
 	drv := entsql.OpenDB(dialect.Postgres, db)
@@ -110,7 +130,8 @@ func New() (*App, error) {
 	srv := server.New(cfg.Port, mux)
 
 	return &App{
-		server: srv,
+		server:    srv,
+		entClient: client,
 	}, nil
 }
 
@@ -119,5 +140,11 @@ func (a *App) Start() error {
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
-	return a.server.Shutdown(ctx)
+	if err := a.server.Shutdown(ctx); err != nil {
+		return err
+	}
+	if a.entClient != nil {
+		a.entClient.Close()
+	}
+	return nil
 }

@@ -3,12 +3,13 @@ package runner
 import "context"
 
 type runIDContextKey struct{}
+type nodeIDContextKey struct{}
 type interactionWaiterContextKey struct{}
 
 // InteractionWaiter bridges user interaction input from gateway into runner workers.
 type InteractionWaiter interface {
-	WaitForInput(ctx context.Context, runID string) (string, error)
-	PublishOutput(ctx context.Context, runID, interactionID, message string) error
+	WaitForInput(ctx context.Context, runID, nodeID string) (string, error)
+	PublishOutput(ctx context.Context, runID, nodeID, interactionID, message string) error
 }
 
 func WithRunID(ctx context.Context, runID string) context.Context {
@@ -20,6 +21,21 @@ func RunIDFromContext(ctx context.Context) (string, bool) {
 		return "", false
 	}
 	v, ok := ctx.Value(runIDContextKey{}).(string)
+	if !ok || v == "" {
+		return "", false
+	}
+	return v, true
+}
+
+func WithNodeID(ctx context.Context, nodeID string) context.Context {
+	return context.WithValue(ctx, nodeIDContextKey{}, nodeID)
+}
+
+func NodeIDFromContext(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	v, ok := ctx.Value(nodeIDContextKey{}).(string)
 	if !ok || v == "" {
 		return "", false
 	}

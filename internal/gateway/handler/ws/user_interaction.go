@@ -41,6 +41,7 @@ var interactionWSUpgrader = websocket.Upgrader{
 type interactionWSInbound struct {
 	Type          string `json:"type"`
 	RunID         string `json:"runId,omitempty"`
+	NodeID        string `json:"nodeId,omitempty"`
 	InteractionID string `json:"interactionId,omitempty"`
 	Input         string `json:"input,omitempty"`
 	Reason        string `json:"reason,omitempty"`
@@ -49,6 +50,7 @@ type interactionWSInbound struct {
 type interactionWSOutbound struct {
 	Type             string `json:"type"`
 	RunID            string `json:"runId,omitempty"`
+	NodeID           string `json:"nodeId,omitempty"`
 	TraceID          string `json:"traceId,omitempty"`
 	InteractionID    string `json:"interactionId,omitempty"`
 	Waiting          bool   `json:"waiting,omitempty"`
@@ -61,8 +63,9 @@ type interactionWSOutbound struct {
 
 func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.URL.Query().Get("run_id"))
-	if runID == "" {
-		http.Error(w, "run_id is required", http.StatusBadRequest)
+	nodeID := strings.TrimSpace(r.URL.Query().Get("node_id"))
+	if runID == "" || nodeID == "" {
+		http.Error(w, "run_id and node_id are required", http.StatusBadRequest)
 		return
 	}
 	traceID := traceutil.ExtractHTTP(r)
@@ -75,7 +78,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		return
 	}
 	defer conn.Close()
-	logctx.Info(ctxWithTrace, "interaction ws connected", "run_id", runID)
+	logctx.Info(ctxWithTrace, "interaction ws connected", "run_id", runID, "node_id", nodeID)
 
 	ctx, cancel := context.WithCancel(ctxWithTrace)
 	defer cancel()
@@ -117,7 +120,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		}
 	}()
 
-	subCh, subErr := h.svc.Subscribe(ctx, runID)
+	subCh, subErr := h.svc.Subscribe(ctx, runID, nodeID)
 	if subErr != nil {
 		pushInteractionWS(writeCh, interactionWSOutbound{
 			Type:    "error",
@@ -133,6 +136,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 	pushInteractionWS(writeCh, interactionWSOutbound{
 		Type:    "subscribed",
 		RunID:   runID,
+		NodeID:  nodeID,
 		TraceID: traceID,
 	})
 
@@ -154,6 +158,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 					pushInteractionWS(writeCh, interactionWSOutbound{
 						Type:          "wait_state",
 						RunID:         runID,
+						NodeID:        nodeID,
 						TraceID:       traceID,
 						InteractionID: state.GetInteractionId(),
 						Waiting:       state.GetWaiting(),
@@ -163,6 +168,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 					pushInteractionWS(writeCh, interactionWSOutbound{
 						Type:             "assistant_message",
 						RunID:            runID,
+						NodeID:           nodeID,
 						TraceID:          traceID,
 						InteractionID:    strings.TrimSpace(evt.InteractionID),
 						AssistantMessage: strings.TrimSpace(evt.AssistantMessage),
@@ -190,8 +196,12 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 			continue
 		}
 		msgRunID := runID
+		msgNodeID := nodeID
 		if v := strings.TrimSpace(in.RunID); v != "" {
 			msgRunID = v
+		}
+		if v := strings.TrimSpace(in.NodeID); v != "" {
+			msgNodeID = v
 		}
 		if msgRunID != runID {
 			pushInteractionWS(writeCh, interactionWSOutbound{
@@ -202,6 +212,15 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 			})
 			continue
 		}
+		if msgNodeID != nodeID {
+			pushInteractionWS(writeCh, interactionWSOutbound{
+				Type:    "error",
+				TraceID: traceID,
+				Code:    "invalid_argument",
+				Message: "nodeId mismatch",
+			})
+			continue
+		}
 
 		switch msgType {
 		case "ping":
@@ -209,6 +228,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		case "send":
 			out, sendErr := h.svc.Send(ctx, &insightifyv1.SendRequest{
 				RunId:         runID,
+				NodeId:        nodeID,
 				InteractionId: strings.TrimSpace(in.InteractionID),
 				Input:         strings.TrimSpace(in.Input),
 			})
@@ -225,6 +245,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:             "send_ack",
 				RunID:            runID,
+				NodeID:           nodeID,
 				TraceID:          traceID,
 				InteractionID:    out.GetInteractionId(),
 				Accepted:         out.GetAccepted(),
@@ -233,6 +254,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 		case "close":
 			out, closeErr := h.svc.Close(ctx, &insightifyv1.CloseRequest{
 				RunId:         runID,
+				NodeId:        nodeID,
 				InteractionId: strings.TrimSpace(in.InteractionID),
 				Reason:        strings.TrimSpace(in.Reason),
 			})
@@ -249,6 +271,7 @@ func (h *UserInteractionHandler) HandleInteractionWS(w http.ResponseWriter, r *h
 			pushInteractionWS(writeCh, interactionWSOutbound{
 				Type:    "close_ack",
 				RunID:   runID,
+				NodeID:  nodeID,
 				TraceID: traceID,
 				Closed:  out.GetClosed(),
 			})

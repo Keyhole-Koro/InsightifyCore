@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"flag"
 	"os"
 	"strings"
@@ -66,6 +67,10 @@ func Load() (*Config, error) {
 	cfg := configForEnv(env)
 	cfg.Port = *port
 	cfg.Env = env
+	cfg.DatabaseURL = strings.TrimSpace(cfg.DatabaseURL)
+	if cfg.DatabaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
 
 	return &cfg, nil
 }

@@ -83,6 +83,14 @@ func (s *Service) ResolveProjectTabDocument(ctx context.Context, projectID, pref
 			Reason:    ReasonNoRun,
 		}, nil
 	}
+	expectedPrefix := fmt.Sprintf("run-%s-", pid)
+	if !strings.HasPrefix(runID, expectedPrefix) {
+		return Result{
+			ProjectID: pid,
+			TabID:     tabID,
+			Reason:    ReasonNoRun,
+		}, nil
+	}
 
 	doc, err := s.uiStore.GetDocument(ctx, runID)
 	if err != nil {

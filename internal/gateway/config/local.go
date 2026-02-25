@@ -7,7 +7,7 @@ import (
 
 func localConfig() Config {
 	return Config{
-		DatabaseURL: "postgres://insightify:insightify@postgres:5432/insightify?sslmode=disable",
+		DatabaseURL: strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		Artifact: ArtifactConfig{
 			Enabled:   true,
 			Endpoint:  firstNonEmpty(strings.TrimSpace(os.Getenv("ARTIFACT_MINIO_ENDPOINT")), "minio:9000"),

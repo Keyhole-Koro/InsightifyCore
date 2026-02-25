@@ -76,23 +76,22 @@ Steps:
 2. Call `UiWorkspaceService.Restore`
 3. Accept restore only when `reason == UI_RESTORE_REASON_RESOLVED` and `runId` exists
 4. Resolve source document via `useUiRestoreCache.resolveDocument(...)`
-   - `server` document by default
-   - `local_cache` only when `(runId, documentHash)` matches
+   - `server` document only (authoritative)
+   - browser cache is metadata-only and never used as restore payload
 5. Rebuild node UI from chosen document
-6. Save tab id and document cache
+6. Save tab id and document metadata cache
 
 Browser cache keys:
 
 - active tab per project:
   - `insightify.ui_tab_id.{projectId}`
-- document cache per project+tab:
-  - `insightify.ui_doc_cache.{projectId}.{tabId}`
+- document metadata cache per project+tab:
+  - `insightify.ui_doc_meta.{projectId}.{tabId}`
 
 Cache payload:
 
 - `runId`
 - `documentHash`
-- `document`
 - `savedAt`
 
 ## 4. ApplyOps batching/retry behavior
@@ -145,12 +144,8 @@ sequenceDiagram
 
   alt reason == RESOLVED and run_id exists
     UI->>LS: read document cache (project+tab)
-    alt cache run_id/hash match
-      UI->>UI: restore from local cache
-    else mismatch
-      UI->>UI: restore from server document
-    end
-    UI->>LS: save tab_id + cache
+    UI->>UI: restore from server document
+    UI->>LS: save tab_id + metadata cache
   else not resolved
     UI->>LS: clear tab/cache
     UI->>UI: fallback init path
@@ -182,7 +177,7 @@ flowchart TD
 
 - `reason` is the only restore decision signal for clients.
 - `run_id` gates both restore acceptance and ApplyOps routing.
-- Cache use is allowed only when `runId` and `documentHash` both match.
+- Browser cache stores metadata only; server response is always authoritative for document payload.
 - ApplyOps queue is isolated by `run_id`.
 
 ## 7. Known limitations
@@ -196,6 +191,6 @@ flowchart TD
 If restore behavior looks wrong:
 
 1. Verify `RestoreUiResponse.reason` and `run_id` first.
-2. Compare `document_hash` in response vs browser cache entry.
+2. Compare `document_hash` in response vs browser metadata cache entry.
 3. Confirm queue version progression (`currentVersion`/`document.version`).
 4. Check for repeated max-retry failures in frontend error handling.

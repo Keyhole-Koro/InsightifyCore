@@ -29,24 +29,47 @@ func (s *Service) withConversationHistory(ctx context.Context, runID string, doc
 	if runID == "" {
 		return doc
 	}
-	path := strings.TrimSpace(s.conversationArtifactPath)
-	if path == "" {
-		return doc
+	out := cloneDocument(doc)
+	basePath := strings.TrimSpace(s.conversationArtifactPath)
+	if basePath == "" {
+		return out
 	}
-	raw, err := s.artifact.Get(ctx, runID, path)
-	if err != nil || len(raw) == 0 {
-		return doc
+	for _, node := range out.GetNodes() {
+		if node == nil || node.GetType() != insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT {
+			continue
+		}
+		nodeID := strings.TrimSpace(node.GetId())
+		if nodeID == "" {
+			continue
+		}
+		raw, err := s.artifact.Get(ctx, runID, nodeID+"/"+basePath)
+		if err != nil || len(raw) == 0 {
+			continue
+		}
+		var conv conversationArtifact
+		if err := json.Unmarshal(raw, &conv); err != nil {
+			continue
+		}
+		msgs := mapConversationMessages(conv.Messages)
+		if len(msgs) == 0 {
+			continue
+		}
+		if node.LlmChat == nil {
+			node.LlmChat = &insightifyv1.UiLlmChatState{}
+		}
+		node.LlmChat.Messages = msgs
+		node.LlmChat.IsResponding = false
+		node.LlmChat.SendLocked = false
+		if strings.TrimSpace(node.LlmChat.Model) == "" {
+			node.LlmChat.Model = "Low"
+		}
 	}
-	var conv conversationArtifact
-	if err := json.Unmarshal(raw, &conv); err != nil {
-		return doc
-	}
-	if len(conv.Messages) == 0 {
-		return doc
-	}
+	return out
+}
 
-	msgs := make([]*insightifyv1.UiChatMessage, 0, len(conv.Messages))
-	for _, m := range conv.Messages {
+func mapConversationMessages(messages []conversationMessage) []*insightifyv1.UiChatMessage {
+	msgs := make([]*insightifyv1.UiChatMessage, 0, len(messages))
+	for _, m := range messages {
 		content := strings.TrimSpace(m.Content)
 		if content == "" {
 			continue
@@ -71,19 +94,7 @@ func (s *Service) withConversationHistory(ctx context.Context, runID string, doc
 			Content: content,
 		})
 	}
-	if len(msgs) == 0 {
-		return doc
-	}
-
-	out := cloneDocument(doc)
-	node := findOrCreateChatNode(out, runID)
-	node.LlmChat.Messages = msgs
-	node.LlmChat.IsResponding = false
-	node.LlmChat.SendLocked = false
-	if strings.TrimSpace(node.LlmChat.Model) == "" {
-		node.LlmChat.Model = "Low"
-	}
-	return out
+	return msgs
 }
 
 func cloneDocument(in *insightifyv1.UiDocument) *insightifyv1.UiDocument {
@@ -100,31 +111,4 @@ func cloneDocument(in *insightifyv1.UiDocument) *insightifyv1.UiDocument {
 	}
 	out.Nodes = append([]*insightifyv1.UiNode(nil), nodes...)
 	return out
-}
-
-func findOrCreateChatNode(doc *insightifyv1.UiDocument, runID string) *insightifyv1.UiNode {
-	if doc == nil {
-		return nil
-	}
-	for _, n := range doc.GetNodes() {
-		if n == nil {
-			continue
-		}
-		if n.GetType() == insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT {
-			if n.LlmChat == nil {
-				n.LlmChat = &insightifyv1.UiLlmChatState{}
-			}
-			return n
-		}
-	}
-	node := &insightifyv1.UiNode{
-		Id:   "llm-chat-" + sanitizeID(runID),
-		Type: insightifyv1.UiNodeType_UI_NODE_TYPE_LLM_CHAT,
-		Meta: &insightifyv1.UiNodeMeta{
-			Title: "LLM Chat",
-		},
-		LlmChat: &insightifyv1.UiLlmChatState{},
-	}
-	doc.Nodes = append(doc.Nodes, node)
-	return node
 }
