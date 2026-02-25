@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	logctx "insightify/internal/common/logctx"
 	actdomain "insightify/internal/domain/act"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
@@ -64,6 +65,18 @@ func (s *Service) ApplyOps(ctx context.Context, req *insightifyv1.ApplyUiOpsRequ
 		return nil, fmt.Errorf("run_id is required")
 	}
 
+	// Actor enforcement: treat empty actor as "system" for internal calls.
+	actor := strings.TrimSpace(req.GetActor())
+	if actor == "" {
+		actor = "system"
+	}
+	if !actdomain.IsNodeCreateActorAllowed(actor) {
+		logctx.Info(ctx, "apply_ops actor denied", "actor", actor, "run_id", runID)
+		return nil, fmt.Errorf("permission denied: actor %q cannot apply ui ops", actor)
+	}
+
+	logctx.Info(ctx, "apply_ops", "actor", actor, "run_id", runID, "ops_count", len(req.GetOps()))
+
 	doc, conflict, err := s.store.ApplyOps(ctx, runID, req.GetBaseVersion(), req.GetOps())
 	if err != nil {
 		return nil, err
@@ -116,8 +129,10 @@ func (s *Service) CreateNodeInTab(ctx context.Context, req *insightifyv1.CreateN
 	}
 	actor := strings.TrimSpace(req.GetActor())
 	if !actdomain.IsNodeCreateActorAllowed(actor) {
+		logctx.Info(ctx, "create_node_in_tab actor denied", "actor", actor, "project_id", projectID)
 		return nil, fmt.Errorf("permission denied: actor %q cannot create ui nodes", actor)
 	}
+	logctx.Info(ctx, "create_node_in_tab", "actor", actor, "project_id", projectID)
 	incomingNode := req.GetNode()
 	if incomingNode == nil {
 		return nil, fmt.Errorf("node is required")

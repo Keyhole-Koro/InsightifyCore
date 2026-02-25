@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 	insightifyv1 "insightify/gen/go/insightify/v1"
@@ -118,4 +119,90 @@ func (s *Service) updateActNode(ctx context.Context, runID, nodeID string, mutat
 		return fmt.Errorf("failed to apply act update for node %s in run %s: %w", nodeID, runID, err)
 	}
 	return nil
+}
+
+// RouteDecision is the outcome of ProcessInput routing.
+type RouteDecision struct {
+	WorkerKey  string  // selected worker key
+	Mode       string  // "suggest" | "search" | "run_worker"
+	Confidence float64 // classification confidence 0.0–1.0
+	Fallback   bool    // true if autonomous_executor was selected as fallback
+	Denied     bool    // true if worker was not in allowed list → needs_user_action
+}
+
+// ProcessInput classifies user input, selects a worker, and transitions the act
+// node to the appropriate status. It returns the routing decision for the caller
+// to use when dispatching the worker.
+func (s *Service) ProcessInput(ctx context.Context, runID, nodeID, input string, allowedWorkers []string) (*RouteDecision, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil, fmt.Errorf("input is required")
+	}
+
+	// 1. Classify input.
+	route := actdomain.RouteInput(input)
+	decision := &RouteDecision{
+		WorkerKey:  route.WorkerKey,
+		Mode:       route.Mode,
+		Confidence: route.Confidence,
+	}
+
+	// 2. Fallback check.
+	if actdomain.ShouldFallback(route.Confidence) {
+		decision.WorkerKey = "autonomous_executor"
+		decision.Fallback = true
+	}
+
+	// 3. Allowed workers check.
+	if !actdomain.IsWorkerAllowed(decision.WorkerKey, allowedWorkers) {
+		decision.Denied = true
+		// Transition to needs_user_action.
+		if err := s.TransitionAct(ctx, runID, nodeID, insightifyv1.UiActStatus_UI_ACT_STATUS_NEEDS_USER_ACTION); err != nil {
+			return nil, fmt.Errorf("failed to transition act to needs_user_action: %w", err)
+		}
+		_ = s.AppendTimeline(ctx, runID, nodeID, &insightifyv1.UiActTimelineEvent{
+			Id:      fmt.Sprintf("route-%d", timeNowUnixMs()),
+			Kind:    "system_note",
+			Summary: fmt.Sprintf("Worker %q is not in allowed list. Please choose from: %s", decision.WorkerKey, strings.Join(allowedWorkers, ", ")),
+		})
+		return decision, nil
+	}
+
+	// 4. Transition act to the appropriate status.
+	targetStatus := modeToStatus(decision.Mode)
+	if err := s.TransitionAct(ctx, runID, nodeID, targetStatus); err != nil {
+		return nil, fmt.Errorf("failed to transition act to %s: %w", targetStatus, err)
+	}
+
+	// 5. Append routing timeline event.
+	summary := fmt.Sprintf("Routing: mode=%s, worker=%s, confidence=%.2f", decision.Mode, decision.WorkerKey, decision.Confidence)
+	if decision.Fallback {
+		summary += " (fallback)"
+	}
+	_ = s.AppendTimeline(ctx, runID, nodeID, &insightifyv1.UiActTimelineEvent{
+		Id:      fmt.Sprintf("route-%d", timeNowUnixMs()),
+		Kind:    "plan",
+		Summary: summary,
+	})
+
+	return decision, nil
+}
+
+// modeToStatus maps a route mode string to the corresponding UiActStatus.
+func modeToStatus(mode string) insightifyv1.UiActStatus {
+	switch mode {
+	case "suggest":
+		return insightifyv1.UiActStatus_UI_ACT_STATUS_SUGGESTING
+	case "search":
+		return insightifyv1.UiActStatus_UI_ACT_STATUS_SEARCHING
+	case "run_worker":
+		return insightifyv1.UiActStatus_UI_ACT_STATUS_RUNNING_WORKER
+	default:
+		return insightifyv1.UiActStatus_UI_ACT_STATUS_PLANNING
+	}
+}
+
+// timeNowUnixMs returns the current time in milliseconds. Extracted for testability.
+func timeNowUnixMs() int64 {
+	return time.Now().UnixMilli()
 }
