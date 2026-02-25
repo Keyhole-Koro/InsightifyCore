@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	insightifyv1 "insightify/gen/go/insightify/v1"
+	actdomain "insightify/internal/domain/act"
 	artifactrepo "insightify/internal/gateway/repository/artifact"
 	uirepo "insightify/internal/gateway/repository/ui"
 	uiworkspacerepo "insightify/internal/gateway/repository/uiworkspace"
@@ -112,6 +113,10 @@ func (s *Service) CreateNodeInTab(ctx context.Context, req *insightifyv1.CreateN
 	projectID := strings.TrimSpace(req.GetProjectId())
 	if projectID == "" {
 		return nil, fmt.Errorf("project_id is required")
+	}
+	actor := strings.TrimSpace(req.GetActor())
+	if !actdomain.IsNodeCreateActorAllowed(actor) {
+		return nil, fmt.Errorf("permission denied: actor %q cannot create ui nodes", actor)
 	}
 	incomingNode := req.GetNode()
 	if incomingNode == nil {

@@ -148,13 +148,19 @@ func TestPlanRegistryBuildInputInjectsBootstrapWorker(t *testing.T) {
 	}
 }
 
-func TestPlanRegistryIncludesBootstrapAndCompatibilitySpecs(t *testing.T) {
+func TestPlanRegistryIncludesBootstrapAndAutonomousExecutor(t *testing.T) {
 	rt := &testRuntime{}
 	reg := BuildRegistryPlan(rt)
 	if _, ok := reg["bootstrap"]; !ok {
 		t.Fatalf("expected bootstrap worker spec in plan registry")
 	}
-	if _, ok := reg["init_purpose"]; !ok {
-		t.Fatalf("expected init_purpose worker spec in plan registry")
+	if _, ok := reg["autonomous_executor"]; !ok {
+		t.Fatalf("expected autonomous_executor worker spec in plan registry")
+	}
+	if _, ok := reg["init_purpose"]; ok {
+		t.Fatalf("did not expect legacy init_purpose worker spec")
+	}
+	if _, ok := reg["plan_pipeline"]; ok {
+		t.Fatalf("did not expect legacy plan_pipeline worker spec")
 	}
 }

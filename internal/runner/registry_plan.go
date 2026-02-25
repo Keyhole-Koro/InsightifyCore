@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"insightify/internal/artifact"
@@ -18,7 +19,6 @@ func BuildRegistryPlan(_ Runtime) map[string]WorkerSpec {
 	reg := map[string]WorkerSpec{}
 
 	// bootstrap: preferred key for interactive bootstrap flow.
-	// Keep init_purpose as a compatibility alias.
 	reg["bootstrap"] = WorkerSpec{
 		Key:         "bootstrap",
 		Description: "Interactive intent bootstrap worker: collects user intent and repository context.",
@@ -27,60 +27,6 @@ func BuildRegistryPlan(_ Runtime) map[string]WorkerSpec {
 		},
 		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
 			ctx = llm.WithWorker(ctx, "bootstrap")
-			p := plan.BootstrapPipeline{
-				LLM: runtime.GetLLM(),
-			}
-			out, err := p.Run(ctx, in.(plan.BootstrapIn))
-			if err != nil {
-				return WorkerOutput{}, err
-			}
-			return bootstrapWorkerOutput(out), nil
-		},
-		Fingerprint: func(in any, runtime Runtime) string {
-			return JSONFingerprint(struct {
-				In   plan.BootstrapIn
-				Salt string
-			}{in.(plan.BootstrapIn), runtime.GetModelSalt()})
-		},
-		Strategy: versionedStrategy{},
-	}
-
-	// init_purpose legacy alias kept for compatibility.
-	reg["init_purpose"] = WorkerSpec{
-		Key:         "init_purpose",
-		Description: "Legacy alias of bootstrap.",
-		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			return plan.BootstrapIn{}, nil
-		},
-		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "bootstrap")
-			p := plan.BootstrapPipeline{
-				LLM: runtime.GetLLM(),
-			}
-			out, err := p.Run(ctx, in.(plan.BootstrapIn))
-			if err != nil {
-				return WorkerOutput{}, err
-			}
-			return bootstrapWorkerOutput(out), nil
-		},
-		Fingerprint: func(in any, runtime Runtime) string {
-			return JSONFingerprint(struct {
-				In   plan.BootstrapIn
-				Salt string
-			}{in.(plan.BootstrapIn), runtime.GetModelSalt()})
-		},
-		Strategy: versionedStrategy{},
-	}
-
-	// plan_pipeline legacy alias kept for compatibility. It delegates to init_purpose behavior.
-	reg["plan_pipeline"] = WorkerSpec{
-		Key:         "plan_pipeline",
-		Description: "Legacy alias of init_purpose.",
-		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
-			return plan.BootstrapIn{}, nil
-		},
-		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
-			ctx = llm.WithWorker(ctx, "init_purpose")
 			p := plan.BootstrapPipeline{
 				LLM: runtime.GetLLM(),
 			}
@@ -167,6 +113,45 @@ func BuildRegistryPlan(_ Runtime) map[string]WorkerSpec {
 				In   artifact.PlanDependenciesIn
 				Salt string
 			}{in.(artifact.PlanDependenciesIn), runtime.GetModelSalt()})
+		},
+		Strategy: jsonStrategy{},
+	}
+
+	reg["autonomous_executor"] = WorkerSpec{
+		Key:         "autonomous_executor",
+		Description: "Fallback autonomous executor that creates a bounded execution plan when worker routing is uncertain.",
+		BuildInput: func(ctx context.Context, deps Deps) (any, error) {
+			_ = ctx
+			_ = deps
+			return map[string]any{}, nil
+		},
+		Run: func(ctx context.Context, in any, runtime Runtime) (WorkerOutput, error) {
+			ctx = llm.WithWorker(ctx, "autonomous_executor")
+			params, _ := in.(map[string]any)
+			rawParams := map[string]string{}
+			for key, value := range params {
+				switch v := value.(type) {
+				case string:
+					rawParams[key] = v
+				default:
+					rawParams[key] = strings.TrimSpace(fmt.Sprintf("%v", v))
+				}
+			}
+			p := plan.AutonomousExecutorPipeline{}
+			out, err := p.Run(ctx, plan.BuildAutonomousExecutorInput(rawParams))
+			if err != nil {
+				return WorkerOutput{}, err
+			}
+			return WorkerOutput{
+				RuntimeState: out,
+				ClientView:   out.ClientView,
+			}, nil
+		},
+		Fingerprint: func(in any, runtime Runtime) string {
+			return JSONFingerprint(struct {
+				In   any
+				Salt string
+			}{in, runtime.GetModelSalt()})
 		},
 		Strategy: jsonStrategy{},
 	}
